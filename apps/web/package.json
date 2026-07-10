@@ -18,7 +18,7 @@
     "typescript": "^5.9.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "three": "^0.180.0",
+    "three": "^0.185.1",
     "zustand": "^5.0.9",
     "@tauri-apps/api": "^2"
   },
