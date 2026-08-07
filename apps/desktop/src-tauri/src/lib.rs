@@ -160,7 +160,32 @@ fn updater_public_key_from_plugin_config(
         .map(str::to_owned)
 }
 
+/// Linux WebKitGTK 渲染路径调优（2026-08 实测 + WebKitGTK 2.52.3 源码确认）。
+///
+/// - GPU 光栅路径只在「UI 进程与 GTK 共享 EGL display」时存在：Wayland 会话满足
+///   （GTK3 Wayland 后端用 EGL），X11 不满足（GTK3 X11 用 GLX，无法共享）。
+///   X11 下 DMABUF 被硬编码为 CPU 光栅 + LINEAR dmabuf，而 NVIDIA 的 GBM 后端拒绝
+///   LINEAR 分配（EINVAL），强制开启直接黑屏——X11 在当前尝试下是废的，不设任何变量。
+/// - Wayland + NVIDIA 下 WebKit 默认自检不会启用硬件 buffer，实测必须
+///   WEBKIT_FORCE_DMABUF_RENDERER=1（FPS 7 → 60，WebProcess 显存 60MiB → 840MiB）。
+///   该变量在 X11 下有毒（强制即黑屏），因此只在 Wayland 会话内设置。
+/// - 用户显式设置过同名变量时尊重其选择，不覆盖。
+#[cfg(target_os = "linux")]
+fn configure_webkitgtk_rendering() {
+    let wayland_display = std::env::var("WAYLAND_DISPLAY").unwrap_or_default();
+    let session_type = std::env::var("XDG_SESSION_TYPE").unwrap_or_default();
+    let is_wayland = !wayland_display.is_empty() || session_type.eq_ignore_ascii_case("wayland");
+    if is_wayland && std::env::var_os("WEBKIT_FORCE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_FORCE_DMABUF_RENDERER", "1");
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn configure_webkitgtk_rendering() {}
+
 pub fn run() {
+    // 必须在任何 WebKit 进程创建之前完成渲染环境配置。
+    configure_webkitgtk_rendering();
     let app_data_dir = paths::resolve_app_data_dir();
     let log_dir = paths::resolve_log_dir();
     let app_version = env!("CARGO_PKG_VERSION").to_string();
