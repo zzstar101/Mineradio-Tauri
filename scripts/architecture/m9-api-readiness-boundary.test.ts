@@ -168,6 +168,6 @@ test("M9 leaves the frozen Sidecar API, shared contracts and packaging unchanged
 		"utf8",
 	);
 	expect(normalizedTauriConfigDigest(tauriConfig)).toBe(
-		"bc8bd5d23b879fa5b4334241db4efef9fe1b78e41f6168e3001b8d139fb49b34",
+		"7b26b1b16d952693b0406fe621614f95b6ac92506a6570f4fc322e856f5dc895",
 	);
 });

@@ -33,6 +33,7 @@
       "../../../SECURITY.md"
     ],
     "icon": [
+      "icons/icon.png",
       "icons/icon.ico"
     ],
     "shortDescription": "MineRadio-Tauri desktop music player",
