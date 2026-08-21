@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "bun run --filter @mineradio/web dev",
     "devUrl": "http://127.0.0.1:5173",
-    "beforeBuildCommand": "bun run --filter @mineradio/web build && bun run --filter @mineradio/desktop build:sidecar",
+    "beforeBuildCommand": "bun run --filter @mineradio/web build",
     "frontendDist": "../../web/dist"
   },
   "app": {
@@ -23,9 +23,7 @@
       "nsis"
     ],
     "category": "Music",
-    "externalBin": [
-      "binaries/mineradio-sidecar-api"
-    ],
+    "externalBin": [],
     "resources": [
       "../../../LICENSE",
       "../../../THIRD_PARTY_NOTICES.md",
