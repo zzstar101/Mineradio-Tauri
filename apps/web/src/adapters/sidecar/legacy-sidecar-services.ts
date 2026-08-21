@@ -20,9 +20,9 @@ export function createLegacySidecarServices(client: SidecarClient): MusicService
 		},
 		accounts: {
 			loginStatus: (provider) => client.loginStatus(provider),
-			createLoginQrKey: (provider) => client.createProviderLoginQrKey(provider),
-			createLoginQrImage: (provider, key) => client.createProviderLoginQrImage(provider, key),
-			checkLoginQr: (provider, key) => client.checkProviderLoginQr(provider, key),
+			createLoginQrKey: (provider, kind) => client.createProviderLoginQrKey(provider, kind),
+			createLoginQrImage: (provider, key, kind) => client.createProviderLoginQrImage(provider, key, kind),
+			checkLoginQr: (provider, key, kind) => client.checkProviderLoginQr(provider, key, kind),
 			setSessionCookie: (provider, cookie) => client.setProviderSessionCookie(provider, cookie),
 			clearSessionCookie: (provider) => client.clearProviderSessionCookie(provider),
 			logout: (provider) => client.logout(provider),

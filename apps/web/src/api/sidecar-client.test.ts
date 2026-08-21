@@ -745,6 +745,51 @@ test("QQ QR login helpers call QQ provider routes and parse responses", async ()
 	expect(seen.length).toBe(3);
 });
 
+test("QR login kind query param is appended for QQ sub-methods", async () => {
+	const seen: string[] = [];
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		seen.push(path);
+		expect(method).toBe("GET");
+		if (path.includes("/providers/qq/login-qr-key")) {
+			expect(path).toContain("kind=qq_music");
+			return { ok: true, data: { provider: "qq", key: "qm-key" } };
+		}
+		if (path.includes("/providers/qq/login-qr-create")) {
+			expect(path).toContain("key=qm-key");
+			expect(path).toContain("kind=qq_music");
+			return {
+				ok: true,
+				data: { provider: "qq", key: "qm-key", img: "data:image/png;base64,qm" },
+			};
+		}
+		if (path.includes("/providers/qq/login-qr-check")) {
+			expect(path).toContain("key=qm-key");
+			expect(path).toContain("kind=qq_music");
+			return { ok: true, data: { provider: "qq", key: "qm-key", code: 801, loggedIn: false } };
+		}
+		throw new Error(`unexpected path ${path}`);
+	}, async () => {
+		const client = new SidecarClient();
+		expect(await client.createProviderLoginQrKey("qq", "qq_music")).toEqual({
+			provider: "qq",
+			key: "qm-key",
+		});
+		expect(await client.createProviderLoginQrImage("qq", "qm-key", "qq_music")).toEqual({
+			provider: "qq",
+			key: "qm-key",
+			img: "data:image/png;base64,qm",
+		});
+		expect(await client.checkProviderLoginQr("qq", "qm-key", "qq_music")).toEqual({
+			provider: "qq",
+			key: "qm-key",
+			code: 801,
+			loggedIn: false,
+		});
+	});
+	expect(seen.length).toBe(3);
+});
+
 test("loginStatus parses a cookie-free provider profile summary", async () => {
 	await withTauriApi(async (args) => {
 		const { method, path } = apiArgs(args);

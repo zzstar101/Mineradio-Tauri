@@ -26,6 +26,7 @@ import {
 	DiscoverHomeResponse,
 	DiscoverHomeResponseSchema,
 	ProviderId,
+	QrLoginKind,
 	ProviderLoginQrCheck,
 	ProviderLoginQrCheckSchema,
 	ProviderLoginQrImage,
@@ -151,7 +152,7 @@ export class SidecarClient {
 	): Promise<unknown | null> {
 		const tauriResult = await invokeTauriCommand("api_call", { method, path, body: body ?? null });
 		if (tauriResult !== null) {
-			console.log("[api]: ", tauriResult);
+			console.log("[api]: ", path, body, tauriResult);
 			return tauriResult;
 		}
 		return tauriResult;
@@ -421,16 +422,19 @@ export class SidecarClient {
 		);
 	}
 
-	async createProviderLoginQrKey(provider: ProviderId): Promise<ProviderLoginQrKey> {
+	async createProviderLoginQrKey(provider: ProviderId, kind?: QrLoginKind): Promise<ProviderLoginQrKey> {
+		const params = kind ? new URLSearchParams({ kind }) : new URLSearchParams();
+		const suffix = params.toString() ? `?${params.toString()}` : "";
 		return this.request(
 			"GET",
-			`/providers/${provider}/login-qr-key`,
+			`/providers/${provider}/login-qr-key${suffix}`,
 			ProviderLoginQrKeySchema,
 		);
 	}
 
-	async createProviderLoginQrImage(provider: ProviderId, key: string): Promise<ProviderLoginQrImage> {
+	async createProviderLoginQrImage(provider: ProviderId, key: string, kind?: QrLoginKind): Promise<ProviderLoginQrImage> {
 		const params = new URLSearchParams({ key });
+		if (kind) params.set("kind", kind);
 		return this.request(
 			"GET",
 			`/providers/${provider}/login-qr-create?${params.toString()}`,
@@ -438,8 +442,9 @@ export class SidecarClient {
 		);
 	}
 
-	async checkProviderLoginQr(provider: ProviderId, key: string): Promise<ProviderLoginQrCheck> {
+	async checkProviderLoginQr(provider: ProviderId, key: string, kind?: QrLoginKind): Promise<ProviderLoginQrCheck> {
 		const params = new URLSearchParams({ key });
+		if (kind) params.set("kind", kind);
 		return this.request(
 			"GET",
 			`/providers/${provider}/login-qr-check?${params.toString()}`,
