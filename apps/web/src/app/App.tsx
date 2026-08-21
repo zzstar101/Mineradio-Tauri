@@ -6,10 +6,6 @@ import {
   type ReactElement,
 } from "react";
 import { AppRuntimeProvider } from "./AppRuntimeProvider";
-export {
-  deriveSidecarRecoveryNoticeState,
-  nextSidecarStatusPollDelayMs,
-} from "./runtime/sidecar-recovery-policy";
 import { AppShell, type AppShellProps } from "./AppShell";
 import {
   defaultApplicationRuntime,
@@ -100,7 +96,6 @@ import type { PlaylistPanelTab } from "../components/shell/PlaylistPanelHost";
 import type { SearchMode } from "../components/shell/SearchShell";
 import { buildDesktopLyricSnapshot } from "../desktop-lyrics/desktop-lyrics-snapshot";
 import { useCustomLyricFontRuntime } from "../desktop-lyrics/useCustomLyricFontRuntime";
-import type { SidecarRecoveryNoticeState } from "../components/shell/SidecarRecoveryNotice";
 import type { VisualGuideStep } from "../components/shell/VisualGuideHost";
 import { SplashHost, type SplashHostProps } from "../visual/SplashHost";
 import {
@@ -305,8 +300,6 @@ export function App({
   const [loginProvider, setLoginProvider] = useState<LoginProviderId>("netease");
   const [qqManualCookieOpen, setQqManualCookieOpen] = useState(false);
   const [shelfDetailOpen, setShelfDetailOpen] = useState(false);
-  const [sidecarRecoveryState, setSidecarRecoveryState] =
-    useState<SidecarRecoveryNoticeState | null>(null);
   const [visualGuideOpen, setVisualGuideOpen] = useState(false);
   const visualGuidePlaylistRestoreRef = useRef<{
     open: boolean;
@@ -1069,13 +1062,6 @@ export function App({
     [refreshShelfPlaylists],
   );
 
-  const handleRecoveryState = useCallback(
-    (state: SidecarRecoveryNoticeState) => {
-      setSidecarRecoveryState(state);
-    },
-    [],
-  );
-
   const syncProviderLoginLibrary = useCallback(
     async (provider: LoginProviderId) => {
       if (!applicationPorts?.music.library) return;
@@ -1508,14 +1494,13 @@ export function App({
   });
 
   const shellProps: AppShellProps = {
-    sidecarRuntimeProps: {
+    bootstrapProps: {
       applicationRuntime,
       loginProviders: LOGIN_PROVIDERS,
       onConnection: handleApplicationConnection,
       onCapabilities: setMatrix,
       onProviderStatus: acceptProviderStatus,
       onRefreshLibrary: handleRuntimeLibraryRefresh,
-      onRecoveryState: handleRecoveryState,
     },
     fileInputRef,
     localAudioAccept: LOCAL_AUDIO_ACCEPT,
@@ -1839,7 +1824,6 @@ export function App({
         hasCustomLyric: Boolean(currentCustomLyricText),
       },
       audioSettings: playbackAudioSettings,
-      recoveryState: sidecarRecoveryState,
     },
     playbackCustomization: {
       customization: {

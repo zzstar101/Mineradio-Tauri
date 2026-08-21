@@ -6,7 +6,6 @@ import type {
 } from "../ports/wallpaper-engine-runtime-port";
 
 export interface RuntimeConfig {
-	sidecarBaseUrl: string;
 	mediaProxyBase: string;
 	appDataDir: string;
 	appVersion: string;
@@ -14,18 +13,7 @@ export interface RuntimeConfig {
 	updaterPublicKeyConfigured: boolean;
 }
 
-export type SidecarPhase = "starting" | "ready" | "recovering" | "stopped" | "error";
 
-export interface SidecarStatus {
-	phase: SidecarPhase;
-	baseUrl: string;
-	pid: number | null;
-	restarts: number;
-	lastError: string | null;
-	lastHealthOkMs: number | null;
-	providers: string[];
-	logPath: string;
-}
 
 export interface WindowDisplayBounds {
 	x: number;
@@ -211,7 +199,6 @@ export interface FullDesktopRuntimeState {
 }
 
 interface RawRuntimeConfig {
-	sidecar_base_url: string;
 	media_proxy_base?: string;
 	app_data_dir: string;
 	app_version: string;
@@ -219,16 +206,7 @@ interface RawRuntimeConfig {
 	updater_public_key_configured: boolean;
 }
 
-interface RawSidecarStatus {
-	phase?: SidecarPhase;
-	baseUrl?: string;
-	pid?: number | null;
-	restarts?: number;
-	lastError?: string | null;
-	lastHealthOkMs?: number | null;
-	providers?: string[];
-	logPath?: string;
-}
+
 
 interface RawWindowDisplayBounds {
 	x?: number;
@@ -313,7 +291,6 @@ export async function listenTauriEvent<T = unknown>(
 
 function placeholderRuntimeConfig(): RuntimeConfig {
 	return {
-		sidecarBaseUrl: "",
 		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-dev",
@@ -322,18 +299,7 @@ function placeholderRuntimeConfig(): RuntimeConfig {
 	};
 }
 
-function placeholderSidecarStatus(): SidecarStatus {
-	return {
-		phase: "stopped",
-		baseUrl: "",
-		pid: null,
-		restarts: 0,
-		lastError: null,
-		lastHealthOkMs: null,
-		providers: [],
-		logPath: "",
-	};
-}
+
 
 function placeholderWindowState(): WindowState {
 	return {
@@ -406,7 +372,6 @@ export async function getRuntimeConfig(): Promise<RuntimeConfig> {
 			return placeholderRuntimeConfig();
 		}
 		return {
-			sidecarBaseUrl: raw.sidecar_base_url,
 			mediaProxyBase: raw.media_proxy_base ?? "mineradio-tauri://localhost",
 			appDataDir: raw.app_data_dir,
 			appVersion: raw.app_version,
@@ -415,28 +380,6 @@ export async function getRuntimeConfig(): Promise<RuntimeConfig> {
 		};
 	} catch {
 		return placeholderRuntimeConfig();
-	}
-}
-
-export async function getSidecarStatus(): Promise<SidecarStatus> {
-	if (!isTauriRuntime()) {
-		return placeholderSidecarStatus();
-	}
-	try {
-		const raw = await invokeTauriCommand<RawSidecarStatus>("get_sidecar_status");
-		if (!raw) return placeholderSidecarStatus();
-		return {
-			phase: raw.phase ?? "stopped",
-			baseUrl: raw.baseUrl ?? "",
-			pid: raw.pid ?? null,
-			restarts: raw.restarts ?? 0,
-			lastError: raw.lastError ?? null,
-			lastHealthOkMs: raw.lastHealthOkMs ?? null,
-			providers: Array.isArray(raw.providers) ? raw.providers : [],
-			logPath: raw.logPath ?? "",
-		};
-	} catch {
-		return placeholderSidecarStatus();
 	}
 }
 

@@ -83,7 +83,7 @@ export function useAccountSessionController({
 		const dependencies = dependenciesRef.current;
 		const { accounts: accountPort } = dependencies;
 		if (!accountPort) {
-			dependencies.showToast("sidecar 未连接，稍后再试");
+			dependencies.showToast("API 未就绪，稍后再试");
 			return;
 		}
 		try {
@@ -113,7 +113,7 @@ export function useAccountSessionController({
 		const { accounts: accountPort } = dependencies;
 		const label = dependencies.providerLabel(provider);
 		if (!accountPort) {
-			dependencies.showToast("sidecar 未连接，稍后再试");
+			dependencies.showToast("API 未就绪，稍后再试");
 			return;
 		}
 		if (!cookie.trim()) {
@@ -154,7 +154,7 @@ export function useAccountSessionController({
 		const { accounts: accountPort } = dependencies;
 		const label = dependencies.providerLabel(provider);
 		if (!accountPort) {
-			dependencies.showToast("sidecar 未连接，稍后再试");
+			dependencies.showToast("API 未就绪，稍后再试");
 			return;
 		}
 		try {

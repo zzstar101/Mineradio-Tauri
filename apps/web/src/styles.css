@@ -6552,63 +6552,6 @@ body.render-deep-sleep #login-guide-canvas {
   color: #fff;
 }
 
-#sidecar-recovery-notice {
-  position: fixed;
-  z-index: 180;
-  left: 24px;
-  bottom: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  max-width: min(420px, calc(100vw - 48px));
-  min-height: 38px;
-  padding: 9px 13px;
-  border-radius: 10px;
-  background: rgba(14, 16, 20, .88);
-  border: 1px solid rgba(255, 255, 255, .10);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, .30), inset 0 1px 0 rgba(255, 255, 255, .045);
-  color: rgba(255, 255, 255, .88);
-  font-size: 12px;
-  letter-spacing: .35px;
-  line-height: 1.25;
-  pointer-events: none;
-  backdrop-filter: blur(18px) saturate(1.18);
-  -webkit-backdrop-filter: blur(18px) saturate(1.18);
-}
-
-.sidecar-recovery-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(244, 210, 138, .86);
-  box-shadow: 0 0 14px rgba(244, 210, 138, .18);
-  flex: 0 0 auto;
-}
-
-.sidecar-recovery-notice.recovered .sidecar-recovery-dot {
-  background: rgba(0, 245, 212, .84);
-  box-shadow: 0 0 14px rgba(0, 245, 212, .18);
-}
-
-.sidecar-recovery-notice.error .sidecar-recovery-dot,
-.sidecar-recovery-notice.stopped .sidecar-recovery-dot {
-  background: rgba(255, 126, 126, .86);
-  box-shadow: 0 0 14px rgba(255, 126, 126, .16);
-}
-
-.sidecar-recovery-text {
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.sidecar-recovery-detail {
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(255, 255, 255, .54);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .modal-mask {
   position: fixed;
   inset: 0;

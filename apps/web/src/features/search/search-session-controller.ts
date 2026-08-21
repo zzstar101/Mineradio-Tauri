@@ -382,7 +382,7 @@ export class SearchSessionController {
 	async openPodcastPrograms(radio: PodcastRadio): Promise<void> {
 		const port = this.port;
 		if (!port) {
-			this.state.setState({ error: "sidecar 尚未就绪，稍后再试" });
+			this.state.setState({ error: "API 尚未就绪，稍后再试" });
 			return;
 		}
 		const radioId = podcastIdentity(radio);
@@ -564,7 +564,7 @@ export class SearchSessionController {
 		generation: number,
 	): Promise<void> {
 		try {
-			if (!this.port) throw new Error("sidecar 尚未就绪，稍后再试");
+			if (!this.port) throw new Error("API 尚未就绪，稍后再试");
 			if (mode === "podcast") {
 				const detail = keyword
 					? await this.port.podcastSearch(keyword, 30)

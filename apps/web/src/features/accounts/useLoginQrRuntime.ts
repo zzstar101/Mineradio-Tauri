@@ -159,7 +159,7 @@ export function useLoginQrRuntime({
 		setProviderQr(target, null);
 		setProviderQrStatus(target, initialQrStatusForProvider(target));
 		if (!accounts) {
-			setProviderQrStatus(target, { text: "sidecar 未连接，稍后再试", tone: "fail" });
+			setProviderQrStatus(target, { text: "API 未就绪，稍后再试", tone: "fail" });
 			return;
 		}
 		try {

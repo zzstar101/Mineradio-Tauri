@@ -25,7 +25,7 @@ export function createLegacyApplicationRuntime(
 ): ApplicationRuntimePort {
 	const loadRuntimeConfig = dependencies.loadRuntimeConfig ?? getRuntimeConfig;
 	const createClient = dependencies.createClient
-		?? ((config: RuntimeConfig) => new SidecarClient(config.sidecarBaseUrl, undefined, config.mediaProxyBase));
+		?? ((config: RuntimeConfig) => new SidecarClient(config.mediaProxyBase));
 	const createDesktopRuntime = dependencies.createDesktopRuntime
 		?? createTauriDesktopRuntime;
 
@@ -38,7 +38,6 @@ export function createLegacyApplicationRuntime(
 				// 与既有启动行为一致：配置不可用时不发布伪造的 ready runtime。
 				return null;
 			}
-			if (!config.sidecarBaseUrl) return null;
 
 			// 单次连接只创建一个 client，确保所有 Ports 属于同一 transport generation。
 			const client = createClient(config);

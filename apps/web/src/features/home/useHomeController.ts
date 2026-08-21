@@ -343,7 +343,7 @@ export function useHomeController({
 				return;
 			}
 			if (!current.library) {
-				current.showToast("sidecar 未连接，稍后再试");
+				current.showToast("API 未就绪，稍后再试");
 				return;
 			}
 			const key = `${item.provider}:${item.id}`;

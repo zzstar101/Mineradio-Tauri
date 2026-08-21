@@ -42,7 +42,6 @@ test("PlaybackSurface 在 feature 层构造音频设置 ReactNode 并注入音�
 	const html = renderToStaticMarkup(
 		<PlaybackSurface
 			controlsProps={{ visible: true, onReveal: () => undefined }}
-			recoveryState={null}
 			audioSettings={audioSettingsFixture()}
 		/>,
 	);

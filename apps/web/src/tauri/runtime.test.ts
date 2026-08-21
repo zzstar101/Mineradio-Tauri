@@ -5,7 +5,6 @@ import {
 	exportJsonFile,
 	getRuntimeConfig,
 	getFullDesktopRuntimeState,
-	getSidecarStatus,
 	getWindowState,
 	importJsonFile,
 	isTauriRuntime,
@@ -31,24 +30,10 @@ test("isTauriRuntime is false outside the Tauri webview", () => {
 
 test("getRuntimeConfig resolves to a non-crashing placeholder outside Tauri", async () => {
 	const cfg = await getRuntimeConfig();
-	expect(typeof cfg.sidecarBaseUrl).toBe("string");
-	expect(cfg.sidecarBaseUrl).toBe("");
+	expect(typeof cfg.mediaProxyBase).toBe("string");
+	expect(cfg.mediaProxyBase).toBe("mineradio-tauri://localhost");
 	expect(typeof cfg.appVersion).toBe("string");
 	expect(cfg.appVersion.length).toBeGreaterThan(0);
-});
-
-test("getSidecarStatus resolves to a non-crashing placeholder outside Tauri", async () => {
-	const status = await getSidecarStatus();
-	expect(status).toEqual({
-		phase: "stopped",
-		baseUrl: "",
-		pid: null,
-		restarts: 0,
-		lastError: null,
-		lastHealthOkMs: null,
-		providers: [],
-		logPath: "",
-	});
 });
 
 test("getWindowState resolves to an Electron-compatible default outside Tauri", async () => {

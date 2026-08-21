@@ -7,19 +7,17 @@ import {
 	App,
 	applyDesktopWindowShellState,
 	buildDesktopLyricsPayloadPatch,
-	deriveSidecarRecoveryNoticeState,
 	desktopLyricsBeatMapKey,
 	isCollectSupportedTrack,
 	isHomeBlankDismissElement,
 	isNeteaseLikeSupported,
 	mergeProviderPlaylists,
-	nextSidecarStatusPollDelayMs,
 	shouldUseSecondaryLeftDisplaySeamGuard,
 	shouldShowEmptyHome,
 	shouldUseCachedHomeDiscoverPlaylist,
 } from "./App";
 import type { SplashHostProps } from "../visual/SplashHost";
-import type { SidecarStatus, RuntimeConfig } from "../tauri/runtime";
+import type { RuntimeConfig } from "../tauri/runtime";
 import { useLyricsStore } from "../stores/lyrics-store";
 import { usePlaybackStore } from "../stores/playback-store";
 import { useSearchStore } from "../stores/search-store";
@@ -275,7 +273,7 @@ test("App provider mutation guards reject import-only tracks", () => {
 test("legacy application runtime default client factory stays stable and does not storm health requests", async () => {
 	await import("../../../../packages/visual-engine/src/runtime/happy-dom-preload");
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -363,7 +361,7 @@ test("DIY desktop lyrics toggle drives the desktop lyrics window lifecycle", asy
 	const restoreAudio = installAppStubAudio();
 	const calls: string[] = [];
 	const runtimeConfig: RuntimeConfig = {
-		sidecarBaseUrl: "",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -527,7 +525,7 @@ test("App opens Search detail from the compact search Enter action", async () =>
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -598,7 +596,7 @@ test("App Search detail append action queues a song without starting playback", 
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -770,7 +768,7 @@ test("App restores persisted Netease login state on startup", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -859,7 +857,7 @@ test("App shows Netease avatar and VIP badge in the top account capsule", async 
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1081,70 +1079,6 @@ test("App suppresses baseline Home while visual shelf detail content is open", a
 		usePlaybackStore.getState().clearQueue();
 		useShelfStore.setState({ open: false, selectedPlaylistId: null });
 	}
-});
-
-function sidecarStatus(overrides: Partial<SidecarStatus> = {}): SidecarStatus {
-	return {
-		phase: "ready",
-		baseUrl: "http://127.0.0.1:40000",
-		pid: 1,
-		restarts: 0,
-		lastError: null,
-		lastHealthOkMs: 10,
-		providers: ["netease", "qq"],
-		logPath: "",
-		...overrides,
-	};
-}
-
-test("deriveSidecarRecoveryNoticeState only marks ready as recovered after an unhealthy phase or restart", () => {
-	const firstReady = deriveSidecarRecoveryNoticeState(sidecarStatus(), null);
-	expect(firstReady.recovered).toBe(false);
-	expect(firstReady.phase).toBe("ready");
-
-	const recovering = deriveSidecarRecoveryNoticeState(sidecarStatus({ phase: "recovering", restarts: 1 }), firstReady);
-	expect(recovering.recovered).toBe(false);
-	expect(recovering.phase).toBe("recovering");
-
-	const recovered = deriveSidecarRecoveryNoticeState(sidecarStatus({ phase: "ready", restarts: 1 }), recovering);
-	expect(recovered.recovered).toBe(true);
-	expect(recovered.restarts).toBe(1);
-
-	const restartedWhileReady = deriveSidecarRecoveryNoticeState(sidecarStatus({ phase: "ready", restarts: 2 }), firstReady);
-	expect(restartedWhileReady.recovered).toBe(true);
-});
-
-test("nextSidecarStatusPollDelayMs backs off only during stable ready polling", () => {
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "ready" }),
-		consecutiveReadyPolls: 0,
-		documentHidden: false,
-	})).toBe(1500);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "ready" }),
-		consecutiveReadyPolls: 1,
-		documentHidden: false,
-	})).toBe(3000);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "ready" }),
-		consecutiveReadyPolls: 3,
-		documentHidden: false,
-	})).toBe(12000);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "ready" }),
-		consecutiveReadyPolls: 4,
-		documentHidden: true,
-	})).toBe(60000);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "recovering" }),
-		consecutiveReadyPolls: 4,
-		documentHidden: true,
-	})).toBe(1500);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "error" }),
-		consecutiveReadyPolls: 4,
-		documentHidden: false,
-	})).toBe(1500);
 });
 
 test("applyDesktopWindowShellState mirrors baseline desktop shell classes", async () => {
@@ -1401,7 +1335,7 @@ test("App applies baseline lyric fallback when provider lyric fetch rejects", as
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1472,7 +1406,7 @@ test("App replaces stale lyrics with current track fallback while provider lyric
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1550,7 +1484,7 @@ test("App loads sidecar audio-proxy URL into the audio element for raw provider 
 			},
 		} as unknown as SidecarClient;
 		const rootConfig: RuntimeConfig = {
-			sidecarBaseUrl: "http://127.0.0.1:39999",
+			mediaProxyBase: "mineradio-tauri://localhost",
 			appDataDir: "",
 			appVersion: "0.0.0-test",
 			schemaVersion: "0.1.0",
@@ -1631,7 +1565,7 @@ test("App resolves proxied Soda URLs against the sidecar base when reloading aft
 			},
 		} as unknown as SidecarClient;
 		const rootConfig: RuntimeConfig = {
-			sidecarBaseUrl: baseUrl,
+			mediaProxyBase: "mineradio-tauri://localhost",
 			appDataDir: "",
 			appVersion: "0.0.0-test",
 			schemaVersion: "0.1.0",
@@ -1736,7 +1670,7 @@ test("App retries playback after applying an automatic quality fallback", async 
 			},
 		} as unknown as SidecarClient;
 		const rootConfig: RuntimeConfig = {
-			sidecarBaseUrl: "http://127.0.0.1:39999",
+			mediaProxyBase: "mineradio-tauri://localhost",
 			appDataDir: "",
 			appVersion: "0.0.0-test",
 			schemaVersion: "0.1.0",
@@ -1814,7 +1748,7 @@ test("App shows the baseline trial banner when provider returns a trial-only URL
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1875,7 +1809,7 @@ test("App renders upstream-style Netease QR login inside the login modal", async
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1936,7 +1870,7 @@ test("App renders direct QQ QR login inside the login modal", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2000,7 +1934,7 @@ test("App renders Soda QR login as a first-class provider in the login modal", a
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2124,7 +2058,7 @@ test("App opens account dropdown from a single logged-in account and launches on
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2244,7 +2178,7 @@ test("App uses Soda's own login status for the add-account hint", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2370,7 +2304,7 @@ test("App opens account dropdown instead of QR login when both providers are alr
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2468,7 +2402,7 @@ test("App syncs QQ account status after direct QR login succeeds", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2561,7 +2495,7 @@ test("App clears the trial banner when the audio element reports a playback erro
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2636,7 +2570,7 @@ test("App resolves playback beatmap and forwards it to visual host", async () =>
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2716,7 +2650,7 @@ test("App does not run the podcast DJ beatmap analyzer for ordinary songs", asyn
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2798,7 +2732,7 @@ test("App starts baseline Home private radar from discover songs", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2875,7 +2809,7 @@ test("App derives Home Continue and Next Up from the live queue before recent hi
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3043,7 +2977,7 @@ test("App starts baseline Home weather radio from a weather rail song", async ()
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3115,7 +3049,7 @@ test("App opens Home playlist tiles as a full-screen detail page before playback
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3188,7 +3122,7 @@ test("App imports a local audio file from the baseline Home import tile", async 
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3279,7 +3213,7 @@ test("App applies and clears a custom cover image from the baseline import contr
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3377,7 +3311,7 @@ test("App plays centered shelf playlist hotspots by loading the playlist into th
 		return <div id="visual-host" />;
 	}
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3429,7 +3363,7 @@ test("App routes the logged-out Home library card to local audio import", async 
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3493,7 +3427,7 @@ test("App routes the logged-in Home library card to the baseline left playlist p
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3577,7 +3511,7 @@ test("App opens the baseline collect picker for shelf detail collect and adds on
 		return <div id="visual-host" />;
 	}
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3659,7 +3593,7 @@ test("App opens the collect picker for QQ detail rows and filters to writable QQ
 		return <div id="visual-host" />;
 	}
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3734,7 +3668,7 @@ test("App checks current Netease like state and wires bottom heart mutations thr
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3815,7 +3749,7 @@ test("App shows QQ unsupported notice for bottom heart without calling like muta
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3885,7 +3819,7 @@ test("App checks current Soda like state and wires bottom heart mutations throug
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3961,7 +3895,7 @@ test("App rolls back bottom heart state and shows baseline failure copy when Net
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -4035,7 +3969,7 @@ test("App opens login modal when Netease heart mutation requires login", async (
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",

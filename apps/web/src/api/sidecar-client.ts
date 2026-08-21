@@ -3,8 +3,6 @@ import {
 	ApiSuccessSchema,
 	CapabilityMatrixSchema,
 	CapabilityMatrix,
-	HealthResponse,
-	HealthResponseSchema,
 	LyricPayloadSchema,
 	PlaylistDetailSchema,
 	PlaylistSummary,
@@ -107,30 +105,6 @@ export class SidecarClientError extends Error {
 
 const CapabilitySuccessEnvelopeSchema = ApiSuccessSchema(CapabilityMatrixSchema);
 
-type FetchImpl = typeof fetch;
-
-function defaultFetchImpl(): FetchImpl {
-	return globalThis.fetch.bind(globalThis) as FetchImpl;
-}
-
-function normalizeFetchError(err: unknown): never {
-	const rawMessage = err instanceof Error ? err.message : String(err);
-	throw new SidecarClientError({
-		code: "NETWORK",
-		message: "sidecar 连接失败，请稍后重试",
-		retryable: true,
-		rawMessage,
-	});
-}
-
-async function readJsonSafely(res: Response): Promise<unknown | null> {
-	try {
-		return await res.json() as unknown;
-	} catch {
-		return null;
-	}
-}
-
 function throwFailureEnvelope(json: unknown): never | void {
 	const failure = ApiFailureSchema.safeParse(json);
 	if (!failure.success) return;
@@ -150,28 +124,10 @@ function throwFailureEnvelope(json: unknown): never | void {
 }
 
 export class SidecarClient {
-	private readonly baseUrl: string;
-	private readonly fetchImpl: FetchImpl;
 	private readonly mediaProxyBase: string;
 
-	constructor(baseUrl: string, fetchImpl: FetchImpl = defaultFetchImpl(), mediaProxyBase = "mineradio-tauri://localhost") {
-		this.baseUrl = baseUrl.replace(/\/$/, "");
-		this.fetchImpl = fetchImpl;
+	constructor(mediaProxyBase = "mineradio-tauri://localhost") {
 		this.mediaProxyBase = mediaProxyBase.replace(/\/$/, "");
-	}
-
-	async health(): Promise<HealthResponse> {
-		const json = await this.invokeApiJson("GET", "/health");
-		throwFailureEnvelope(json);
-		const parsed = HealthResponseSchema.safeParse(json);
-		if (!parsed.success) {
-			throw new SidecarClientError({
-				code: "SCHEMA",
-				message: "health response failed schema validation",
-				retryable: false,
-			});
-		}
-		return parsed.data;
 	}
 
 	async capabilities(): Promise<CapabilityMatrix> {
@@ -193,34 +149,12 @@ export class SidecarClient {
 		path: string,
 		body?: unknown,
 	): Promise<unknown | null> {
-		try {
-			const tauriResult = await invokeTauriCommand("api_call", { method, path, body: body ?? null });
-			if (tauriResult !== null) {
-				console.log("[api]: ", tauriResult);
-				return tauriResult;
-			}
-		} catch(e) {
-			console.log("[api] failed: ", e);
-			// 非 Tauri 环境或 invoke 失败：回退到 HTTP sidecar。
+		const tauriResult = await invokeTauriCommand("api_call", { method, path, body: body ?? null });
+		if (tauriResult !== null) {
+			console.log("[api]: ", tauriResult);
+			return tauriResult;
 		}
-		const init: RequestInit = method === "POST"
-			? {
-					method,
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify(body ?? {}),
-				}
-			: { method };
-		const res = await this.fetchImpl(`${this.baseUrl}${path}`, init).catch(normalizeFetchError);
-		const json = await readJsonSafely(res);
-		throwFailureEnvelope(json);
-		if (!res.ok) {
-			throw new SidecarClientError({
-				code: `HTTP_${res.status}`,
-				message: `${method} ${path} failed with status ${res.status}`,
-				retryable: res.status >= 500 || res.status === 429,
-			});
-		}
-		return json;
+		return tauriResult;
 	}
 
 	private async request<T>(

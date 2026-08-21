@@ -198,7 +198,7 @@ export function useLibraryController({
 				return;
 			}
 			if (!current.library) {
-				current.showToast("sidecar 未连接，稍后再试");
+				current.showToast("API 未就绪，稍后再试");
 				return;
 			}
 			collectTargetRef.current = track;
@@ -268,7 +268,7 @@ export function useLibraryController({
 	const importSharedPlaylist = useCallback(async (text: string) => {
 		const current = dependenciesRef.current;
 		if (!current.library) {
-			const message = "sidecar 尚未就绪，稍后再试";
+			const message = "API 尚未就绪，稍后再试";
 			current.setSearchError(message);
 			current.showToast(message);
 			throw new Error(message);
@@ -362,7 +362,7 @@ export function useLibraryController({
 		async (payload: ShelfPlayPlaylistPayload) => {
 			const current = dependenciesRef.current;
 			if (!current.library) {
-				current.showToast("sidecar 未连接，稍后再试");
+				current.showToast("API 未就绪，稍后再试");
 				return;
 			}
 			const playlistId = String(payload.playlistId || "").trim();

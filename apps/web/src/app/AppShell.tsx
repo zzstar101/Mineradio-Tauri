@@ -3,7 +3,7 @@ import type {
   ReactElement,
   RefObject,
 } from "react";
-import { SidecarRecoveryRuntime } from "./runtime/SidecarRecoveryRuntime";
+import { ApplicationRuntimeBootstrap } from "./runtime/ApplicationRuntimeBootstrap";
 import { UpdateHost } from "../components/shell/UpdateHost";
 import { VisualGuideHost } from "../components/shell/VisualGuideHost";
 import type { SplashHostProps } from "../visual/SplashHost";
@@ -137,7 +137,7 @@ function DesktopTitlebar({
 }
 
 export interface AppShellProps {
-  sidecarRuntimeProps: ComponentProps<typeof SidecarRecoveryRuntime>;
+  bootstrapProps: ComponentProps<typeof ApplicationRuntimeBootstrap>;
   fileInputRef: RefObject<HTMLInputElement | null>;
   localAudioAccept: string;
   onImportLocalFiles(files: FileList | null): void;
@@ -159,7 +159,7 @@ export interface AppShellProps {
 }
 
 export function AppShell({
-  sidecarRuntimeProps,
+  bootstrapProps,
   fileInputRef,
   localAudioAccept,
   onImportLocalFiles,
@@ -181,7 +181,7 @@ export function AppShell({
 }: AppShellProps): ReactElement {
   return (
     <>
-      <SidecarRecoveryRuntime {...sidecarRuntimeProps} />
+      <ApplicationRuntimeBootstrap {...bootstrapProps} />
       <div id="desktop-window-shell">
         <input
           ref={fileInputRef}

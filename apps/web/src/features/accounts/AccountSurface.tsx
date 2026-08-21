@@ -300,7 +300,7 @@ export function AccountOverlaySurface({
           <div className="login-intro-kicker">Mineradio</div>
           <div className="login-intro-title">音乐播放器，也是一座视觉舞台</div>
           <div className="login-intro-body">
-            搜索或导入一首歌即可播放；登录后会同步歌单、红心和播客，登录态会保存在本机 sidecar 数据目录。
+            搜索或导入一首歌即可播放；登录后会同步歌单、红心和播客，登录态会保存在本机数据目录。
           </div>
         </div>
         {modalMode === "add-account" ? (
@@ -415,7 +415,7 @@ export function AccountOverlaySurface({
               />
               <div className="qq-cookie-actions">
                 <div className="qq-cookie-note">
-                  手动导入只会写入本机 sidecar 会话。
+                  手动导入只会写入本机会话。
                 </div>
                 <button
                   className="modal-btn primary"
