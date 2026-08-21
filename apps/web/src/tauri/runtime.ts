@@ -7,6 +7,7 @@ import type {
 
 export interface RuntimeConfig {
 	sidecarBaseUrl: string;
+	mediaProxyBase: string;
 	appDataDir: string;
 	appVersion: string;
 	schemaVersion: string;
@@ -211,6 +212,7 @@ export interface FullDesktopRuntimeState {
 
 interface RawRuntimeConfig {
 	sidecar_base_url: string;
+	media_proxy_base?: string;
 	app_data_dir: string;
 	app_version: string;
 	schema_version: string;
@@ -312,6 +314,7 @@ export async function listenTauriEvent<T = unknown>(
 function placeholderRuntimeConfig(): RuntimeConfig {
 	return {
 		sidecarBaseUrl: "",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-dev",
 		schemaVersion: "0.1.0",
@@ -404,6 +407,7 @@ export async function getRuntimeConfig(): Promise<RuntimeConfig> {
 		}
 		return {
 			sidecarBaseUrl: raw.sidecar_base_url,
+			mediaProxyBase: raw.media_proxy_base ?? "mineradio-tauri://localhost",
 			appDataDir: raw.app_data_dir,
 			appVersion: raw.app_version,
 			schemaVersion: raw.schema_version,

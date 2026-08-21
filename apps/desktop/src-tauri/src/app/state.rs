@@ -21,6 +21,7 @@ pub struct RuntimeConfig {
     pub app_data_dir: String,
     pub app_version: String,
     pub schema_version: String,
+    pub media_proxy_base: String,
     pub updater_public_key_configured: bool,
 }
 
@@ -279,6 +280,7 @@ impl AppState {
                 app_data_dir: app_data_dir.clone(),
                 app_version,
                 schema_version,
+                media_proxy_base: crate::media_protocol::media_proxy_base().to_string(),
                 updater_public_key_configured,
             },
             started_at: Instant::now(),

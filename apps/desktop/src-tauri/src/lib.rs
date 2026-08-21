@@ -6,7 +6,7 @@ mod platform;
 mod runtime;
 mod sidecar;
 mod api_bridge;
-mod media_protocol;
+pub(crate) mod media_protocol;
 #[cfg(feature = "updater-smoke")]
 pub mod updater_smoke;
 
@@ -217,7 +217,7 @@ pub fn run() {
     })
     .map_err(|err| eprintln!("mineradio api init failed: {err}"))
     .ok();
-    let state = AppState::new(
+    let mut state = AppState::new(
         base_url.clone(),
         app_data_dir.to_string_lossy().to_string(),
         app_version.clone(),
@@ -230,7 +230,7 @@ pub fn run() {
         cache_init_error,
         runtime_settings,
     );
-    state.attach_api(move api);
+    state.attach_api(api);
 
     let setup_app_version = app_version.clone();
     let setup_app_data = app_data_dir.clone();
@@ -266,7 +266,7 @@ pub fn run() {
             },
         )
         .register_asynchronous_uri_scheme_protocol(
-            "mineradio",
+            "mineradio-tauri",
             media_protocol::handle_media_request,
         )
         .manage(state)

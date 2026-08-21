@@ -25,7 +25,7 @@ export function createLegacyApplicationRuntime(
 ): ApplicationRuntimePort {
 	const loadRuntimeConfig = dependencies.loadRuntimeConfig ?? getRuntimeConfig;
 	const createClient = dependencies.createClient
-		?? ((config: RuntimeConfig) => new SidecarClient(config.sidecarBaseUrl));
+		?? ((config: RuntimeConfig) => new SidecarClient(config.sidecarBaseUrl, undefined, config.mediaProxyBase));
 	const createDesktopRuntime = dependencies.createDesktopRuntime
 		?? createTauriDesktopRuntime;
 

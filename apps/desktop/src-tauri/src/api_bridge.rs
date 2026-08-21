@@ -123,7 +123,7 @@ async fn handle_route(
                 .song_url(track, options)
                 .await
                 .map_err(|err| ApiCallError::from_api_error(&err))?;
-            Ok(Success::Data(serde_json::to_value(result).unwrap()))
+            Ok(Success::Data(media_song_url_value(result)))
         }
         _ => handle_provider_route(api, method, route, params, body).await,
     }
@@ -172,7 +172,7 @@ async fn handle_provider_route(
                 .song_url(&track, options)
                 .await
                 .map_err(|err| ApiCallError::from_api_error(&err))?;
-            Ok(Success::Data(serde_json::to_value(result).unwrap()))
+            Ok(Success::Data(media_song_url_value(result)))
         }
         ("POST", ["qualities"]) => {
             let track = parse_body::<Track>(&body)?;
@@ -313,6 +313,20 @@ async fn handle_provider_route(
             "unknown route: {method} {route}"
         ))),
     }
+}
+
+fn media_song_url_value(result: mineradio_api::types::SongUrlResult) -> serde_json::Value {
+    let mut value = serde_json::to_value(result).unwrap_or_else(|_| serde_json::json!({ "url": "" }));
+    if let Some(url) = value.get("url").and_then(serde_json::Value::as_str) {
+        if !url.is_empty() && !url.starts_with("http://") && !url.starts_with("https://") {
+            value["url"] = serde_json::Value::String(format!(
+                "{}/{}",
+                crate::media_protocol::media_proxy_base(),
+                url.trim_start_matches('/')
+            ));
+        }
+    }
+    value
 }
 
 fn parse_song_url_body(

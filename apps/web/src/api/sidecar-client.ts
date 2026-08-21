@@ -60,6 +60,8 @@ import {
 	SongUrlResult,
 	type ZodTypeLike,
 } from "@mineradio/shared";
+import { invokeTauriCommand } from "../tauri/runtime";
+
 
 export interface SidecarClientErrorInit {
 	code: string;
@@ -150,23 +152,17 @@ function throwFailureEnvelope(json: unknown): never | void {
 export class SidecarClient {
 	private readonly baseUrl: string;
 	private readonly fetchImpl: FetchImpl;
+	private readonly mediaProxyBase: string;
 
-	constructor(baseUrl: string, fetchImpl: FetchImpl = defaultFetchImpl()) {
+	constructor(baseUrl: string, fetchImpl: FetchImpl = defaultFetchImpl(), mediaProxyBase = "mineradio-tauri://localhost") {
 		this.baseUrl = baseUrl.replace(/\/$/, "");
 		this.fetchImpl = fetchImpl;
+		this.mediaProxyBase = mediaProxyBase.replace(/\/$/, "");
 	}
 
 	async health(): Promise<HealthResponse> {
-		const res = await this.fetchImpl(`${this.baseUrl}/health`).catch(normalizeFetchError);
-		const json = await readJsonSafely(res);
+		const json = await this.invokeApiJson("GET", "/health");
 		throwFailureEnvelope(json);
-		if (!res.ok) {
-			throw new SidecarClientError({
-				code: `HTTP_${res.status}`,
-				message: `health request failed with status ${res.status}`,
-				retryable: res.status >= 500 || res.status === 429,
-			});
-		}
 		const parsed = HealthResponseSchema.safeParse(json);
 		if (!parsed.success) {
 			throw new SidecarClientError({
@@ -179,16 +175,8 @@ export class SidecarClient {
 	}
 
 	async capabilities(): Promise<CapabilityMatrix> {
-		const res = await this.fetchImpl(`${this.baseUrl}/providers/capabilities`).catch(normalizeFetchError);
-		const json = await readJsonSafely(res);
+		const json = await this.invokeApiJson("GET", "/providers/capabilities");
 		throwFailureEnvelope(json);
-		if (!res.ok) {
-			throw new SidecarClientError({
-				code: `HTTP_${res.status}`,
-				message: `capabilities request failed with status ${res.status}`,
-				retryable: res.status >= 500 || res.status === 429,
-			});
-		}
 		const envelope = CapabilitySuccessEnvelopeSchema.safeParse(json);
 		if (!envelope.success) {
 			throw new SidecarClientError({
@@ -200,12 +188,21 @@ export class SidecarClient {
 		return envelope.data.data;
 	}
 
-	private async request<T>(
+	private async invokeApiJson(
 		method: "GET" | "POST" | "DELETE",
 		path: string,
-		schema: ZodTypeLike,
 		body?: unknown,
-	): Promise<T> {
+	): Promise<unknown | null> {
+		try {
+			const tauriResult = await invokeTauriCommand("api_call", { method, path, body: body ?? null });
+			if (tauriResult !== null) {
+				console.log("[api]: ", tauriResult);
+				return tauriResult;
+			}
+		} catch(e) {
+			console.log("[api] failed: ", e);
+			// 非 Tauri 环境或 invoke 失败：回退到 HTTP sidecar。
+		}
 		const init: RequestInit = method === "POST"
 			? {
 					method,
@@ -223,6 +220,17 @@ export class SidecarClient {
 				retryable: res.status >= 500 || res.status === 429,
 			});
 		}
+		return json;
+	}
+
+	private async request<T>(
+		method: "GET" | "POST" | "DELETE",
+		path: string,
+		schema: ZodTypeLike,
+		body?: unknown,
+	): Promise<T> {
+		const json = await this.invokeApiJson(method, path, body);
+		throwFailureEnvelope(json);
 		const envelope = ApiSuccessSchema(schema).safeParse(json);
 		if (!envelope.success) {
 			throw new SidecarClientError({
@@ -376,23 +384,26 @@ export class SidecarClient {
 	}
 
 	audioProxyUrl(url: string): string {
-		const params = new URLSearchParams({ url });
-		return `${this.baseUrl}/audio-proxy?${params.toString()}`;
+		if (/^https?:\/\//i.test(url)) return url;
+		if (/^(mineradio-tauri:\/\/localhost|https?:\/\/mineradio-tauri\.localhost)(\/|$)/i.test(url)) return url;
+		return `${this.mediaProxyBase}/${url.replace(/^\/+/, "")}`;
 	}
 
 	proxiedUrl(url: string): string {
 		if (/^https?:\/\//i.test(url)) return url;
-		if (url.startsWith("/")) return `${this.baseUrl}${url}`;
-		return new URL(url, `${this.baseUrl}/`).toString();
+		if (/^(mineradio-tauri:\/\/localhost|https?:\/\/mineradio-tauri\.localhost)(\/|$)/i.test(url)) return url;
+		if (url.startsWith("/")) return `${this.mediaProxyBase}${url}`;
+		return `${this.mediaProxyBase}/${url.replace(/^\/+/, "")}`;
 	}
 
 	imageProxyUrl(url: string, cacheBust = false, now = Date.now()): string {
 		if (!url) return "";
 		if (/^data:image\//i.test(url) || /^blob:/i.test(url)) return url;
+		if (/^(mineradio-tauri:\/\/localhost|https?:\/\/mineradio-tauri\.localhost)(\/|$)/i.test(url)) return url;
 		if (!/^https?:\/\//i.test(url)) return "";
 		const params = new URLSearchParams({ url });
 		if (cacheBust) params.set("v", String(now));
-		return `${this.baseUrl}/image-proxy?${params.toString()}`;
+		return `${this.mediaProxyBase}/image-proxy?${params.toString()}`;
 	}
 
 	async lyric(track: Track): Promise<LyricPayload> {
