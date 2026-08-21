@@ -188,6 +188,7 @@ pub struct AppState {
     pub(crate) sidecar_launch_descriptor: Mutex<Option<SidecarLaunchDescriptor>>,
     pub db: Option<Mutex<db::DbRuntimeState>>,
     pub db_init_error: Option<String>,
+    pub api: Option<mineradio_api::Api>,
 }
 
 impl AppState {
@@ -328,7 +329,12 @@ impl AppState {
             sidecar_launch_descriptor: Mutex::new(None),
             db,
             db_init_error,
+            api: None,
         }
+    }
+
+    pub fn attach_api(&mut self, api: Option<mineradio_api::Api>) {
+        self.api = api;
     }
 }
 

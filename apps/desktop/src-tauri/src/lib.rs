@@ -5,6 +5,8 @@ mod paths;
 mod platform;
 mod runtime;
 mod sidecar;
+mod api_bridge;
+mod media_protocol;
 #[cfg(feature = "updater-smoke")]
 pub mod updater_smoke;
 
@@ -202,6 +204,19 @@ pub fn run() {
         }
     };
 
+    // Rust 侧 API 库初始化。Sidecar 进程在 P2 剥离前暂时并存；
+    // 前端将优先通过 api_call invoke 使用此 in-process 库。
+    let api = tauri::async_runtime::block_on(async {
+        mineradio_api::Api::init(mineradio_api::LibraryConfig {
+            app_version: app_version.clone(),
+            api_version: "0.1.0".to_string(),
+            schema_version: schema_version.clone(),
+            data_dir: Some(app_data_dir.clone()),
+        })
+        .await
+    })
+    .map_err(|err| eprintln!("mineradio api init failed: {err}"))
+    .ok();
     let state = AppState::new(
         base_url.clone(),
         app_data_dir.to_string_lossy().to_string(),
@@ -215,6 +230,7 @@ pub fn run() {
         cache_init_error,
         runtime_settings,
     );
+    state.attach_api(move api);
 
     let setup_app_version = app_version.clone();
     let setup_app_data = app_data_dir.clone();
@@ -248,6 +264,10 @@ pub fn run() {
                     responder.respond(response);
                 });
             },
+        )
+        .register_asynchronous_uri_scheme_protocol(
+            "mineradio",
+            media_protocol::handle_media_request,
         )
         .manage(state)
         .invoke_handler(tauri::generate_handler![
@@ -308,7 +328,8 @@ pub fn run() {
             commands::login_netease_complete,
             commands::login_qq_complete,
             commands::login_netease_close_window,
-            commands::login_qq_close_window
+            commands::login_qq_close_window,
+            api_bridge::api_call
         ])
         .setup(move |app| {
             // NOTE: spawn + health-wait are best-effort. This setup closure only
