@@ -4,17 +4,12 @@ mod db;
 mod paths;
 mod platform;
 mod runtime;
-mod sidecar;
 mod api_bridge;
 pub(crate) mod media_protocol;
 #[cfg(feature = "updater-smoke")]
 pub mod updater_smoke;
 
-use std::{
-    path::PathBuf,
-    sync::{atomic::Ordering, Arc, Mutex, OnceLock},
-    time::Duration,
-};
+use std::sync::{Arc, Mutex, OnceLock};
 use tauri::Manager;
 
 pub use app::state::{
@@ -23,128 +18,6 @@ pub use app::state::{
 
 static TLS_PROVIDER: OnceLock<()> = OnceLock::new();
 
-fn build_and_start_sidecar(
-    state: &AppState,
-    port: u16,
-    app_data_dir: &std::path::Path,
-    log_dir: &std::path::Path,
-    app_version: &str,
-    resource_dir: Option<&std::path::Path>,
-) -> Result<(), sidecar::SidecarError> {
-    let update_owner = state
-        .sidecar_update_owner
-        .lock()
-        .map_err(|_| sidecar::SidecarError::Io("sidecar update owner unavailable".to_owned()))?;
-    if update_owner.supervisor_blocked() {
-        return Ok(());
-    }
-    if !state.sidecar_supervisor_running.load(Ordering::Acquire) {
-        return Ok(());
-    }
-    let plan = sidecar::resolve_sidecar_launch_plan_with_resource_dir(resource_dir);
-    let (cmd, descriptor) = app::sidecar_owner::SidecarLaunchDescriptor::command_and_descriptor(
-        plan,
-        port,
-        app_data_dir.to_path_buf(),
-        log_dir.to_path_buf(),
-        app_version.to_owned(),
-    );
-    let mut launch_descriptor = state.sidecar_launch_descriptor.lock().map_err(|_| {
-        sidecar::SidecarError::Io("sidecar launch descriptor unavailable".to_owned())
-    })?;
-    let mut runtime = state
-        .sidecar
-        .lock()
-        .map_err(|e| sidecar::SidecarError::Io(e.to_string()))?;
-    // cleanup 先关闭 ownership 再取得同一把锁；锁内复核可避免退出期间重启出新 child。
-    if !state.sidecar_supervisor_running.load(Ordering::Acquire) {
-        return Ok(());
-    }
-    let prior_child_id = runtime.child.as_ref().map(std::process::Child::id);
-    let prior_descriptor = launch_descriptor.clone();
-    // command 与 descriptor 来自同一个 resolved plan；在 owner/descriptor/runtime 锁域内
-    // 先预置回滚 recipe。若 spawn 根本未发生，child identity 不变并恢复旧 recipe。
-    *launch_descriptor = Some(descriptor);
-    let result = sidecar::spawn_sidecar_into_runtime(&mut runtime, cmd, Duration::from_secs(2));
-    let current_child_id = runtime.child.as_ref().map(std::process::Child::id);
-    if result.is_err() && current_child_id == prior_child_id {
-        *launch_descriptor = prior_descriptor;
-    }
-    result
-}
-
-fn start_sidecar_supervisor(
-    app: tauri::AppHandle,
-    port: u16,
-    app_data_dir: PathBuf,
-    log_dir: PathBuf,
-    app_version: String,
-    resource_dir: Option<PathBuf>,
-) {
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::from_secs(3));
-        let state = app.state::<AppState>();
-        if !state.sidecar_supervisor_running.load(Ordering::Acquire) {
-            break;
-        }
-        let should_restart = match state.sidecar_update_owner.lock() {
-            Ok(owner) if !owner.supervisor_blocked() => match state.sidecar.lock() {
-                Ok(mut runtime) => {
-                    sidecar::sidecar_runtime_child_exited(&mut runtime).unwrap_or_default()
-                }
-                Err(_) => false,
-            },
-            _ => false,
-        };
-        if !should_restart {
-            let should_probe_health = match state.sidecar_update_owner.lock() {
-                Ok(owner) if !owner.supervisor_blocked() => match state.sidecar.lock() {
-                    Ok(runtime) => sidecar::sidecar_runtime_should_probe_health(&runtime),
-                    Err(_) => false,
-                },
-                _ => false,
-            };
-            if should_probe_health {
-                if let Ok(health) = sidecar::wait_for_health(
-                    &state.config.sidecar_base_url,
-                    Duration::from_millis(500),
-                ) {
-                    if let Ok(owner) = state.sidecar_update_owner.lock() {
-                        if !owner.supervisor_blocked() {
-                            if let Ok(mut runtime) = state.sidecar.lock() {
-                                if sidecar::sidecar_runtime_should_probe_health(&runtime) {
-                                    sidecar::sidecar_runtime_mark_ready(
-                                        &mut runtime,
-                                        health,
-                                        sidecar::now_ms(),
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            continue;
-        }
-        if let Ok(owner) = state.sidecar_update_owner.lock() {
-            if !owner.supervisor_blocked() {
-                if let Ok(mut runtime) = state.sidecar.lock() {
-                    sidecar::sidecar_runtime_mark_restarting(&mut runtime);
-                }
-            }
-        }
-        let _ = build_and_start_sidecar(
-            &state,
-            port,
-            &app_data_dir,
-            &log_dir,
-            &app_version,
-            resource_dir.as_deref(),
-        );
-    });
-}
-
-#[cfg(test)]
 fn updater_public_key_configured_from_plugin_config(
     plugins: &tauri::utils::config::PluginConfig,
 ) -> bool {
@@ -173,16 +46,11 @@ pub fn install_tls_crypto_provider() {
 pub fn run() {
     install_tls_crypto_provider();
     let app_data_dir = paths::resolve_app_data_dir();
-    let log_dir = paths::resolve_log_dir();
     let app_version = env!("CARGO_PKG_VERSION").to_string();
     let schema_version = "0.1.0".to_string();
     let context = tauri::generate_context!();
     let updater_public_key = updater_public_key_from_plugin_config(&context.config().plugins);
     let updater_public_key_configured = updater_public_key.is_some();
-
-    let port = sidecar::allocate_port();
-    let base_url = format!("http://127.0.0.1:{}", port);
-    let sidecar_log_path = sidecar::sidecar_log_path(&log_dir);
 
     // SQLite 本地存储初始化
     let (db_state, db_init_error) = match db::initialize(&app_data_dir) {
@@ -213,8 +81,7 @@ pub fn run() {
         }
     };
 
-    // Rust 侧 API 库初始化。Sidecar 进程在 P2 剥离前暂时并存；
-    // 前端将优先通过 api_call invoke 使用此 in-process 库。
+    // Rust 侧 API 库初始化。前端通过 api_call invoke 使用此 in-process 库。
     let api = tauri::async_runtime::block_on(async {
         mineradio_api::Api::init(mineradio_api::LibraryConfig {
             app_version: app_version.clone(),
@@ -227,12 +94,10 @@ pub fn run() {
     .map_err(|err| eprintln!("mineradio api init failed: {err}"))
     .ok();
     let mut state = AppState::new(
-        base_url.clone(),
         app_data_dir.to_string_lossy().to_string(),
         app_version.clone(),
         schema_version.clone(),
         updater_public_key_configured,
-        sidecar_log_path,
         db_state,
         db_init_error,
         cache_state,
@@ -243,7 +108,6 @@ pub fn run() {
 
     let setup_app_version = app_version.clone();
     let setup_app_data = app_data_dir.clone();
-    let setup_log_dir = log_dir.clone();
     let setup_updater_public_key = updater_public_key.clone();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
@@ -281,7 +145,6 @@ pub fn run() {
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             commands::get_runtime_config,
-            commands::get_sidecar_status,
             commands::get_database_status,
             commands::get_preferences_snapshot,
             commands::commit_preferences_transaction,
@@ -353,7 +216,7 @@ pub fn run() {
             ) {
                 Ok(runtime) => runtime,
                 Err(error) => {
-                    // 更新初始化故障只关闭更新能力，不能阻止播放器和 frozen Sidecar 启动。
+                    // 更新初始化故障只关闭更新能力，不能阻止播放器启动。
                     eprintln!(
                         "updater bootstrap failed; continuing with updates disabled: {error}"
                     );
@@ -383,33 +246,11 @@ pub fn run() {
                 if let Err(error) = app::tray::ensure_main_tray(app.handle()) {
                     state.diagnostics.record_runtime_error(
                         runtime::diagnostics::DiagnosticProbeKind::Tray,
-                        sidecar::now_ms(),
+                        crate::runtime::now_ms(),
                         format!("persisted tray initialization failed: {error}"),
                     );
                 }
             }
-            let setup_resource_dir = app.path().resource_dir().ok();
-            if let Err(e) = build_and_start_sidecar(
-                &state,
-                port,
-                &setup_app_data,
-                &setup_log_dir,
-                &setup_app_version,
-                setup_resource_dir.as_deref(),
-            ) {
-                let mut runtime = state.sidecar.lock().map_err(|lock| lock.to_string())?;
-                if runtime.child.is_none() {
-                    sidecar::sidecar_runtime_mark_start_failed(&mut runtime, &e);
-                }
-            }
-            start_sidecar_supervisor(
-                app.handle().clone(),
-                port,
-                setup_app_data.clone(),
-                setup_log_dir.clone(),
-                setup_app_version.clone(),
-                setup_resource_dir.clone(),
-            );
             Ok(())
         })
         .on_window_event(app::desktop_runtime::handle_window_event)
@@ -421,45 +262,6 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn stopped_supervisor_cannot_start_a_new_sidecar_child() {
-        let settings_path = std::env::temp_dir().join(format!(
-            "mineradio-stopped-supervisor-settings-{}.json",
-            std::process::id()
-        ));
-        let _ = std::fs::remove_file(&settings_path);
-        let state = AppState::new(
-            "http://127.0.0.1:1".into(),
-            "/data".into(),
-            "0.1.0".into(),
-            "0.1.0".into(),
-            false,
-            PathBuf::from("/logs/sidecar-runtime.log"),
-            None,
-            None,
-            None,
-            None,
-            Arc::new(Mutex::new(
-                runtime::settings::RuntimeSettingsStore::with_path(&settings_path),
-            )),
-        );
-        state
-            .sidecar_supervisor_running
-            .store(false, Ordering::Release);
-
-        assert!(build_and_start_sidecar(
-            &state,
-            1,
-            std::path::Path::new("/data"),
-            std::path::Path::new("/logs"),
-            "0.1.0",
-            None,
-        )
-        .is_ok());
-        assert!(state.sidecar.lock().expect("sidecar state").child.is_none());
-        let _ = std::fs::remove_file(settings_path);
-    }
 
     #[test]
     fn updater_public_key_config_is_read_from_tauri_plugin_config() {

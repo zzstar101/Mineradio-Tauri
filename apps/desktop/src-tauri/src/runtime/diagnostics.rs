@@ -20,7 +20,6 @@ pub enum DiagnosticProbeKind {
     FullDesktop,
     WallpaperEngine,
     Cache,
-    Sidecar,
     Database,
     ProcessMemory,
     Visual,
@@ -325,7 +324,7 @@ mod tests {
                 Err("缓存目录暂不可读")
             }),
             DiagnosticProbe::value(
-                DiagnosticProbeKind::Sidecar,
+                DiagnosticProbeKind::Tray,
                 1_000,
                 json!({ "status": "ready" }),
             ),
@@ -348,7 +347,7 @@ mod tests {
         for (source, at_ms) in [
             (DiagnosticProbeKind::Window, 1),
             (DiagnosticProbeKind::Cache, 2),
-            (DiagnosticProbeKind::Sidecar, 3),
+            (DiagnosticProbeKind::Tray, 3),
         ] {
             runtime.record_runtime_error(source, at_ms, format!("error-{at_ms}"));
         }
@@ -357,7 +356,7 @@ mod tests {
 
         assert_eq!(errors.len(), 2);
         assert_eq!(errors[0].source, DiagnosticProbeKind::Cache);
-        assert_eq!(errors[1].source, DiagnosticProbeKind::Sidecar);
+        assert_eq!(errors[1].source, DiagnosticProbeKind::Tray);
     }
 
     #[test]

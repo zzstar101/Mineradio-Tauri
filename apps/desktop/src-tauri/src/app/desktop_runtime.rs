@@ -4,7 +4,7 @@ use tauri::Manager;
 
 use crate::{
     runtime::{self, resources::WindowActivity, window_adapter},
-    sidecar, AppState,
+    AppState,
 };
 
 use super::{
@@ -213,7 +213,7 @@ fn finish_cancelable_cleanup<OnExit, OnPrevent>(
 /// 只在真正退出时取得资源清理所有权；托盘隐藏不会进入这里。
 pub fn cleanup_runtime_once(app: &tauri::AppHandle) -> Result<bool, String> {
     let state = app.state::<AppState>();
-    // 必须早于歌词、Sidecar 与托盘 cleanup；失败时不取得 exactly-once claim，允许用户
+    // 必须早于歌词与托盘 cleanup；失败时不取得 exactly-once claim，允许用户
     // 修复 Explorer 后再次尝试退出。
     if !super::full_desktop_runtime::recover_before_exit(app) {
         return Err("FULL_DESKTOP_EXIT_RECOVERY_UNCONFIRMED".to_owned());
@@ -222,7 +222,7 @@ pub fn cleanup_runtime_once(app: &tauri::AppHandle) -> Result<bool, String> {
     if let Err(error) = &exact_scene_dispose {
         state.diagnostics.record_runtime_error(
             runtime::diagnostics::DiagnosticProbeKind::WallpaperEngine,
-            sidecar::now_ms(),
+            crate::runtime::now_ms(),
             error.clone(),
         );
     }
@@ -260,16 +260,6 @@ pub fn cleanup_runtime_once(app: &tauri::AppHandle) -> Result<bool, String> {
     runtime::desktop_lyrics::desktop_lyrics_terminate_poller_child(lyrics_child);
     close_desktop_lyrics_window_for_shutdown(app);
 
-    state
-        .sidecar_supervisor_running
-        .store(false, Ordering::Release);
-
-    let sidecar_child = state
-        .sidecar
-        .lock()
-        .ok()
-        .and_then(|mut runtime| sidecar::sidecar_runtime_mark_stopped(&mut runtime));
-    sidecar::terminate_sidecar_child(sidecar_child);
     super::tray::remove_main_tray(app);
     Ok(true)
 }
@@ -289,7 +279,7 @@ fn flush_desktop_lyrics_bounds_for_shutdown(state: &AppState) {
     if let Err(error) = runtime::desktop_lyrics::flush_desktop_lyrics_user_bounds(state) {
         state.diagnostics.record_runtime_error(
             runtime::diagnostics::DiagnosticProbeKind::DesktopLyrics,
-            sidecar::now_ms(),
+            crate::runtime::now_ms(),
             format!("desktop lyrics bounds persist failed: {error}"),
         );
     }
@@ -326,11 +316,11 @@ fn schedule_background_working_set_trim(app: tauri::AppHandle) {
         let adapter = runtime::resources::WindowsProcessMemoryAdapter;
         let outcome = state
             .resources
-            .trim_working_set(activity, sidecar::now_ms(), &adapter);
+            .trim_working_set(activity, crate::runtime::now_ms(), &adapter);
         if matches!(outcome, runtime::resources::TrimOutcome::Failed { .. }) {
             state.diagnostics.record_runtime_error(
                 runtime::diagnostics::DiagnosticProbeKind::ProcessMemory,
-                sidecar::now_ms(),
+                crate::runtime::now_ms(),
                 format!("background working-set trim failed: {outcome:?}"),
             );
         }
@@ -384,7 +374,7 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
                     let state = window.state::<AppState>();
                     state.diagnostics.record_runtime_error(
                         runtime::diagnostics::DiagnosticProbeKind::FullDesktop,
-                        sidecar::now_ms(),
+                        crate::runtime::now_ms(),
                         format!("完整桌面最小化切换 passive 失败：{error}"),
                     );
                 }
@@ -394,7 +384,7 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
             }
             let activity = if native_minimized && !full_desktop_active {
                 WindowActivity::Minimized {
-                    since_ms: sidecar::now_ms(),
+                    since_ms: crate::runtime::now_ms(),
                 }
             } else {
                 WindowActivity::Visible
@@ -406,7 +396,7 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
                 ) {
                     window.state::<AppState>().diagnostics.record_runtime_error(
                         runtime::diagnostics::DiagnosticProbeKind::WallpaperEngine,
-                        sidecar::now_ms(),
+                        crate::runtime::now_ms(),
                         error,
                     );
                     // exact Scene 未确认关闭时不能把透明 host 留在最小化状态。
@@ -464,7 +454,7 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
         {
             state.diagnostics.record_runtime_error(
                 runtime::diagnostics::DiagnosticProbeKind::WallpaperEngine,
-                sidecar::now_ms(),
+                crate::runtime::now_ms(),
                 error,
             );
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -493,7 +483,7 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
             set_window_activity(
                 window.app_handle(),
                 WindowActivity::Hidden {
-                    since_ms: sidecar::now_ms(),
+                    since_ms: crate::runtime::now_ms(),
                 },
             );
             schedule_background_working_set_trim(window.app_handle().clone());

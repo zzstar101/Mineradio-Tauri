@@ -14,7 +14,6 @@ pub enum NativeInstallStage {
     FullDesktop,
     Wallpaper,
     DesktopLyrics,
-    Sidecar,
     Recheck,
     RollbackVerification,
 }
@@ -27,7 +26,6 @@ impl NativeInstallStage {
             Self::FullDesktop => "full-desktop",
             Self::Wallpaper => "wallpaper",
             Self::DesktopLyrics => "desktop-lyrics",
-            Self::Sidecar => "sidecar",
             Self::Recheck => "recheck",
             Self::RollbackVerification => "rollback-verification",
         }
@@ -157,11 +155,6 @@ pub trait NativeInstallOwnerPort: Send + Sync {
     ) -> Result<NativeOwnerReceipt, NativeOwnerPrepareFailure>;
 
     fn stop_and_join_desktop_lyrics_worker(
-        &self,
-        operation: &UpdateInstallGateClaim,
-    ) -> Result<NativeOwnerReceipt, NativeOwnerPrepareFailure>;
-
-    fn gate_supervisor_and_stop_exact_sidecar(
         &self,
         operation: &UpdateInstallGateClaim,
     ) -> Result<NativeOwnerReceipt, NativeOwnerPrepareFailure>;
@@ -349,11 +342,6 @@ impl NativeInstallQuiescence {
             NativeInstallStage::DesktopLyrics,
             self.owners
                 .stop_and_join_desktop_lyrics_worker(&lease.claim)
-        );
-        prepare_owner!(
-            NativeInstallStage::Sidecar,
-            self.owners
-                .gate_supervisor_and_stop_exact_sidecar(&lease.claim)
         );
 
         if let Err(error) = self.owners.verify_prepared(&lease.claim, &lease.receipts) {
@@ -657,13 +645,6 @@ mod tests {
             self.prepare(operation, NativeInstallStage::DesktopLyrics)
         }
 
-        fn gate_supervisor_and_stop_exact_sidecar(
-            &self,
-            operation: &UpdateInstallGateClaim,
-        ) -> Result<NativeOwnerReceipt, NativeOwnerPrepareFailure> {
-            self.prepare(operation, NativeInstallStage::Sidecar)
-        }
-
         fn verify_prepared(
             &self,
             _operation: &UpdateInstallGateClaim,
@@ -770,7 +751,6 @@ mod tests {
                 NativeInstallStage::FullDesktop,
                 NativeInstallStage::Wallpaper,
                 NativeInstallStage::DesktopLyrics,
-                NativeInstallStage::Sidecar,
             ]
         );
         assert!(matches!(
@@ -791,9 +771,7 @@ mod tests {
                 "prepare-full-desktop",
                 "prepare-wallpaper",
                 "prepare-desktop-lyrics",
-                "prepare-sidecar",
                 "verify-prepared",
-                "rollback-sidecar",
                 "rollback-desktop-lyrics",
                 "rollback-wallpaper",
                 "rollback-full-desktop",
@@ -810,14 +788,12 @@ mod tests {
             NativeInstallStage::FullDesktop,
             NativeInstallStage::Wallpaper,
             NativeInstallStage::DesktopLyrics,
-            NativeInstallStage::Sidecar,
         ];
         let failure_stages = [
             NativeInstallStage::Transition,
             NativeInstallStage::FullDesktop,
             NativeInstallStage::Wallpaper,
             NativeInstallStage::DesktopLyrics,
-            NativeInstallStage::Sidecar,
             NativeInstallStage::Recheck,
         ];
 

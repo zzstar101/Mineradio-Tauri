@@ -273,13 +273,6 @@ impl NativeInstallOwnerPort for SmokeNativeInstallOwners {
         Self::receipt(operation, NativeInstallStage::DesktopLyrics)
     }
 
-    fn gate_supervisor_and_stop_exact_sidecar(
-        &self,
-        operation: &UpdateInstallGateClaim,
-    ) -> Result<NativeOwnerReceipt, NativeOwnerPrepareFailure> {
-        Self::receipt(operation, NativeInstallStage::Sidecar)
-    }
-
     fn verify_prepared(
         &self,
         _operation: &UpdateInstallGateClaim,
@@ -290,7 +283,6 @@ impl NativeInstallOwnerPort for SmokeNativeInstallOwners {
             NativeInstallStage::FullDesktop,
             NativeInstallStage::Wallpaper,
             NativeInstallStage::DesktopLyrics,
-            NativeInstallStage::Sidecar,
         ];
         (receipts.iter().map(NativeOwnerReceipt::stage).eq(expected))
             .then_some(())

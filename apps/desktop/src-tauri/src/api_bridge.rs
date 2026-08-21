@@ -1,9 +1,8 @@
 //! Frontend-facing API bridge.
 //!
-//! `api.ts` on the web side no longer talks to a sidecar HTTP server; it calls
-//! Tauri's `api_call` invoke command instead. This module re-implements the
-//! sidecar's HTTP route table on top of the `mineradio_api` crate so the
-//! frontend contract (`{ ok, data }` / `{ ok, error }`) stays unchanged.
+//! `api.ts` on the web side calls Tauri's `api_call` invoke command; this module
+//! maps the frontend contract (`{ ok, data }` / `{ ok, error }`) onto the
+//! in-process `mineradio_api` crate.
 
 use std::collections::HashMap;
 

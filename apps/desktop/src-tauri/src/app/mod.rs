@@ -3,7 +3,6 @@ pub mod desktop_runtime;
 pub mod full_desktop_runtime;
 pub mod lifecycle;
 pub mod main_window;
-pub mod sidecar_owner;
 pub mod state;
 pub mod tray;
 #[allow(dead_code)]

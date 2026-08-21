@@ -8,16 +8,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{db, runtime, sidecar};
+use crate::{db, runtime};
 
-use super::{
-    sidecar_owner::{SidecarLaunchDescriptor, SidecarUpdateOwnerState},
-    update_install_gate::{UpdateInstallGate, UpdateInstallMutationPermit},
-};
+use super::update_install_gate::{UpdateInstallGate, UpdateInstallMutationPermit};
 
 #[derive(serde::Serialize, Clone)]
 pub struct RuntimeConfig {
-    pub sidecar_base_url: String,
     pub app_data_dir: String,
     pub app_version: String,
     pub schema_version: String,
@@ -183,10 +179,6 @@ pub struct AppState {
     pub window_activity: Mutex<runtime::resources::WindowActivity>,
     pub application_runtime_running: AtomicBool,
     pub update_install_gate: UpdateInstallGate,
-    pub sidecar: Mutex<sidecar::SidecarRuntimeState>,
-    pub sidecar_supervisor_running: AtomicBool,
-    pub(crate) sidecar_update_owner: Mutex<SidecarUpdateOwnerState>,
-    pub(crate) sidecar_launch_descriptor: Mutex<Option<SidecarLaunchDescriptor>>,
     pub db: Option<Mutex<db::DbRuntimeState>>,
     pub db_init_error: Option<String>,
     pub api: Option<mineradio_api::Api>,
@@ -204,12 +196,10 @@ impl AppState {
     // 这些参数逐一对应应用启动阶段的配置、日志与数据库状态资源，显式签名便于核对装配关系。
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        sidecar_base_url: String,
         app_data_dir: String,
         app_version: String,
         schema_version: String,
         updater_public_key_configured: bool,
-        sidecar_log_path: PathBuf,
         db: Option<Mutex<db::DbRuntimeState>>,
         db_init_error: Option<String>,
         cache: Option<Arc<Mutex<runtime::cache::CacheRuntime>>>,
@@ -233,7 +223,7 @@ impl AppState {
                 .unwrap_or_default();
             diagnostics.record_runtime_error(
                 runtime::diagnostics::DiagnosticProbeKind::Runtime,
-                sidecar::now_ms(),
+                crate::runtime::now_ms(),
                 format!("{}{}", issue.message, preserved),
             );
         }
@@ -252,7 +242,7 @@ impl AppState {
                     let code = error.code().to_owned();
                     diagnostics.record_runtime_error(
                         runtime::diagnostics::DiagnosticProbeKind::WallpaperEngine,
-                        sidecar::now_ms(),
+                        crate::runtime::now_ms(),
                         code.clone(),
                     );
                     // 损坏的用户配置保持原位供恢复；disabled runtime 使用不可持久化的
@@ -260,7 +250,7 @@ impl AppState {
                     let fallback = std::env::temp_dir().join(format!(
                         "mineradio-wallpaper-library-disabled-{}-{}.json",
                         std::process::id(),
-                        sidecar::now_ms(),
+                        crate::runtime::now_ms(),
                     ));
                     let library =
                         runtime::wallpaper_engine::library::WallpaperLibrary::open(fallback)
@@ -276,7 +266,6 @@ impl AppState {
         ));
         Self {
             config: RuntimeConfig {
-                sidecar_base_url: sidecar_base_url.clone(),
                 app_data_dir: app_data_dir.clone(),
                 app_version,
                 schema_version,
@@ -322,13 +311,6 @@ impl AppState {
             window_activity: Mutex::new(runtime::resources::WindowActivity::Foreground),
             application_runtime_running: AtomicBool::new(true),
             update_install_gate: UpdateInstallGate::default(),
-            sidecar: Mutex::new(sidecar::SidecarRuntimeState::new(
-                sidecar_base_url,
-                sidecar_log_path,
-            )),
-            sidecar_supervisor_running: AtomicBool::new(true),
-            sidecar_update_owner: Mutex::new(SidecarUpdateOwnerState::default()),
-            sidecar_launch_descriptor: Mutex::new(None),
             db,
             db_init_error,
             api: None,
@@ -432,12 +414,10 @@ mod tests {
         let _ = fs::remove_file(&settings_path);
 
         let state = AppState::new(
-            "http://127.0.0.1:1".into(),
             "/data".into(),
             "0.1.0".into(),
             "0.1.0".into(),
             false,
-            PathBuf::from("/logs/sidecar-runtime.log"),
             Some(Mutex::new(db_state)),
             None,
             None,
@@ -447,7 +427,6 @@ mod tests {
             )),
         );
 
-        assert_eq!(state.config.sidecar_base_url, "http://127.0.0.1:1");
         assert_eq!(state.config.app_data_dir, "/data");
         assert_eq!(state.config.app_version, "0.1.0");
         assert_eq!(state.config.schema_version, "0.1.0");
@@ -483,11 +462,6 @@ mod tests {
             super::super::lifecycle::CloseBehavior::Exit
         );
         drop(window);
-        let sidecar = state.sidecar.lock().expect("sidecar state");
-        assert_eq!(sidecar.phase, sidecar::SidecarPhase::Starting);
-        assert_eq!(sidecar.base_url, "http://127.0.0.1:1");
-        assert!(sidecar.child.is_none());
-        assert_eq!(sidecar.log_path, PathBuf::from("/logs/sidecar-runtime.log"));
         let _ = fs::remove_file(settings_path);
     }
 
@@ -514,12 +488,10 @@ mod tests {
             .set_desktop_lyrics_bounds(Some(desktop_lyrics_bounds))
             .expect("应持久化桌面歌词位置");
         let state = AppState::new(
-            "http://127.0.0.1:1".into(),
             test_dir.to_string_lossy().into_owned(),
             "0.1.0".into(),
             "0.1.0".into(),
             false,
-            test_dir.join("sidecar-runtime.log"),
             None,
             None,
             None,
