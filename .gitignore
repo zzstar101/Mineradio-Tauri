@@ -2,7 +2,6 @@
 node_modules/
 apps/*/node_modules/
 packages/*/node_modules/
-sidecars/*/node_modules/
 
 # Build output
 dist/
@@ -16,7 +15,6 @@ src-tauri/target/
 apps/desktop/src-tauri/target/
 apps/*/dist/
 packages/*/dist/
-sidecars/*/dist/
 *.exe
 *.msi
 *.blockmap
