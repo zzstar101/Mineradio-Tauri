@@ -40,8 +40,12 @@ import {
 import type { PlaybackControllerRef } from "../features/playback/PlaybackSurface";
 import { useTrackCustomizationController } from "../features/customization/useTrackCustomizationController";
 import {
-  LOGIN_QR_PROVIDERS,
+  ACCOUNT_PROVIDERS,
+  accountProviderLabel,
+  firstMethodForProvider,
+  providerForLogin,
   useLoginQrRuntime,
+  type AccountProviderId,
   type LoginModalMode,
   type LoginProviderId,
 } from "../features/accounts/useLoginQrRuntime";
@@ -111,7 +115,6 @@ import {
 } from "../visual/shelf-detail-data";
 import {
   type ProviderId,
-  type ProviderLoginStatus,
   type Track,
 } from "@mineradio/shared";
 import type { AudioFrameSource } from "@mineradio/visual-engine";
@@ -157,15 +160,6 @@ function afterPreferenceCommit(
   }
   onCommitted();
 }
-
-const LOGIN_PROVIDERS = LOGIN_QR_PROVIDERS;
-
-function providerLabelText(provider: ProviderId): string {
-  if (provider === "netease") return "网易云";
-  if (provider === "qq") return "QQ 音乐";
-  return "汽水音乐";
-}
-
 
 function trackTitle(track: Track | null | undefined): string {
   return track?.title || "MineRadio-Tauri";
@@ -594,6 +588,7 @@ export function App({
   );
   const neteaseCookieInputRef = useRef<HTMLTextAreaElement | null>(null);
   const qqCookieInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const kugouCookieInputRef = useRef<HTMLTextAreaElement | null>(null);
   const sodaCookieInputRef = useRef<HTMLTextAreaElement | null>(null);
   const shelfContentListRef = useRef<ShelfDetailContentListController | null>(
     null,
@@ -1040,8 +1035,8 @@ export function App({
     showToast,
   ]);
 
-  const providerLabel = useCallback(
-    (provider: ProviderId) => providerLabelText(provider),
+  const loginProviderLabel = useCallback(
+    (method: LoginProviderId) => accountProviderLabel(providerForLogin(method)),
     [],
   );
 
@@ -1065,14 +1060,14 @@ export function App({
   const syncProviderLoginLibrary = useCallback(
     async (provider: LoginProviderId) => {
       if (!applicationPorts?.music.library) return;
-      await refreshProviderPlaylists(provider);
+      await refreshProviderPlaylists(providerForLogin(provider));
       await refreshHomeDiscover();
     },
     [applicationPorts?.music.library, refreshHomeDiscover, refreshProviderPlaylists],
   );
 
   const syncAccountProviderPlaylists = useCallback(
-    async (provider: LoginProviderId) => {
+    async (provider: AccountProviderId) => {
       if (!applicationPorts?.music.library) return;
       await refreshProviderPlaylists(provider);
     },
@@ -1094,15 +1089,17 @@ export function App({
     syncProviderPlaylists: syncAccountProviderPlaylists,
     refreshHome: refreshHomeDiscover,
     refreshLibrary: refreshAccountLibrary,
-    providerLabel,
+    providerLabel: accountProviderLabel,
     showToast,
   });
   const neteaseStatus = accountStatusByProvider.netease;
   const qqStatus = accountStatusByProvider.qq;
+  const kugouStatus = accountStatusByProvider.kugou;
   const sodaStatus = accountStatusByProvider.soda;
   accountLoggedInRef.current = !!(
     neteaseStatus?.loggedIn ||
     qqStatus?.loggedIn ||
+    kugouStatus?.loggedIn ||
     sodaStatus?.loggedIn
   );
 
@@ -1119,57 +1116,66 @@ export function App({
     onProviderStatus: acceptProviderStatus,
     syncProviderLibrary: syncProviderLoginLibrary,
     refreshLibraryAfterLoggedOut: refreshAccountLibrary,
-    providerLabel,
+    providerLabel: loginProviderLabel,
     showToast,
   });
 
   const openLoginModal = useCallback(() => {
-    const statusByProvider: Partial<Record<ProviderId, ProviderLoginStatus | null>> = {
-      netease: neteaseStatus,
-      qq: qqStatus,
-      soda: sodaStatus,
-    };
-    const loggedProviderCount = LOGIN_PROVIDERS.filter(
-      (provider) => statusByProvider[provider]?.loggedIn,
+    const loggedProviderCount = ACCOUNT_PROVIDERS.filter(
+      (provider) => accountStatusByProvider[provider]?.loggedIn,
     ).length;
     const firstMissingProvider =
-      LOGIN_PROVIDERS.find((provider) => !statusByProvider[provider]?.loggedIn) ?? "netease";
+      ACCOUNT_PROVIDERS.find(
+        (provider) => !accountStatusByProvider[provider]?.loggedIn,
+      ) ?? "netease";
     setAccountDropdownOpen(false);
     resetProviderLoginQr();
     setLoginModalOpen(true);
     if (loggedProviderCount > 0) {
       setLoginModalMode("add-account");
-      setLoginProvider(firstMissingProvider);
+      setLoginProvider(firstMethodForProvider(firstMissingProvider));
     } else {
       setLoginModalMode("full");
       setLoginProvider("netease");
     }
     setQqManualCookieOpen(false);
-    for (const provider of LOGIN_PROVIDERS) void refreshProviderStatus(provider);
+    for (const provider of ACCOUNT_PROVIDERS) void refreshProviderStatus(provider);
   }, [
-    neteaseStatus?.loggedIn,
-    qqStatus?.loggedIn,
-    sodaStatus?.loggedIn,
+    accountStatusByProvider.netease?.loggedIn,
+    accountStatusByProvider.qq?.loggedIn,
+    accountStatusByProvider.kugou?.loggedIn,
+    accountStatusByProvider.soda?.loggedIn,
     refreshProviderStatus,
     resetProviderLoginQr,
   ]);
 
-  const openSingleProviderLogin = useCallback((provider: ProviderId) => {
+  const openLoginModalForProvider = useCallback((provider: AccountProviderId) => {
     setAccountDropdownOpen(false);
     resetProviderLoginQr();
     setLoginModalOpen(true);
-    setLoginProvider(provider);
-    setLoginModalMode("single-provider");
+    setLoginProvider(firstMethodForProvider(provider));
+    setLoginModalMode("full");
     setQqManualCookieOpen(false);
   }, [resetProviderLoginQr]);
 
   const handleAccountButtonClick = useCallback(() => {
-    if (neteaseStatus?.loggedIn || qqStatus?.loggedIn || sodaStatus?.loggedIn) {
+    if (
+      neteaseStatus?.loggedIn ||
+      qqStatus?.loggedIn ||
+      kugouStatus?.loggedIn ||
+      sodaStatus?.loggedIn
+    ) {
       setAccountDropdownOpen((open) => !open);
       return;
     }
     openLoginModal();
-  }, [neteaseStatus?.loggedIn, openLoginModal, qqStatus?.loggedIn, sodaStatus?.loggedIn]);
+  }, [
+    kugouStatus?.loggedIn,
+    neteaseStatus?.loggedIn,
+    openLoginModal,
+    qqStatus?.loggedIn,
+    sodaStatus?.loggedIn,
+  ]);
 
   const openHomeProductGuide = useCallback(() => {
     setHomeSuppressed(false);
@@ -1193,7 +1199,7 @@ export function App({
 
   const openHomeLibrary = useCallback(() => {
     closeHomePlaylistDetail();
-    if (homeDiscover?.loggedIn || neteaseStatus?.loggedIn || qqStatus?.loggedIn || sodaStatus?.loggedIn) {
+    if (homeDiscover?.loggedIn || neteaseStatus?.loggedIn || qqStatus?.loggedIn || kugouStatus?.loggedIn || sodaStatus?.loggedIn) {
       void refreshShelfPlaylists();
       setHomeForcedOpen(false);
       setHomeSuppressed(true);
@@ -1209,6 +1215,7 @@ export function App({
   }, [
     closeHomePlaylistDetail,
     homeDiscover?.loggedIn,
+    kugouStatus?.loggedIn,
     neteaseStatus?.loggedIn,
     closeShelf,
     openLocalFileImport,
@@ -1235,17 +1242,20 @@ export function App({
     resetProviderLoginQr();
     if (neteaseCookieInputRef.current) neteaseCookieInputRef.current.value = "";
     if (qqCookieInputRef.current) qqCookieInputRef.current.value = "";
+    if (kugouCookieInputRef.current) kugouCookieInputRef.current.value = "";
     if (sodaCookieInputRef.current) sodaCookieInputRef.current.value = "";
   }, [resetProviderLoginQr]);
 
   const importProviderCookie = useCallback(
-    async (provider: LoginProviderId) => {
+    async (provider: AccountProviderId) => {
       const input =
         provider === "netease"
           ? neteaseCookieInputRef.current
-          : provider === "soda"
-            ? sodaCookieInputRef.current
-            : qqCookieInputRef.current;
+          : provider === "qq"
+            ? qqCookieInputRef.current
+            : provider === "kugou"
+              ? kugouCookieInputRef.current
+              : sodaCookieInputRef.current;
       const cookie = input?.value.trim() ?? "";
       await importProviderSessionCookie(provider, cookie, {
         onStored: () => setQqManualCookieOpen(false),
@@ -1484,7 +1494,10 @@ export function App({
     miniQueueOpen,
     accountDropdownOpen,
     accountLoggedIn: Boolean(
-      neteaseStatus?.loggedIn || qqStatus?.loggedIn || sodaStatus?.loggedIn,
+      neteaseStatus?.loggedIn ||
+        qqStatus?.loggedIn ||
+        kugouStatus?.loggedIn ||
+        sodaStatus?.loggedIn,
     ),
     clearToast,
     setMiniQueue,
@@ -1496,7 +1509,7 @@ export function App({
   const shellProps: AppShellProps = {
     bootstrapProps: {
       applicationRuntime,
-      loginProviders: LOGIN_PROVIDERS,
+      loginProviders: ACCOUNT_PROVIDERS,
       onConnection: handleApplicationConnection,
       onCapabilities: setMatrix,
       onProviderStatus: acceptProviderStatus,
@@ -1715,7 +1728,7 @@ export function App({
       onHideCapsule: toggleUserCapsuleAutoHide,
       onRefreshStatus: (provider) => void refreshProviderStatus(provider),
       onLogout: (provider) => void logoutProvider(provider),
-      onOpenSingleProvider: openSingleProviderLogin,
+      onOpenSingleProvider: openLoginModalForProvider,
     },
     guide: {
       open: visualGuideOpen,
@@ -1851,11 +1864,16 @@ export function App({
       cookieInputRefs: {
         netease: neteaseCookieInputRef,
         qq: qqCookieInputRef,
+        kugou: kugouCookieInputRef,
         soda: sodaCookieInputRef,
       },
       onClose: closeLoginModal,
-      onProviderChange: (provider) => {
-        setLoginProvider(provider);
+      onAccountProviderChange: (provider) => {
+        setLoginProvider(firstMethodForProvider(provider));
+        setQqManualCookieOpen(false);
+      },
+      onMethodChange: (method) => {
+        setLoginProvider(method);
         setQqManualCookieOpen(false);
       },
       onManualCookieToggle: () => setQqManualCookieOpen((open) => !open),
@@ -1863,7 +1881,7 @@ export function App({
       onRefreshStatus: (provider) => void refreshProviderStatus(provider),
       onImportCookie: (provider) => void importProviderCookie(provider),
       onLogout: (provider) => void logoutProvider(provider),
-      onOpenSingleProvider: openSingleProviderLogin,
+      onOpenSingleProvider: openLoginModalForProvider,
     },
     playbackNotices: {
       trialBanner,

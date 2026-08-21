@@ -1892,10 +1892,22 @@ test("App renders direct QQ QR login inside the login modal", async () => {
 	}
 
 	expect(host.querySelector("#login-provider-qq")?.className).toContain("active");
-	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ 音乐");
+	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ");
 	expect(host.querySelector("#qr-img")?.getAttribute("src")).toBe("data:image/png;base64,qq-img");
 	expect(host.querySelector("#qq-web-login-card")).toBeNull();
-	expect(host.querySelector("#qr-status")?.textContent).toContain("QQ 音乐 App");
+	expect(host.querySelector("#qr-status")?.textContent).toContain("QQ App");
+
+	expect(host.querySelector("#login-method-tabs")).not.toBeNull();
+	expect(host.querySelector("#login-method-qq")?.className).toContain("active");
+	expect(host.querySelector("#login-method-qq_music")).not.toBeNull();
+	expect(host.querySelector("#login-method-wechat")).not.toBeNull();
+	(host.querySelector("#login-method-qq_music") as HTMLButtonElement).click();
+	for (let i = 0; i < 12 && !(host.querySelector("#login-method-qq_music")?.className ?? "").includes("active"); i += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+	expect(host.querySelector("#login-method-qq_music")?.className).toContain("active");
+	expect(host.querySelector("#login-provider-qq")?.className).toContain("active");
+	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ 音乐");
 
 	root.unmount();
 	host.remove();
@@ -2093,9 +2105,9 @@ test("App opens account dropdown from a single logged-in account and launches on
 	}
 
 	expect(host.querySelector("#account-dropdown")).toBeNull();
-	expect(host.querySelector("#login-provider-netease")).toBeNull();
-	expect(host.querySelector("#login-provider-qq")).toBeNull();
-	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ 音乐");
+	expect(host.querySelector("#login-provider-netease")).not.toBeNull();
+	expect(host.querySelector("#login-provider-qq")?.className).toContain("active");
+	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ");
 	expect(host.querySelector("#qr-img")?.getAttribute("src")).toBe("data:image/png;base64,qq-img");
 	expect(qrProviders).toEqual(["qq"]);
 

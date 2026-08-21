@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import type { ProviderLoginStatus } from "@mineradio/shared";
 import type { AccountPort } from "../../ports/music/account-port";
-import type { LoginProviderId } from "./useLoginQrRuntime";
+import { ACCOUNT_PROVIDERS, type AccountProviderId } from "./useLoginQrRuntime";
 
 export type AccountStatusByProvider = Record<
-	LoginProviderId,
+	AccountProviderId,
 	ProviderLoginStatus | null
 >;
 
@@ -15,31 +15,33 @@ export interface AccountCookieImportLifecycle {
 
 export interface AccountSessionControllerOptions {
 	accounts: AccountPort | null;
-	syncProviderPlaylists(provider: LoginProviderId): Promise<void>;
+	syncProviderPlaylists(provider: AccountProviderId): Promise<void>;
 	refreshHome(): Promise<unknown>;
 	refreshLibrary(): void | Promise<void>;
-	providerLabel(provider: LoginProviderId): string;
+	providerLabel(provider: AccountProviderId): string;
 	showToast(message: string): void;
 }
 
 export interface AccountSessionControllerResult {
 	statusByProvider: AccountStatusByProvider;
 	acceptProviderStatus(status: ProviderLoginStatus): void;
-	refreshProviderStatus(provider: LoginProviderId): Promise<void>;
+	refreshProviderStatus(provider: AccountProviderId): Promise<void>;
 	importProviderCookie(
-		provider: LoginProviderId,
+		provider: AccountProviderId,
 		cookie: string,
 		lifecycle?: AccountCookieImportLifecycle,
 	): Promise<void>;
-	logoutProvider(provider: LoginProviderId): Promise<void>;
+	logoutProvider(provider: AccountProviderId): Promise<void>;
 }
 
 function createInitialStatusByProvider(): AccountStatusByProvider {
-	return {
+	const initial: Record<AccountProviderId, ProviderLoginStatus | null> = {
 		netease: null,
 		qq: null,
+		kugou: null,
 		soda: null,
 	};
+	return initial;
 }
 
 export function useAccountSessionController({
@@ -70,7 +72,7 @@ export function useAccountSessionController({
 	};
 
 	const acceptProviderStatus = useCallback((status: ProviderLoginStatus) => {
-		if (status.provider !== "netease" && status.provider !== "qq" && status.provider !== "soda") {
+		if (!ACCOUNT_PROVIDERS.includes(status.provider)) {
 			return;
 		}
 		setStatusByProvider((current) => ({
@@ -79,7 +81,7 @@ export function useAccountSessionController({
 		}));
 	}, []);
 
-	const refreshProviderStatus = useCallback(async (provider: LoginProviderId) => {
+	const refreshProviderStatus = useCallback(async (provider: AccountProviderId) => {
 		const dependencies = dependenciesRef.current;
 		const { accounts: accountPort } = dependencies;
 		if (!accountPort) {
@@ -105,7 +107,7 @@ export function useAccountSessionController({
 	}, [acceptProviderStatus]);
 
 	const importProviderCookie = useCallback(async (
-		provider: LoginProviderId,
+		provider: AccountProviderId,
 		cookie: string,
 		lifecycle: AccountCookieImportLifecycle = {},
 	) => {
@@ -149,7 +151,7 @@ export function useAccountSessionController({
 		}
 	}, [acceptProviderStatus]);
 
-	const logoutProvider = useCallback(async (provider: LoginProviderId) => {
+	const logoutProvider = useCallback(async (provider: AccountProviderId) => {
 		const dependencies = dependenciesRef.current;
 		const { accounts: accountPort } = dependencies;
 		const label = dependencies.providerLabel(provider);
