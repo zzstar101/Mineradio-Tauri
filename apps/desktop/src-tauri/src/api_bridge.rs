@@ -277,7 +277,7 @@ async fn handle_provider_route(
             })))
         }
         ("GET", ["login-qr-key"]) => {
-            let qr = qr_login(api, provider)?;
+            let qr = qr_login(api, provider, params.get("kind").map(String::as_str))?;
             let result = qr
                 .create_key()
                 .await
@@ -289,7 +289,7 @@ async fn handle_provider_route(
             if key.trim().is_empty() {
                 return Err(ApiCallError::bad_request("QR key required"));
             }
-            let qr = qr_login(api, provider)?;
+            let qr = qr_login(api, provider, params.get("kind").map(String::as_str))?;
             let result = qr
                 .create_image(key)
                 .await
@@ -301,7 +301,7 @@ async fn handle_provider_route(
             if key.trim().is_empty() {
                 return Err(ApiCallError::bad_request("QR key required"));
             }
-            let qr = qr_login(api, provider)?;
+            let qr = qr_login(api, provider, params.get("kind").map(String::as_str))?;
             let result = qr
                 .check(key)
                 .await
@@ -368,16 +368,32 @@ fn provider_api(api: &Api, provider: ProviderId) -> ProviderApi {
     }
 }
 
-fn qr_login(api: &Api, provider: ProviderId) -> Result<mineradio_api::QrLoginApi, ApiCallError> {
-    let kind = match provider {
-        ProviderId::Netease => QrLoginKind::Netease,
-        ProviderId::Qq => QrLoginKind::Qq,
-        ProviderId::Soda => QrLoginKind::Soda,
-        ProviderId::Kugou => QrLoginKind::Kugou,
-        ProviderId::Spotify | ProviderId::Unknown => {
-            return Err(ApiCallError::not_found("QR login not supported for provider"))
-        }
+fn qr_login(
+    api: &Api,
+    provider: ProviderId,
+    kind: Option<&str>,
+) -> Result<mineradio_api::QrLoginApi, ApiCallError> {
+    let kind = match kind {
+        Some("qq") => QrLoginKind::Qq,
+        Some("qq_music") => QrLoginKind::QqMusic,
+        Some("wechat") => QrLoginKind::Wechat,
+        Some("netease") => QrLoginKind::Netease,
+        Some("kugou") => QrLoginKind::Kugou,
+        Some("soda") => QrLoginKind::Soda,
+        Some(_) => return Err(ApiCallError::bad_request("unknown QR login kind")),
+        None => match provider {
+            ProviderId::Netease => QrLoginKind::Netease,
+            ProviderId::Qq => QrLoginKind::Qq,
+            ProviderId::Soda => QrLoginKind::Soda,
+            ProviderId::Kugou => QrLoginKind::Kugou,
+            ProviderId::Spotify | ProviderId::Unknown => {
+                return Err(ApiCallError::not_found("QR login not supported for provider"))
+            }
+        },
     };
+    if kind.provider() != provider {
+        return Err(ApiCallError::bad_request("QR login kind does not match provider"));
+    }
     api.qr_login(kind)
         .cloned()
         .ok_or_else(|| ApiCallError::not_found("QR login not available"))
@@ -425,7 +441,7 @@ fn health_body(app_version: &str, schema_version: &str) -> serde_json::Value {
         "appVersion": app_version,
         "apiVersion": "0.1.0",
         "schemaVersion": schema_version,
-        "providers": ["netease", "qq", "soda"],
+        "providers": ["netease", "qq", "kugou", "soda"],
         "providerStatus": capabilities_matrix()
     })
 }
@@ -444,6 +460,12 @@ fn capabilities_matrix() -> serde_json::Value {
                 "providerId": "qq",
                 "available": true,
                 "capabilities": ["search", "songUrl", "lyric", "playlistList", "playlistDetail", "loginStatus", "logout", "quality"],
+                "message": "online"
+            },
+            {
+                "providerId": "kugou",
+                "available": true,
+                "capabilities": ["search", "songUrl", "lyric", "playlistList", "playlistDetail", "loginStatus", "logout", "like", "quality"],
                 "message": "online"
             },
             {
