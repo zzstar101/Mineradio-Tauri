@@ -41,6 +41,7 @@ const IMAGE_PROXY_USER_AGENT: &str =
 const MEDIA_FETCH_TIMEOUT: Duration = Duration::from_secs(120);
 
 fn http_client() -> &'static reqwest::Client {
+    crate::install_tls_crypto_provider();
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()

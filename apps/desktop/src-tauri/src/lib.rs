@@ -12,7 +12,7 @@ pub mod updater_smoke;
 
 use std::{
     path::PathBuf,
-    sync::{atomic::Ordering, Arc, Mutex},
+    sync::{atomic::Ordering, Arc, Mutex, OnceLock},
     time::Duration,
 };
 use tauri::Manager;
@@ -20,6 +20,8 @@ use tauri::Manager;
 pub use app::state::{
     AppState, DesktopLyricsPollerChild, DesktopLyricsRuntimeState, RuntimeConfig,
 };
+
+static TLS_PROVIDER: OnceLock<()> = OnceLock::new();
 
 fn build_and_start_sidecar(
     state: &AppState,
@@ -162,7 +164,14 @@ fn updater_public_key_from_plugin_config(
         .map(str::to_owned)
 }
 
+pub fn install_tls_crypto_provider() {
+    TLS_PROVIDER.get_or_init(|| {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    });
+}
+
 pub fn run() {
+    install_tls_crypto_provider();
     let app_data_dir = paths::resolve_app_data_dir();
     let log_dir = paths::resolve_log_dir();
     let app_version = env!("CARGO_PKG_VERSION").to_string();
