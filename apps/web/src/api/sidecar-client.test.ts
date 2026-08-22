@@ -209,6 +209,33 @@ test("discoverHome GETs the baseline Home discover endpoint", async () => {
 	});
 });
 
+test("recommendationPages GETs provider recommendation pages", async () => {
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toBe("/recommendations/pages?refresh=false");
+		return {
+			ok: true,
+			data: [{
+				provider: "netease",
+				list: [{
+					title: "每日推荐",
+					list: [{
+						id: "card-1",
+						kind: "Track",
+					}],
+				}],
+			}],
+		};
+	}, async () => {
+		const client = new SidecarClient();
+		const pages = await client.recommendationPages();
+		expect(pages[0].provider).toBe("netease");
+		expect(pages[0].list[0].title).toBe("每日推荐");
+		expect(pages[0].list[0].list[0].id).toBe("card-1");
+	});
+});
+
 test("podcastSearch GETs baseline podcast search endpoint", async () => {
 	await withTauriApi(async (args) => {
 		const { method, path } = apiArgs(args);

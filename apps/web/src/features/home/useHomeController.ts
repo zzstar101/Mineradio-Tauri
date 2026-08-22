@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
 	DiscoverHomeResponse,
+	RecommendationPage,
 	Track,
 	WeatherRadioResponse,
 } from "@mineradio/shared";
@@ -25,11 +26,14 @@ export type HomeListenStorage = HomeListenRepository;
 
 export interface HomeControllerResult {
 	discover: DiscoverHomeResponse | null;
+	recommendations: RecommendationPage[];
 	weatherRadio: WeatherRadioResponse | null;
 	playlistDetail: HomePlaylistDetailView | null;
 	discoverLoading: boolean;
+	recommendationsLoading: boolean;
 	weatherRadioLoading: boolean;
 	discoverError: string | null;
+	recommendationsError: string | null;
 	weatherRadioError: string | null;
 	forcedOpen: boolean;
 	suppressed: boolean;
@@ -38,6 +42,7 @@ export interface HomeControllerResult {
 	setForcedOpen(open: boolean): void;
 	setSuppressed(suppressed: boolean): void;
 	refreshDiscover(): Promise<DiscoverHomeResponse | null>;
+	refreshRecommendations(options?: { refresh?: boolean }): Promise<RecommendationPage[]>;
 	refreshWeatherRadio(): Promise<WeatherRadioResponse | null>;
 	recordListenPause(): void;
 	recordListenProgress(positionMs: number, durationMs: number | null): void;
@@ -114,14 +119,17 @@ export function useHomeController({
 	autoRefresh?: boolean;
 }): HomeControllerResult {
 	const [discover, setDiscover] = useState<DiscoverHomeResponse | null>(null);
+	const [recommendations, setRecommendations] = useState<RecommendationPage[]>([]);
 	const [weatherRadio, setWeatherRadio] = useState<WeatherRadioResponse | null>(
 		null,
 	);
 	const [playlistDetail, setPlaylistDetail] =
 		useState<HomePlaylistDetailView | null>(null);
 	const [discoverLoading, setDiscoverLoading] = useState(false);
+	const [recommendationsLoading, setRecommendationsLoading] = useState(false);
 	const [weatherRadioLoading, setWeatherRadioLoading] = useState(false);
 	const [discoverError, setDiscoverError] = useState<string | null>(null);
+	const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
 	const [weatherRadioError, setWeatherRadioError] = useState<string | null>(null);
 	const [forcedOpen, setForcedOpen] = useState(false);
 	const [suppressed, setSuppressed] = useState(false);
@@ -137,6 +145,7 @@ export function useHomeController({
 		repository: storage,
 	});
 	const discoverRequestRef = useRef(0);
+	const recommendationRequestRef = useRef(0);
 	const weatherRequestRef = useRef(0);
 	const dependenciesRef = useRef({
 		discoverPort,
@@ -218,6 +227,37 @@ export function useHomeController({
 		}
 	}, []);
 
+	const refreshRecommendations = useCallback(async (
+		options: { refresh?: boolean } = {},
+	) => {
+		const port = dependenciesRef.current.discoverPort;
+		if (!port) {
+			setRecommendations([]);
+			setRecommendationsLoading(false);
+			setRecommendationsError(null);
+			return [];
+		}
+		const sequence = ++recommendationRequestRef.current;
+		setRecommendationsLoading(true);
+		setRecommendationsError(null);
+		try {
+			const next = await port.recommendationPages(options);
+			if (sequence === recommendationRequestRef.current) setRecommendations(next);
+			return next;
+		} catch (error) {
+			if (sequence === recommendationRequestRef.current) {
+				setRecommendationsError(
+					error instanceof Error ? error.message : "推荐内容载入失败",
+				);
+			}
+			return [];
+		} finally {
+			if (sequence === recommendationRequestRef.current) {
+				setRecommendationsLoading(false);
+			}
+		}
+	}, []);
+
 	const refreshWeatherRadio = useCallback(async () => {
 		const port = dependenciesRef.current.discoverPort;
 		if (!port) {
@@ -255,19 +295,24 @@ export function useHomeController({
 		if (!autoRefresh) return;
 		if (!discoverPort) {
 			setDiscover(null);
+			setRecommendations([]);
 			setWeatherRadio(null);
 			setDiscoverLoading(false);
+			setRecommendationsLoading(false);
 			setWeatherRadioLoading(false);
 			setDiscoverError(null);
+			setRecommendationsError(null);
 			setWeatherRadioError(null);
 			return;
 		}
 		void refreshDiscover();
+		void refreshRecommendations();
 		void refreshWeatherRadio();
 	}, [
 		autoRefresh,
 		discoverPort,
 		typeof providerLoggedIn === "boolean" ? providerLoggedIn : false,
+		refreshRecommendations,
 		refreshDiscover,
 		refreshWeatherRadio,
 	]);
@@ -517,11 +562,14 @@ export function useHomeController({
 
 	return {
 		discover,
+		recommendations,
 		weatherRadio,
 		playlistDetail,
 		discoverLoading,
+		recommendationsLoading,
 		weatherRadioLoading,
 		discoverError,
+		recommendationsError,
 		weatherRadioError,
 		forcedOpen,
 		suppressed,
@@ -530,6 +578,7 @@ export function useHomeController({
 		setForcedOpen,
 		setSuppressed,
 		refreshDiscover,
+		refreshRecommendations,
 		refreshWeatherRadio,
 		recordListenPause,
 		recordListenProgress,

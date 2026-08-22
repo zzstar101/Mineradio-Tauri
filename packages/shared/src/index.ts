@@ -14,3 +14,4 @@ export * from "./session";
 export * from "./weather";
 export * from "./podcast";
 export * from "./discover";
+export * from "./recommendation";

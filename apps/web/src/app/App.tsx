@@ -533,11 +533,14 @@ export function App({
   homeControllerRef.current = homeController;
   const {
     discover: homeDiscover,
+    recommendations: homeRecommendations,
     weatherRadio: homeWeatherRadio,
     playlistDetail: homePlaylistDetail,
     discoverLoading: homeDiscoverLoading,
+    recommendationsLoading: homeRecommendationsLoading,
     weatherRadioLoading: homeWeatherRadioLoading,
     discoverError: homeDiscoverError,
+    recommendationsError: homeRecommendationsError,
     weatherRadioError: homeWeatherRadioError,
     forcedOpen: homeForcedOpen,
     suppressed: homeSuppressed,
@@ -546,6 +549,7 @@ export function App({
     setForcedOpen: setHomeForcedOpen,
     setSuppressed: setHomeSuppressed,
     refreshDiscover: refreshHomeDiscover,
+    refreshRecommendations: refreshHomeRecommendations,
     refreshWeatherRadio: refreshHomeWeatherRadio,
     recordListenPause: recordHomeListenPause,
     recordListenProgress: recordHomeListenProgress,
@@ -1652,6 +1656,7 @@ export function App({
     home: {
       homeProps: {
         discover: homeDiscover,
+        recommendations: homeRecommendations,
         weatherRadio: homeWeatherRadio,
         listenSummary: homeListenSummary,
         dashboard: homeDashboard,
@@ -1659,6 +1664,7 @@ export function App({
         active: emptyHomeActive,
         loading: homeDiscoverLoading || homeWeatherRadioLoading,
         discoverError: homeDiscoverError,
+        recommendationsError: homeRecommendationsError,
         weatherRadioError: homeWeatherRadioError,
         isPlaying,
         positionMs,
@@ -1684,6 +1690,7 @@ export function App({
         onNotice: showNotice,
         onPlayWeatherSong: (index) => void playHomeWeatherSong(index),
         onRetryDiscover: () => void refreshHomeDiscover(),
+        onRetryRecommendations: () => void refreshHomeRecommendations({ refresh: true }),
         onRetryWeatherRadio: () => void refreshHomeWeatherRadio(),
         onClosePlaylistDetail: closeHomePlaylistDetail,
         onPlayPlaylistDetail: playHomePlaylistDetail,

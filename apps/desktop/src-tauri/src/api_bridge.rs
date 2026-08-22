@@ -98,6 +98,17 @@ async fn handle_route(
     match (method, route) {
         ("GET", "/health") => Ok(Success::Raw(health_body(app_version, schema_version))),
         ("GET", "/providers/capabilities") => Ok(Success::Data(capabilities_matrix())),
+        ("GET", "/recommendations/pages") => {
+            let refresh = params
+                .get("refresh")
+                .map(|value| value == "true" || value == "1")
+                .unwrap_or(false);
+            let pages = api
+                .recommendation_pages(refresh)
+                .await
+                .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(serde_json::to_value(pages).unwrap()))
+        }
         ("GET", "/search") => {
             let keyword = params
                 .get("keyword")

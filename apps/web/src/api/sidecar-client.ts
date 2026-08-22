@@ -39,6 +39,8 @@ import {
 	ProviderLoginStatusSchema,
 	ProviderLogoutAck,
 	ProviderLogoutAckSchema,
+	RecommendationPage,
+	RecommendationPageArraySchema,
 	SharedPlaylistImportRequest,
 	SharedPlaylistImportResult,
 	SharedPlaylistImportResultSchema,
@@ -222,6 +224,17 @@ export class SidecarClient {
 			"GET",
 			"/discover/home",
 			DiscoverHomeResponseSchema,
+		);
+	}
+
+	async recommendationPages(options: { refresh?: boolean } = {}): Promise<RecommendationPage[]> {
+		const query = new URLSearchParams({
+			refresh: String(options.refresh === true),
+		});
+		return this.request(
+			"GET",
+			`/recommendations/pages?${query.toString()}`,
+			RecommendationPageArraySchema,
 		);
 	}
 

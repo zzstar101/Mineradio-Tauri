@@ -32,6 +32,7 @@ const legacyMethodOperations = {
 	checkSongLikes: "likes.checkSongLikes",
 	weatherRadio: "discover.weatherRadio",
 	discoverHome: "discover.discoverHome",
+	recommendationPages: "discover.recommendationPages",
 	podcastDetail: "discover.podcastDetail",
 	podcastMy: "discover.podcastMy",
 	podcastMyItems: "discover.podcastMyItems",
@@ -47,6 +48,7 @@ const sidecarDefaults: Partial<Record<LegacyMusicMethod, Readonly<Record<number,
 	podcastPrograms: { 1: 30, 2: 0 },
 	podcastMyItems: { 1: 36, 2: 0 },
 	podcastDjBeatmap: { 1: 0, 2: 0 },
+	recommendationPages: { 0: {} },
 };
 
 function applySidecarDefaults(method: LegacyMusicMethod, args: unknown[]): unknown[] {

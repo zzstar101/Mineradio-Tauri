@@ -1,5 +1,14 @@
 import { useState, type CSSProperties, type KeyboardEvent, type ReactElement } from "react";
-import type { DiscoverHomeResponse, PlaylistSummary, PodcastRadio, ProviderId, Track, WeatherRadioResponse } from "@mineradio/shared";
+import type {
+	DiscoverHomeResponse,
+	PlaylistSummary,
+	PodcastRadio,
+	ProviderId,
+	RecommendationCard,
+	RecommendationPage,
+	Track,
+	WeatherRadioResponse,
+} from "@mineradio/shared";
 import { resolveVirtualListWindow } from "../components/shell/virtual-list";
 import { HomeDashboardHero } from "../features/home/HomeDashboardHero";
 import {
@@ -19,6 +28,7 @@ export type {
 
 export interface EmptyHomeHostProps {
 	discover?: DiscoverHomeResponse | null;
+	recommendations?: RecommendationPage[] | null;
 	weatherRadio?: WeatherRadioResponse | null;
 	listenSummary?: HomeListenSummary | null;
 	dashboard?: HomeDashboardModel | null;
@@ -26,6 +36,7 @@ export interface EmptyHomeHostProps {
 	active?: boolean;
 	loading?: boolean;
 	discoverError?: string | null;
+	recommendationsError?: string | null;
 	weatherRadioError?: string | null;
 	isPlaying?: boolean;
 	positionMs?: number;
@@ -50,6 +61,7 @@ export interface EmptyHomeHostProps {
 	onPlayForYou?: (index: number) => void;
 	onPlayWeatherSong?: (index: number) => void;
 	onRetryDiscover?: () => void;
+	onRetryRecommendations?: () => void;
 	onRetryWeatherRadio?: () => void;
 	onClosePlaylistDetail?: () => void;
 	onPlayPlaylistDetail?: (index: number) => void;
@@ -80,6 +92,38 @@ const HOME_WAVE_BAR_COUNT = 24;
 const HOME_RAIL_MAX_TILES = 32;
 const HOME_RAIL_PRIMARY_SONG_COUNT = 4;
 const HOME_PROVIDER_ORDER: ProviderId[] = ["netease", "qq", "soda"];
+const HOME_RECOMMENDATION_PREVIEW_PROVIDER_ORDER: ProviderId[] = [
+	"netease",
+	"qq",
+	"kugou",
+	"soda",
+];
+const HOME_RECOMMENDATION_PREVIEW_CARD_LIMIT = 8;
+
+interface HomeRecommendationPreview {
+	provider: ProviderId;
+	title: string;
+	kind: RecommendationPage["list"][number]["kind"];
+	cards: RecommendationCard[];
+}
+
+function buildHomeRecommendationPreviews(
+	pages: RecommendationPage[] | null | undefined,
+): HomeRecommendationPreview[] {
+	return HOME_RECOMMENDATION_PREVIEW_PROVIDER_ORDER.flatMap((provider) => {
+		const module = pages
+			?.filter((page) => page.provider === provider)
+			.flatMap((page) => page.list[0] ?? [])
+		.find((module) => module.list.length > 0);
+		if (!module) return [];
+		return [{
+			provider,
+			title: module.title,
+			kind: module.kind,
+			cards: module.list.slice(0, HOME_RECOMMENDATION_PREVIEW_CARD_LIMIT),
+		}];
+	});
+}
 
 const HOME_PROVIDER_LABELS: Record<ProviderId, string> = {
 	netease: "网易云音乐",
@@ -605,6 +649,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 		dashboard,
 	);
 	const railSections = buildHomeRailSections(tiles, loggedOut);
+	const recommendationPreviews = buildHomeRecommendationPreviews(props.recommendations);
 	const loading = props.loading === true;
 	const hasPublicRecommendations = loggedOut && (discover?.playlists.length ?? 0) > 0;
 	const libraryCover = firstPlaylist?.coverUrl || daily?.coverUrl;
@@ -624,6 +669,74 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 		else if (dashboard.continue.kind === "daily") props.onPlayDaily?.();
 		else props.onPlayRecent?.();
 	};
+	const recommendationPreviewNodes = recommendationPreviews.length ? (
+		<div className="home-recommendation-previews" aria-label="Provider recommendations">
+			{recommendationPreviews.map((preview) => (
+				<section
+					className="home-rail-section"
+					data-home-provider={preview.provider}
+					data-home-recommendation-preview={preview.provider}
+					key={`recommendation-${preview.provider}`}
+				>
+					{preview.title.trim() ? (
+						<div className="home-rail-section-head">
+							<div className="home-rail-section-title home-recommendation-module-title">{preview.title}</div>
+						</div>
+					) : null}
+					<div className="home-tile-row">
+						{preview.cards.map((card, index) => preview.kind === "Track" ? (
+							<div
+								className="home-recommendation-card home-recommendation-card-track"
+								data-home-recommendation-card={index}
+								data-card-kind={card.kind}
+								key={`${preview.provider}-${card.id}-${index}`}
+							>
+								<div className={`home-recommendation-track-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
+								<div className="home-recommendation-track-text">
+									<div className="home-recommendation-title">{card.title || "未命名歌曲"}</div>
+									<div className="home-recommendation-subtitle">{card.subtitle}</div>
+								</div>
+							</div>
+						) : (
+							preview.kind === "Mixed" && preview.provider === "netease" ? (
+								<div
+									className="home-recommendation-card home-recommendation-card-netease-mixed"
+									data-home-recommendation-card={index}
+									data-card-kind={card.kind}
+									key={`${preview.provider}-${card.id}-${index}`}
+								>
+									<div className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
+									<div className="home-recommendation-netease-title">
+										<div className="home-recommendation-title">{card.title || "未命名推荐"}</div>
+									</div>
+									{card.subtitle ? (
+										<div className="home-recommendation-netease-footer">
+											<div className="home-recommendation-subtitle">{card.subtitle}</div>
+										</div>
+									) : null}
+								</div>
+							) : (
+								<div
+									className="home-recommendation-media"
+									data-home-recommendation-card={index}
+									data-card-kind={card.kind}
+									key={`${preview.provider}-${card.id}-${index}`}
+								>
+									<div className="home-recommendation-cover-card">
+										<div className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
+									</div>
+									<div className="home-recommendation-media-text">
+										<div className="home-recommendation-title">{card.title || "未命名推荐"}</div>
+										{card.subtitle ? <div className="home-recommendation-subtitle">{card.subtitle}</div> : null}
+									</div>
+								</div>
+							)
+						))}
+					</div>
+				</section>
+			))}
+		</div>
+	) : null;
 
 	return (
 		<section id="empty-home" aria-label="Mineradio home">
@@ -638,12 +751,18 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 				</div>
 
 				<div className="home-right-pane">
-					{props.discoverError || props.weatherRadioError ? (
+					{props.discoverError || props.recommendationsError || props.weatherRadioError ? (
 						<div className="home-local-errors" aria-label="首页载入状态">
 							{props.discoverError ? (
 								<div className="home-local-error" role="status" data-home-error="discover">
 									<span>推荐内容载入失败：{props.discoverError}</span>
 									<button type="button" onClick={props.onRetryDiscover}>重试推荐</button>
+								</div>
+							) : null}
+							{props.recommendationsError ? (
+								<div className="home-local-error" role="status" data-home-error="recommendations">
+									<span>推荐预览载入失败：{props.recommendationsError}</span>
+									<button type="button" onClick={props.onRetryRecommendations}>重试推荐</button>
 								</div>
 							) : null}
 							{props.weatherRadioError ? (
@@ -654,6 +773,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 							) : null}
 						</div>
 					) : null}
+					{recommendationPreviewNodes}
 					<div className="home-insight-dock" aria-label="今日收听概览">
 						<div className="home-insight-item"><span>今日</span><strong>{Math.round(dashboard.insight.todayListenMs / 60_000)} 分钟</strong></div>
 						<div className="home-insight-item"><span>歌曲</span><strong>{dashboard.insight.todayUniqueSongs} 首</strong></div>

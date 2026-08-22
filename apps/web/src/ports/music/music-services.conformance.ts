@@ -40,6 +40,7 @@ export type MusicServiceOperation =
 	| "likes.checkSongLikes"
 	| "discover.weatherRadio"
 	| "discover.discoverHome"
+	| "discover.recommendationPages"
 	| "discover.podcastDetail"
 	| "discover.podcastMy"
 	| "discover.podcastMyItems"
@@ -222,6 +223,12 @@ export const musicServicesConformanceScenarios: readonly ConformanceScenario[] =
 		invoke: (services) => services.discover.discoverHome(),
 	},
 	{
+		name: "recommendationPages preserves the refresh default",
+		operation: "discover.recommendationPages",
+		expectedArgs: [{}],
+		invoke: (services) => services.discover.recommendationPages(),
+	},
+	{
 		name: "podcastDetail preserves id",
 		operation: "discover.podcastDetail",
 		expectedArgs: ["radio-1"],
@@ -300,13 +307,13 @@ export function runMusicServicesConformance(
 		});
 	}
 
-	test(`${adapterName}: conformance covers all 28 MusicServices methods`, () => {
+	test(`${adapterName}: conformance covers all 29 MusicServices methods`, () => {
 		const covered = musicServicesConformanceScenarios
 			.map((scenario) => scenario.operation)
 			.sort();
 		const exposed = musicServiceLeafOperations(createHarness({ result: {} }).services);
-		expect(covered.length).toBe(28);
-		expect(new Set(covered).size).toBe(28);
+		expect(covered.length).toBe(29);
+		expect(new Set(covered).size).toBe(29);
 		expect(covered).toEqual(exposed);
 	});
 }

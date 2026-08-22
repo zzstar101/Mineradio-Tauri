@@ -86,6 +86,7 @@ test("MusicServices keeps feature calls behind narrow ports", async () => {
 		discover: {
 			weatherRadio: unused,
 			discoverHome: unused,
+			recommendationPages: unused,
 			podcastDetail: unused,
 			podcastMy: unused,
 			podcastMyItems: unused,

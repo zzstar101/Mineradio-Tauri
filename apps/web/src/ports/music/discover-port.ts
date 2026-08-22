@@ -4,6 +4,7 @@ import type {
 	PodcastDetailResponse,
 	PodcastMyItemsResponse,
 	PodcastMyResponse,
+	RecommendationPage,
 	WeatherRadioResponse,
 } from "@mineradio/shared";
 
@@ -19,6 +20,7 @@ export interface WeatherRadioQuery {
 export interface DiscoverPort {
 	weatherRadio(params?: WeatherRadioQuery): Promise<WeatherRadioResponse>;
 	discoverHome(): Promise<DiscoverHomeResponse>;
+	recommendationPages(options?: { refresh?: boolean }): Promise<RecommendationPage[]>;
 	podcastDetail(id: string): Promise<PodcastDetailResponse>;
 	podcastMy(): Promise<PodcastMyResponse>;
 	podcastMyItems(key: string, limit?: number, offset?: number): Promise<PodcastMyItemsResponse>;
