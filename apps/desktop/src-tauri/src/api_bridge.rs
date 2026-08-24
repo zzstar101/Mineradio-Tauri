@@ -209,8 +209,13 @@ async fn handle_provider_route(
         }
         ("GET", ["playlists", id]) => {
             let id = decode_path_segment(id);
+            let offset = query_u32(params, "offset", 0);
+            // 缺省 500：QQ 侧 song_num 上限即 500，网易 n 按需返回。
+            // 旧实现硬编码 (0, 0)：QQ clamp 后只回 1 首，网易直接回空，
+            // 歌单详情页因此显示“没有内容”。
+            let limit = query_u32(params, "limit", 500);
             let result = provider_api
-                .playlist_detail(&id, 0, 0)
+                .playlist_detail(&id, offset, limit)
                 .await
                 .map_err(|err| ApiCallError::from_api_error(&err))?;
             Ok(Success::Data(serde_json::to_value(result).unwrap()))
