@@ -363,10 +363,20 @@ export class SidecarClient {
 		);
 	}
 
-	async playlistDetail(provider: ProviderId, id: string): Promise<PlaylistDetail> {
+	async playlistDetail(
+		provider: ProviderId,
+		id: string,
+		page?: { offset: number; limit: number },
+	): Promise<PlaylistDetail> {
+		const params = new URLSearchParams();
+		if (page) {
+			params.set("offset", String(page.offset));
+			params.set("limit", String(page.limit));
+		}
+		const query = params.toString();
 		return this.request(
 			"GET",
-			`/providers/${provider}/playlists/${encodeURIComponent(id)}`,
+			`/providers/${provider}/playlists/${encodeURIComponent(id)}${query ? `?${query}` : ""}`,
 			PlaylistDetailSchema,
 		);
 	}

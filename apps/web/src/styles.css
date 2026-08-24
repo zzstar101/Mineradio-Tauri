@@ -2681,6 +2681,83 @@ button.home-recommendation-module-title:hover {
   font-weight: 760;
 }
 
+/* 歌单详情分页：底部空占位行。载入下一页期间播放双层扫光
+   （整行连体带 + 封面内部高亮），静态时仅显示灰色块与灰条 */
+.home-detail-track-skeleton {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.home-detail-skeleton-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .085);
+}
+
+/* 占位行封面：与文字条同灰度的纯色块。
+   需要同时压掉基础规则的渐变 background-image、
+   无封面时的黑胶唱片（::before 改作扫光载体故仅覆盖其内容）、通用高光 ::after */
+.home-detail-track-skeleton .home-detail-track-cover {
+  background: rgba(255, 255, 255, .085);
+}
+
+.home-detail-track-skeleton .home-detail-track-cover::after {
+  content: none;
+}
+
+.home-detail-skeleton-title {
+  width: 62%;
+}
+
+.home-detail-skeleton-sub {
+  width: 38%;
+  margin-top: 6px;
+}
+
+.home-detail-skeleton-album {
+  width: 70%;
+}
+
+/* 文字条保持静态灰，不做扫光 */
+
+/* 整行连体扫光：一条灰白高亮带从左到右掠过封面+文字条（覆盖整行），仅加载期间 */
+.home-detail-list[data-loading-more="true"] .home-detail-track-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 18%,
+    rgba(255, 255, 255, .13) 50%,
+    transparent 82%
+  );
+  transform: translateX(-100%);
+  animation: home-detail-skeleton-sweep 1.4s linear infinite;
+}
+
+/* 封面内部扫光：方块自己再有一条更亮的高亮掠过，同样仅在加载期间。
+   需重置黑胶唱片 ::before 泄漏过来的 box-shadow / border-radius */
+.home-detail-list[data-loading-more="true"] .home-detail-track-skeleton .home-detail-track-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: none;
+  background: linear-gradient(
+    100deg,
+    transparent 18%,
+    rgba(255, 255, 255, .16) 50%,
+    transparent 82%
+  );
+  transform: translateX(-100%);
+  animation: home-detail-skeleton-sweep 1.4s linear infinite;
+}
+
+@keyframes home-detail-skeleton-sweep {
+  to { transform: translateX(100%); }
+}
+
 @media (max-height: 760px) {
   #empty-home.home-detail-active {
     top: 86px;

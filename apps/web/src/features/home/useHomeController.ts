@@ -23,6 +23,11 @@ import type { HomeListenSummary } from "./home-listen-ledger";
 import type { HomeListenRepository } from "./home-listen-repository";
 import { defaultHomeListenRepository } from "./legacy-home-listen-adapter";
 import {
+	HOME_PLAYLIST_PAGE_SIZE,
+	applyPlaylistPageAtOffset,
+	playlistHasNextPage,
+} from "./home-playlist-paging";
+import {
 	useHomeDashboardController,
 	type HomeDashboardPlaybackFacade,
 } from "./useHomeDashboardController";
@@ -60,6 +65,7 @@ export interface HomeControllerResult {
 	openPlaylist(index: number): Promise<void>;
 	closePlaylistDetail(): void;
 	playPlaylistDetail(index: number): void;
+	loadMorePlaylistTracks(): Promise<void>;
 	openRecommendations(anchorProvider: ProviderId): void;
 	closeRecommendations(): void;
 	playRecommendationTrack(provider: ProviderId, card: RecommendationCardData): void;
@@ -406,6 +412,7 @@ export function useHomeController({
 			}
 			const key = `${item.provider}:${item.id}`;
 			setPlaylistDetail({ key, playlist: item, tracks: [], loading: true });
+			playlistLoadedCountRef.current = 0;
 			setSuppressed(false);
 			setForcedOpen(true);
 			current.setConsole(false);
@@ -414,10 +421,25 @@ export function useHomeController({
 			current.closeShelf();
 			current.selectShelfPlaylist(null);
 			try {
-				const detail = await current.library.playlistDetail(item.provider, item.id);
+				const detail = await current.library.playlistDetail(item.provider, item.id, {
+					offset: 0,
+					limit: HOME_PLAYLIST_PAGE_SIZE,
+				});
+				playlistLoadedCountRef.current = detail.tracks.length;
 				setPlaylistDetail((value) =>
 					value?.key === key
-						? { key, playlist: detail, tracks: detail.tracks, loading: false }
+						? {
+								key,
+								playlist: detail,
+								tracks: detail.tracks,
+								loading: false,
+								exhausted: !playlistHasNextPage({
+									loadedCount: detail.tracks.length,
+									pageCount: detail.tracks.length,
+									pageSize: HOME_PLAYLIST_PAGE_SIZE,
+									totalCount: detail.trackCount ?? null,
+								}),
+							}
 						: value,
 				);
 			} catch (error) {
@@ -434,6 +456,84 @@ export function useHomeController({
 	);
 
 	const closePlaylistDetail = useCallback(() => setPlaylistDetail(null), []);
+
+	/** 歌单详情加载下一页：单飞串行（进行中直接忽略新的触发），
+	 *  合并时去重；无新增/请求失败都判尽并收起占位。
+	 *  已载数以 ref 为权威：快速滚动下旧渲染的闭包可能持有过期 tracks 快照，
+	 *  用它算 offset 会发出重复页；提交时再校验一次 offset 是否仍与已载数一致，
+	 *  不一致说明响应已过期，丢弃且不判尽（保留占位等下一次触发）。 */
+	const playlistLoadMoreBusyRef = useRef(false);
+	const playlistLoadedCountRef = useRef(0);
+	const loadMorePlaylistTracks = useCallback(async () => {
+		const current = dependenciesRef.current;
+		const view = playlistDetail;
+		if (
+			playlistLoadMoreBusyRef.current ||
+			!view ||
+			view.loading ||
+			view.loadingMore ||
+			view.exhausted ||
+			playlistLoadedCountRef.current === 0 ||
+			!current.library
+		) {
+			return;
+		}
+		const offset = playlistLoadedCountRef.current;
+		const key = view.key;
+		playlistLoadMoreBusyRef.current = true;
+		setPlaylistDetail((value) =>
+			value && value.key === key ? { ...value, loadingMore: true } : value,
+		);
+		try {
+			console.log("[playlist-page] request", {
+				offset,
+				limit: HOME_PLAYLIST_PAGE_SIZE,
+			}); // TODO(debug)
+			const page = await current.library.playlistDetail(
+				view.playlist.provider,
+				view.playlist.id,
+				{ offset, limit: HOME_PLAYLIST_PAGE_SIZE },
+			);
+			setPlaylistDetail((value) => {
+				if (!value || (key != null && value.key !== key)) return value;
+				if (playlistLoadedCountRef.current !== offset) {
+					// 陈旧响应：期间列表已被其他写入推进，丢弃本页（不判尽）
+					console.log("[playlist-page] stale drop", {
+						requestedOffset: offset,
+						currentCount: playlistLoadedCountRef.current,
+					}); // TODO(debug)
+					return { ...value, loadingMore: false };
+				}
+				const merged = applyPlaylistPageAtOffset(value.tracks, offset, page.tracks);
+				playlistLoadedCountRef.current = merged.length;
+				const exhausted = !playlistHasNextPage({
+					loadedCount: merged.length,
+					pageCount: page.tracks.length,
+					pageSize: HOME_PLAYLIST_PAGE_SIZE,
+					totalCount: value.playlist.trackCount ?? null,
+				});
+				console.log("[playlist-page] apply", {
+					offset,
+					got: page.tracks.length,
+					total: merged.length,
+					exhausted,
+				}); // TODO(debug)
+				return {
+					...value,
+					tracks: merged,
+					loadingMore: false,
+					exhausted,
+				};
+			});
+		} catch {
+			// 静默收场：占位消失，用户可再次滚动重试
+			setPlaylistDetail((value) =>
+				value && value.key === key ? { ...value, loadingMore: false } : value,
+			);
+		} finally {
+			playlistLoadMoreBusyRef.current = false;
+		}
+	}, [playlistDetail]);
 
 	const closeRecommendations = useCallback(() => setRecommendationDetail(null), []);
 
@@ -477,6 +577,7 @@ export function useHomeController({
 				tracks: [],
 				loading: true,
 			});
+			playlistLoadedCountRef.current = 0;
 			setSuppressed(false);
 			setForcedOpen(true);
 			current.setConsole(false);
@@ -485,10 +586,25 @@ export function useHomeController({
 			current.closeShelf();
 			current.selectShelfPlaylist(null);
 			try {
-				const detail = await current.library.playlistDetail(provider, id);
+				const detail = await current.library.playlistDetail(provider, id, {
+					offset: 0,
+					limit: HOME_PLAYLIST_PAGE_SIZE,
+				});
+				playlistLoadedCountRef.current = detail.tracks.length;
 				setPlaylistDetail((value) =>
 					value?.key === key
-						? { key, playlist: detail, tracks: detail.tracks, loading: false }
+						? {
+								key,
+								playlist: detail,
+								tracks: detail.tracks,
+								loading: false,
+								exhausted: !playlistHasNextPage({
+									loadedCount: detail.tracks.length,
+									pageCount: detail.tracks.length,
+									pageSize: HOME_PLAYLIST_PAGE_SIZE,
+									totalCount: detail.trackCount ?? null,
+								}),
+							}
 						: value,
 				);
 			} catch (error) {
@@ -676,6 +792,7 @@ export function useHomeController({
 		closeRecommendations,
 		playRecommendationTrack,
 		openRecommendationPlaylist,
+		loadMorePlaylistTracks,
 		searchPlaylistDetailArtist,
 		openPodcast,
 		openPodcastSearch,

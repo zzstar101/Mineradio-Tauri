@@ -24,6 +24,10 @@ import {
 	type HomeDashboardModel,
 } from "../features/home/home-dashboard-policy";
 import type { HomeHeroVideoRepository } from "../features/home/home-hero-video";
+import {
+	HOME_PLAYLIST_LOAD_MORE_THRESHOLD_PX,
+	HOME_PLAYLIST_SKELETON_COUNT,
+} from "../features/home/home-playlist-paging";
 import type {
 	HomeListenRecord,
 	HomeListenSummary,
@@ -74,6 +78,7 @@ export interface EmptyHomeHostProps {
 	onRetryWeatherRadio?: () => void;
 	onClosePlaylistDetail?: () => void;
 	onPlayPlaylistDetail?: (index: number) => void;
+	onLoadMorePlaylistDetails?: () => void;
 	onOpenRecommendations?: (provider: ProviderId) => void;
 	onCloseRecommendations?: () => void;
 	onPlayRecommendationTrack?: (provider: ProviderId, card: RecommendationCardData) => void;
@@ -89,6 +94,10 @@ export interface HomePlaylistDetailView {
 	tracks: Track[];
 	loading?: boolean;
 	error?: string;
+	/** 正在拉取下一页（分页懒加载）。 */
+	loadingMore?: boolean;
+	/** 没有更多页了。 */
+	exhausted?: boolean;
 }
 
 interface HomeWaveBar {
@@ -490,7 +499,10 @@ function HomePlaylistDetailPage({
 		rowHeight: HOME_DETAIL_ROW_HEIGHT,
 		viewportHeight: HOME_DETAIL_VIEWPORT_HEIGHT,
 		scrollTop,
-		threshold: 80,
+		// 本列表为 flex gap 布局、行高非固定，padding 型虚拟化在 80 行阈值
+		// 边界与深滚动下会严重错位（表现为列表塌缩成一个渲染窗口）。
+		// 分页后已载行数有限，直接全量渲染，停用虚拟化。
+		threshold: Number.MAX_SAFE_INTEGER,
 	});
 	const visibleTracks = tracks.slice(
 		virtualWindow.startIndex,
@@ -549,46 +561,84 @@ function HomePlaylistDetailPage({
 					className="home-detail-list"
 					aria-label="Playlist tracks"
 					data-virtualized={virtualWindow.virtualized ? "true" : undefined}
-					onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+					data-loading-more={detail.loadingMore ? "true" : undefined}
+					onScroll={(event) => {
+						const el = event.currentTarget;
+						setScrollTop(el.scrollTop);
+						if (
+							!detail.loading &&
+							!detail.loadingMore &&
+							!detail.exhausted &&
+							el.scrollHeight - el.scrollTop - el.clientHeight <
+								HOME_PLAYLIST_LOAD_MORE_THRESHOLD_PX
+						) {
+							props.onLoadMorePlaylistDetails?.();
+						}
+					}}
 					style={virtualStyle}
 				>
 					{detail.loading ? (
 						<div className="home-detail-empty">正在载入歌单</div>
 					) : tracks.length === 0 ? (
 						<div className="home-detail-empty">{detail.error || "歌单暂无可播放歌曲"}</div>
-					) : visibleTracks.map((track, localIndex) => {
-						const index = virtualWindow.startIndex + localIndex;
-						const artist = artistLine(track, "未知歌手");
-						return (
-							<div
-								className="home-detail-track"
-								data-home-detail-track={index}
-								key={homeDetailTrackKey(track, index)}
-								onClick={() => props.onPlayPlaylistDetail?.(index)}
-								onKeyDown={(event) => handleDetailTrackKeyDown(event, () => props.onPlayPlaylistDetail?.(index))}
-								role="button"
-								tabIndex={0}
-							>
-								<div className="home-detail-track-index">{String(index + 1).padStart(2, "0")}</div>
-								<div className="home-detail-track-main">
-									<div className={`home-detail-track-cover${track.coverUrl ? " has-cover" : ""}`} style={coverStyle(track.coverUrl)} />
-									<div className="home-detail-track-text">
-										<div className="home-detail-track-title">{track.title || "未命名歌曲"}</div>
-										<div className="home-detail-track-sub">
-											<button className="home-detail-artist" type="button" onClick={(event) => {
-												event.stopPropagation();
-												props.onPlaylistDetailArtist?.(artist, track);
-											}}>{artist}</button>
+					) : (
+						<>
+							{visibleTracks.map((track, localIndex) => {
+								const index = virtualWindow.startIndex + localIndex;
+								const artist = artistLine(track, "未知歌手");
+								return (
+									<div
+										className="home-detail-track"
+										data-home-detail-track={index}
+										key={homeDetailTrackKey(track, index)}
+										onClick={() => props.onPlayPlaylistDetail?.(index)}
+										onKeyDown={(event) => handleDetailTrackKeyDown(event, () => props.onPlayPlaylistDetail?.(index))}
+										role="button"
+										tabIndex={0}
+									>
+										<div className="home-detail-track-index">{String(index + 1).padStart(2, "0")}</div>
+										<div className="home-detail-track-main">
+											<div className={`home-detail-track-cover${track.coverUrl ? " has-cover" : ""}`} style={coverStyle(track.coverUrl)} />
+											<div className="home-detail-track-text">
+												<div className="home-detail-track-title">{track.title || "未命名歌曲"}</div>
+												<div className="home-detail-track-sub">
+													<button className="home-detail-artist" type="button" onClick={(event) => {
+														event.stopPropagation();
+														props.onPlaylistDetailArtist?.(artist, track);
+													}}>{artist}</button>
+												</div>
+											</div>
+										</div>
+										<div className="home-detail-track-album">{track.album || "-"}</div>
+										<div className="home-detail-track-side">
+											<span>{formatDurationMs(track.durationMs)}</span>
 										</div>
 									</div>
-								</div>
-								<div className="home-detail-track-album">{track.album || "-"}</div>
-								<div className="home-detail-track-side">
-									<span>{formatDurationMs(track.durationMs)}</span>
-								</div>
-							</div>
-						);
-					})}
+								);
+							})}
+							{!detail.exhausted
+								? Array.from({ length: HOME_PLAYLIST_SKELETON_COUNT }, (_, skeletonIndex) => (
+									<div
+										className="home-detail-track home-detail-track-skeleton"
+										aria-hidden="true"
+										key={`skeleton-${skeletonIndex}`}
+									>
+										<div className="home-detail-track-index">{String(tracks.length + skeletonIndex + 1).padStart(2, "0")}</div>
+										<div className="home-detail-track-main">
+											<div className="home-detail-track-cover" />
+											<div className="home-detail-track-text">
+												<div className="home-detail-skeleton-bar home-detail-skeleton-title" />
+												<div className="home-detail-skeleton-bar home-detail-skeleton-sub" />
+											</div>
+										</div>
+										<div className="home-detail-track-album">
+											<div className="home-detail-skeleton-bar home-detail-skeleton-album" />
+										</div>
+									</div>
+								))
+								: null}
+						</>
+					)}
 				</div>
 			</div>
 		</section>
@@ -667,7 +717,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 							{preview.title.trim() ? ` · ${preview.title}` : null}
 						</button>
 					</div>
-					{preview.kind === "Track" ? (
+					{preview.kind === "track" ? (
 						<div className="home-recommendation-track-row">
 							{chunkIntoColumns(preview.cards, 3).map((column, columnIndex) => (
 								<div
@@ -691,7 +741,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 					) : (
 						<div
 							className={
-								preview.kind === "Mixed" && preview.provider === "netease"
+								preview.kind === "mixed" && preview.provider === "netease"
 									? "home-recommendation-netease-mixed-row"
 									: "home-recommendation-tile-row"
 							}

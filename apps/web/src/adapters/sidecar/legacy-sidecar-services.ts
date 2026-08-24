@@ -29,7 +29,7 @@ export function createLegacySidecarServices(client: SidecarClient): MusicService
 		},
 		library: {
 			playlistList: (provider) => client.playlistList(provider),
-			playlistDetail: (provider, id) => client.playlistDetail(provider, id),
+			playlistDetail: (provider, id, page) => client.playlistDetail(provider, id, page),
 			importSharedPlaylist: (input) => client.importSharedPlaylist(input),
 			addSongToPlaylist: (provider, playlistId, trackId) => (
 				client.addSongToPlaylist(provider, playlistId, trackId)
