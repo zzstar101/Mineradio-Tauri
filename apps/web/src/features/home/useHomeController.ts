@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
 	DiscoverHomeResponse,
 	ProviderId,
+	RecommendationCard as RecommendationCardData,
 	RecommendationPage,
 	Track,
 	WeatherRadioResponse,
@@ -10,7 +11,10 @@ import type { DiscoverPort } from "../../ports/music/discover-port";
 import type { LibraryPort } from "../../ports/music/library-port";
 import type { SearchExperiencePort } from "../../ports/music/search-port";
 import type { HomePlaylistDetailView } from "../../home/EmptyHomeHost";
-import type { RecommendationDetail } from "../recommendation/recommendation-page-policy";
+import {
+	buildTrackFromRecommendationCard,
+	type RecommendationDetail,
+} from "../recommendation/recommendation-page-policy";
 import {
 	shouldUseCachedHomeDiscoverPlaylist,
 } from "./home-policy";
@@ -58,6 +62,8 @@ export interface HomeControllerResult {
 	playPlaylistDetail(index: number): void;
 	openRecommendations(anchorProvider: ProviderId): void;
 	closeRecommendations(): void;
+	playRecommendationTrack(provider: ProviderId, card: RecommendationCardData): void;
+	openRecommendationPlaylist(provider: ProviderId, id: string): Promise<void>;
 	searchPlaylistDetailArtist(artist: string): void;
 	openPodcast(index: number): Promise<void>;
 	openPodcastSearch(): void;
@@ -443,6 +449,61 @@ export function useHomeController({
 		current.selectShelfPlaylist(null);
 	}, []);
 
+	const playRecommendationTrack = useCallback(
+		(provider: ProviderId, card: RecommendationCardData) => {
+			const current = dependenciesRef.current;
+			const track = buildTrackFromRecommendationCard(provider, card);
+			current.playback.setQueue([track]);
+			current.playback.playAt(0);
+			enterPlayback();
+		},
+		[enterPlayback],
+	);
+
+	/** 打开推荐歌单：与 openPlaylist 同一套详情页/导航样板，
+	 *  但按 provider + card.id 定位（不依赖 discover 数组下标）。
+	 *  playlist 先放最小占位，playlistDetail 返回后整体替换。 */
+	const openRecommendationPlaylist = useCallback(
+		async (provider: ProviderId, id: string) => {
+			const current = dependenciesRef.current;
+			if (!current.library) {
+				current.showToast("API 未就绪，稍后再试");
+				return;
+			}
+			const key = `${provider}:${id}`;
+			setPlaylistDetail({
+				key,
+				playlist: { provider, id, name: "", coverUrl: "", trackIds: [], subscribed: false },
+				tracks: [],
+				loading: true,
+			});
+			setSuppressed(false);
+			setForcedOpen(true);
+			current.setConsole(false);
+			current.setMiniQueue(false);
+			if (!current.libraryPanelPinned) current.closeLibraryPanel();
+			current.closeShelf();
+			current.selectShelfPlaylist(null);
+			try {
+				const detail = await current.library.playlistDetail(provider, id);
+				setPlaylistDetail((value) =>
+					value?.key === key
+						? { key, playlist: detail, tracks: detail.tracks, loading: false }
+						: value,
+				);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "歌单载入失败";
+				setPlaylistDetail((value) =>
+					value?.key === key
+						? { ...value, loading: false, error: message, tracks: [] }
+						: value,
+				);
+				current.showToast(message);
+			}
+		},
+		[],
+	);
+
 	const playPlaylistDetail = useCallback(
 		(index: number) => {
 			const current = dependenciesRef.current;
@@ -613,6 +674,8 @@ export function useHomeController({
 		playPlaylistDetail,
 		openRecommendations,
 		closeRecommendations,
+		playRecommendationTrack,
+		openRecommendationPlaylist,
 		searchPlaylistDetailArtist,
 		openPodcast,
 		openPodcastSearch,

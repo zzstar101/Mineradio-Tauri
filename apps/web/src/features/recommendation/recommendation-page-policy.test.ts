@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
-import type { RecommendationPage } from "@mineradio/shared";
+import type { RecommendationCard, RecommendationPage } from "@mineradio/shared";
 import {
+	buildTrackFromRecommendationCard,
 	chunkIntoColumns,
 	flattenRecommendationFeed,
+	resolveRecommendationCardDisplay,
 } from "./recommendation-page-policy";
 
 function page(
@@ -58,4 +60,68 @@ test("chunkIntoColumns splits items into fixed-size columns", () => {
 	expect(chunkIntoColumns(items, 3)).toEqual([[0, 1, 2], [3, 4, 5], [6]]);
 	expect(chunkIntoColumns(items, 7)).toEqual([[0, 1, 2, 3, 4, 5, 6]]);
 	expect(chunkIntoColumns([], 3)).toEqual([]);
+});
+
+test("resolveRecommendationCardDisplay applies title fallback rules", () => {
+	expect(resolveRecommendationCardDisplay({ title: "歌名", subtitle: "歌手", id: "1", kind: "Track" } as RecommendationCard)).toEqual({
+		title: "歌名",
+		subtitle: "歌手",
+	});
+	expect(
+		resolveRecommendationCardDisplay({ title: "", subtitle: "只有副标题", id: "2", kind: "Playlist" } as RecommendationCard),
+	).toEqual({ title: "只有副标题", subtitle: "" });
+	expect(resolveRecommendationCardDisplay({ title: "", subtitle: "", id: "3", kind: "Unknown" } as RecommendationCard)).toEqual({
+		title: "",
+		subtitle: "",
+	});
+});
+
+test("buildTrackFromRecommendationCard synthesizes a playable track", () => {
+	const track = buildTrackFromRecommendationCard("qq", {
+		id: "0039MnYb0qxYhV",
+		title: "晴天",
+		subtitle: "周杰伦 / 杨瑞代",
+		kind: "Track",
+		coverUrl: "https://example.com/cover.jpg",
+	} as RecommendationCard);
+
+	expect(track).toEqual({
+		provider: "qq",
+		id: "0039MnYb0qxYhV",
+		sourceId: "0039MnYb0qxYhV",
+		title: "晴天",
+		artists: ["周杰伦", "杨瑞代"],
+		album: "",
+		coverUrl: "https://example.com/cover.jpg",
+		qualityHints: [],
+		playableState: "playable",
+	});
+});
+
+test("buildTrackFromRecommendationCard falls back to subtitle as title without artists", () => {
+	const track = buildTrackFromRecommendationCard("netease", {
+		id: "42",
+		title: "",
+		subtitle: "只有副标题的歌",
+		kind: "Track",
+		coverUrl: "",
+	} as RecommendationCard);
+
+	expect(track.title).toBe("只有副标题的歌");
+	expect(track.artists).toEqual([]);
+});
+
+test("buildTrackFromRecommendationCard tolerates empty card text", () => {
+	const track = buildTrackFromRecommendationCard("kugou", {
+		id: "x-1",
+		title: "",
+		subtitle: "",
+		kind: "Track",
+		coverUrl: "",
+	} as RecommendationCard);
+
+	expect(track.id).toBe("x-1");
+	expect(track.sourceId).toBe("x-1");
+	expect(track.title).toBe("");
+	expect(track.artists).toEqual([]);
 });

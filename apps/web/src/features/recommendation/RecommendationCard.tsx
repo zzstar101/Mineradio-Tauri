@@ -4,22 +4,10 @@ import type {
 	RecommendationCard as RecommendationCardData,
 	RecommendationModuleKind,
 } from "@mineradio/shared";
+import { resolveRecommendationCardDisplay } from "./recommendation-page-policy";
 
 function coverStyle(url: string | undefined): CSSProperties | undefined {
 	return url ? { backgroundImage: `url("${url}")` } : undefined;
-}
-
-/** 标题替补逻辑：有 title 时 subtitle 独立展示；
- *  无 title 有 subtitle → subtitle 升 title，无独立 subtitle；
- *  均无 → title="" subtitle=""（均不渲染）。 */
-function resolvedDisplay(card: RecommendationCardData): { title: string; subtitle: string } {
-	if (card.title) {
-		return { title: card.title, subtitle: card.subtitle || "" };
-	}
-	if (card.subtitle) {
-		return { title: card.subtitle, subtitle: "" };
-	}
-	return { title: "", subtitle: "" };
 }
 
 export interface RecommendationCardProps {
@@ -27,18 +15,40 @@ export interface RecommendationCardProps {
 	moduleKind: RecommendationModuleKind;
 	card: RecommendationCardData;
 	index: number;
+	onPlayTrack?: (provider: ProviderId, card: RecommendationCardData) => void;
+	onOpenPlaylist?: (provider: ProviderId, card: RecommendationCardData) => void;
 }
 
 /**
- * 推荐卡片渲染（按模块 kind 决定三段布局）。
+ * 推荐卡片渲染（按模块 kind 决定三段布局）+ 点击交互（按卡片 kind 分发）：
+ * Track → 播放；Playlist → 打开歌单；Stream 本轮不做，保持无交互。
  */
 export function RecommendationCard({
 	provider,
 	moduleKind,
 	card,
 	index,
+	onPlayTrack,
+	onOpenPlaylist,
 }: RecommendationCardProps): ReactElement {
-	const { title: cardTitle, subtitle: cardSubtitle } = resolvedDisplay(card);
+	const { title: cardTitle, subtitle: cardSubtitle } =
+		resolveRecommendationCardDisplay(card);
+
+	const interactive =
+		(card.kind === "Track" && Boolean(onPlayTrack)) ||
+		(card.kind === "Playlist" && Boolean(onOpenPlaylist));
+
+	const handleActivate = () => {
+		if (card.kind === "Track") onPlayTrack?.(provider, card);
+		else if (card.kind === "Playlist") onOpenPlaylist?.(provider, card);
+	};
+
+	const interactiveProps = interactive
+		? {
+				onClick: handleActivate,
+				"data-card-interactive": "true",
+			}
+		: {};
 
 	if (moduleKind === "Track") {
 		return (
@@ -46,6 +56,7 @@ export function RecommendationCard({
 				className="home-recommendation-card-track"
 				data-home-recommendation-card={index}
 				data-card-kind={card.kind}
+				{...interactiveProps}
 			>
 				<div
 					className={`home-recommendation-track-cover${card.coverUrl ? " has-cover" : ""}`}
@@ -65,6 +76,7 @@ export function RecommendationCard({
 				className="home-recommendation-card home-recommendation-card-netease-mixed"
 				data-home-recommendation-card={index}
 				data-card-kind={card.kind}
+				{...interactiveProps}
 			>
 				<div
 					className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`}
@@ -89,6 +101,7 @@ export function RecommendationCard({
 			className="home-recommendation-media"
 			data-home-recommendation-card={index}
 			data-card-kind={card.kind}
+			{...interactiveProps}
 		>
 			<div className="home-recommendation-cover-card">
 				<div

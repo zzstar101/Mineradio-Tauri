@@ -75,6 +75,8 @@ export function RecommendationPage({
 									segment.provider === detail.anchorProvider &&
 									index === firstAnchorIndex
 								}
+								onPlayTrack={props.onPlayRecommendationTrack}
+								onOpenPlaylist={props.onOpenRecommendationPlaylist}
 							/>
 						))
 					)}

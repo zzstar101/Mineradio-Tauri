@@ -563,6 +563,8 @@ export function App({
     playPlaylistDetail: playHomePlaylistDetail,
     openRecommendations: openHomeRecommendations,
     closeRecommendations: closeHomeRecommendations,
+    playRecommendationTrack: playHomeRecommendationTrack,
+    openRecommendationPlaylist: openHomeRecommendationPlaylist,
     searchPlaylistDetailArtist: searchHomePlaylistDetailArtist,
     openPodcast: openHomeDiscoverPodcast,
     openPodcastSearch: openHomePodcastSearch,
@@ -1701,6 +1703,9 @@ export function App({
         onPlaylistDetailArtist: searchHomePlaylistDetailArtist,
         onOpenRecommendations: (provider) => void openHomeRecommendations(provider),
         onCloseRecommendations: closeHomeRecommendations,
+        onPlayRecommendationTrack: playHomeRecommendationTrack,
+        onOpenRecommendationPlaylist: (provider, card) =>
+          void openHomeRecommendationPlaylist(provider, card.id),
       },
       searchProps: {
         client: applicationPorts?.music.search ?? null,

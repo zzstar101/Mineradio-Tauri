@@ -1,5 +1,9 @@
 import type { ReactElement } from "react";
-import type { ProviderId, RecommendationModule } from "@mineradio/shared";
+import type {
+	ProviderId,
+	RecommendationCard as RecommendationCardData,
+	RecommendationModule,
+} from "@mineradio/shared";
 import { HOME_PROVIDER_LABELS } from "../home/home-provider-labels";
 import { RecommendationCard } from "./RecommendationCard";
 import { chunkIntoColumns } from "./recommendation-page-policy";
@@ -8,6 +12,8 @@ export interface RecommendationModuleRailProps {
 	provider: ProviderId;
 	module: RecommendationModule;
 	anchor?: boolean;
+	onPlayTrack?: (provider: ProviderId, card: RecommendationCardData) => void;
+	onOpenPlaylist?: (provider: ProviderId, card: RecommendationCardData) => void;
 }
 
 /** 推荐页里单条 module rail：Provider 分段标题 + 卡片行。 */
@@ -15,6 +21,8 @@ export function RecommendationModuleRail({
 	provider,
 	module,
 	anchor,
+	onPlayTrack,
+	onOpenPlaylist,
 }: RecommendationModuleRailProps): ReactElement {
 	const label = HOME_PROVIDER_LABELS[provider];
 	const heading = module.title.trim() ? `${label} · ${module.title}` : label;
@@ -45,6 +53,8 @@ export function RecommendationModuleRail({
 									moduleKind={module.kind}
 									card={card}
 									index={index}
+									onPlayTrack={onPlayTrack}
+									onOpenPlaylist={onOpenPlaylist}
 								/>
 							))}
 						</div>
@@ -65,6 +75,8 @@ export function RecommendationModuleRail({
 							moduleKind={module.kind}
 							card={card}
 							index={index}
+							onPlayTrack={onPlayTrack}
+							onOpenPlaylist={onOpenPlaylist}
 						/>
 					))}
 				</div>

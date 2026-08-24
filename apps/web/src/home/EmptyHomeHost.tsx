@@ -4,6 +4,7 @@ import type {
 	PlaylistSummary,
 	PodcastRadio,
 	ProviderId,
+	RecommendationCard as RecommendationCardData,
 	RecommendationPage,
 	Track,
 	WeatherRadioResponse,
@@ -75,6 +76,8 @@ export interface EmptyHomeHostProps {
 	onPlayPlaylistDetail?: (index: number) => void;
 	onOpenRecommendations?: (provider: ProviderId) => void;
 	onCloseRecommendations?: () => void;
+	onPlayRecommendationTrack?: (provider: ProviderId, card: RecommendationCardData) => void;
+	onOpenRecommendationPlaylist?: (provider: ProviderId, card: RecommendationCardData) => void;
 	onPlaylistDetailArtist?: (artist: string, track: Track) => void;
 	onNotice?: (message: string) => void;
 	heroVideoRepository?: HomeHeroVideoRepository;
@@ -593,11 +596,13 @@ function HomePlaylistDetailPage({
 }
 
 export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
-	if (props.recommendationDetail) {
-		return <RecommendationPageScreen props={props} detail={props.recommendationDetail} />;
-	}
+	// 歌单详情优先于推荐页：在推荐页里点歌单卡片时，
+	// recommendationDetail 仍然非空，若它先行判断会永远挡住详情页。
 	if (props.playlistDetail) {
 		return <HomePlaylistDetailPage props={props} detail={props.playlistDetail} />;
+	}
+	if (props.recommendationDetail) {
+		return <RecommendationPageScreen props={props} detail={props.recommendationDetail} />;
 	}
 
 	const discover = props.discover ?? null;
@@ -676,6 +681,8 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 											moduleKind={preview.kind}
 											card={card}
 											index={index}
+											onPlayTrack={props.onPlayRecommendationTrack}
+											onOpenPlaylist={props.onOpenRecommendationPlaylist}
 										/>
 									))}
 								</div>
@@ -696,6 +703,8 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 									moduleKind={preview.kind}
 									card={card}
 									index={index}
+									onPlayTrack={props.onPlayRecommendationTrack}
+									onOpenPlaylist={props.onOpenRecommendationPlaylist}
 								/>
 							))}
 						</div>
