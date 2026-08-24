@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
 	DiscoverHomeResponse,
+	ProviderId,
 	RecommendationPage,
 	Track,
 	WeatherRadioResponse,
@@ -9,6 +10,7 @@ import type { DiscoverPort } from "../../ports/music/discover-port";
 import type { LibraryPort } from "../../ports/music/library-port";
 import type { SearchExperiencePort } from "../../ports/music/search-port";
 import type { HomePlaylistDetailView } from "../../home/EmptyHomeHost";
+import type { RecommendationDetail } from "../recommendation/recommendation-page-policy";
 import {
 	shouldUseCachedHomeDiscoverPlaylist,
 } from "./home-policy";
@@ -29,6 +31,7 @@ export interface HomeControllerResult {
 	recommendations: RecommendationPage[];
 	weatherRadio: WeatherRadioResponse | null;
 	playlistDetail: HomePlaylistDetailView | null;
+	recommendationDetail: RecommendationDetail | null;
 	discoverLoading: boolean;
 	recommendationsLoading: boolean;
 	weatherRadioLoading: boolean;
@@ -53,6 +56,8 @@ export interface HomeControllerResult {
 	openPlaylist(index: number): Promise<void>;
 	closePlaylistDetail(): void;
 	playPlaylistDetail(index: number): void;
+	openRecommendations(anchorProvider: ProviderId): void;
+	closeRecommendations(): void;
 	searchPlaylistDetailArtist(artist: string): void;
 	openPodcast(index: number): Promise<void>;
 	openPodcastSearch(): void;
@@ -125,6 +130,8 @@ export function useHomeController({
 	);
 	const [playlistDetail, setPlaylistDetail] =
 		useState<HomePlaylistDetailView | null>(null);
+	const [recommendationDetail, setRecommendationDetail] =
+		useState<RecommendationDetail | null>(null);
 	const [discoverLoading, setDiscoverLoading] = useState(false);
 	const [recommendationsLoading, setRecommendationsLoading] = useState(false);
 	const [weatherRadioLoading, setWeatherRadioLoading] = useState(false);
@@ -422,6 +429,20 @@ export function useHomeController({
 
 	const closePlaylistDetail = useCallback(() => setPlaylistDetail(null), []);
 
+	const closeRecommendations = useCallback(() => setRecommendationDetail(null), []);
+
+	const openRecommendations = useCallback((anchorProvider: ProviderId) => {
+		const current = dependenciesRef.current;
+		setRecommendationDetail({ anchorProvider });
+		setSuppressed(false);
+		setForcedOpen(true);
+		current.setConsole(false);
+		current.setMiniQueue(false);
+		if (!current.libraryPanelPinned) current.closeLibraryPanel();
+		current.closeShelf();
+		current.selectShelfPlaylist(null);
+	}, []);
+
 	const playPlaylistDetail = useCallback(
 		(index: number) => {
 			const current = dependenciesRef.current;
@@ -565,6 +586,7 @@ export function useHomeController({
 		recommendations,
 		weatherRadio,
 		playlistDetail,
+		recommendationDetail,
 		discoverLoading,
 		recommendationsLoading,
 		weatherRadioLoading,
@@ -589,6 +611,8 @@ export function useHomeController({
 		openPlaylist,
 		closePlaylistDetail,
 		playPlaylistDetail,
+		openRecommendations,
+		closeRecommendations,
 		searchPlaylistDetailArtist,
 		openPodcast,
 		openPodcastSearch,

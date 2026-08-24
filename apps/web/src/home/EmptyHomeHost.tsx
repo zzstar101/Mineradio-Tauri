@@ -11,6 +11,12 @@ import type {
 } from "@mineradio/shared";
 import { resolveVirtualListWindow } from "../components/shell/virtual-list";
 import { HomeDashboardHero } from "../features/home/HomeDashboardHero";
+import { HOME_PROVIDER_LABELS } from "../features/home/home-provider-labels";
+import { RecommendationPage as RecommendationPageScreen } from "../features/recommendation/RecommendationPage";
+import {
+	chunkIntoColumns,
+	type RecommendationDetail,
+} from "../features/recommendation/recommendation-page-policy";
 import {
 	buildHomeDashboardModel,
 	type HomeDashboardModel,
@@ -33,6 +39,7 @@ export interface EmptyHomeHostProps {
 	listenSummary?: HomeListenSummary | null;
 	dashboard?: HomeDashboardModel | null;
 	playlistDetail?: HomePlaylistDetailView | null;
+	recommendationDetail?: RecommendationDetail | null;
 	active?: boolean;
 	loading?: boolean;
 	discoverError?: string | null;
@@ -65,6 +72,8 @@ export interface EmptyHomeHostProps {
 	onRetryWeatherRadio?: () => void;
 	onClosePlaylistDetail?: () => void;
 	onPlayPlaylistDetail?: (index: number) => void;
+	onOpenRecommendations?: (provider: ProviderId) => void;
+	onCloseRecommendations?: () => void;
 	onPlaylistDetailArtist?: (artist: string, track: Track) => void;
 	onNotice?: (message: string) => void;
 	heroVideoRepository?: HomeHeroVideoRepository;
@@ -124,13 +133,6 @@ function buildHomeRecommendationPreviews(
 		}];
 	});
 }
-
-const HOME_PROVIDER_LABELS: Record<ProviderId, string> = {
-	netease: "网易云音乐",
-	qq: "QQ音乐",
-	kugou: "酷狗音乐",
-	soda: "汽水音乐",
-};
 
 const STARTER_TILES = [
 	{ kind: "login", tone: "library", title: "登录同步歌单", sub: "网易云 / QQ 音乐", action: "Login" },
@@ -622,6 +624,9 @@ function HomePlaylistDetailPage({
 }
 
 export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
+	if (props.recommendationDetail) {
+		return <RecommendationPageScreen props={props} detail={props.recommendationDetail} />;
+	}
 	if (props.playlistDetail) {
 		return <HomePlaylistDetailPage props={props} detail={props.playlistDetail} />;
 	}
@@ -678,61 +683,90 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 					data-home-recommendation-preview={preview.provider}
 					key={`recommendation-${preview.provider}`}
 				>
-					{preview.title.trim() ? (
-						<div className="home-rail-section-head">
-							<div className="home-rail-section-title home-recommendation-module-title">{preview.title}</div>
-						</div>
-					) : null}
-					<div className="home-tile-row">
-						{preview.cards.map((card, index) => preview.kind === "Track" ? (
-							<div
-								className="home-recommendation-card home-recommendation-card-track"
-								data-home-recommendation-card={index}
-								data-card-kind={card.kind}
-								key={`${preview.provider}-${card.id}-${index}`}
-							>
-								<div className={`home-recommendation-track-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
-								<div className="home-recommendation-track-text">
-									<div className="home-recommendation-title">{card.title || "未命名歌曲"}</div>
-									<div className="home-recommendation-subtitle">{card.subtitle}</div>
-								</div>
-							</div>
-						) : (
-							preview.kind === "Mixed" && preview.provider === "netease" ? (
-								<div
-									className="home-recommendation-card home-recommendation-card-netease-mixed"
-									data-home-recommendation-card={index}
-									data-card-kind={card.kind}
-									key={`${preview.provider}-${card.id}-${index}`}
-								>
-									<div className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
-									<div className="home-recommendation-netease-title">
-										<div className="home-recommendation-title">{card.title || "未命名推荐"}</div>
-									</div>
-									{card.subtitle ? (
-										<div className="home-recommendation-netease-footer">
-											<div className="home-recommendation-subtitle">{card.subtitle}</div>
-										</div>
-									) : null}
-								</div>
-							) : (
-								<div
-									className="home-recommendation-media"
-									data-home-recommendation-card={index}
-									data-card-kind={card.kind}
-									key={`${preview.provider}-${card.id}-${index}`}
-								>
-									<div className="home-recommendation-cover-card">
-										<div className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
-									</div>
-									<div className="home-recommendation-media-text">
-										<div className="home-recommendation-title">{card.title || "未命名推荐"}</div>
-										{card.subtitle ? <div className="home-recommendation-subtitle">{card.subtitle}</div> : null}
-									</div>
-								</div>
-							)
-						))}
+					<div className="home-rail-section-head">
+						<button
+							className="home-rail-section-title home-recommendation-module-title"
+							type="button"
+							onClick={() => props.onOpenRecommendations?.(preview.provider)}
+						>
+							{HOME_PROVIDER_LABELS[preview.provider]}
+							{preview.title.trim() ? ` · ${preview.title}` : null}
+						</button>
 					</div>
+					{preview.kind === "Track" ? (
+						<div className="home-recommendation-track-row">
+							{chunkIntoColumns(preview.cards, 3).map((column, columnIndex) => (
+								<div
+									className="home-recommendation-track-column"
+									key={`${preview.provider}-column-${columnIndex}`}
+								>
+									{column.map((card, index) => {
+										const title = card.title || card.subtitle || "";
+										const subtitle = card.title && card.subtitle ? card.subtitle : "";
+										return (
+											<div
+												className="home-recommendation-card-track"
+												data-home-recommendation-card={index}
+												data-card-kind={card.kind}
+												key={`${preview.provider}-${card.id}-${index}`}
+											>
+												<div className={`home-recommendation-track-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
+												<div className="home-recommendation-track-text">
+													{title ? <div className="home-recommendation-title">{title}</div> : null}
+													{subtitle ? <div className="home-recommendation-subtitle">{subtitle}</div> : null}
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							))}
+						</div>
+					) : (
+						<div
+							className={
+								preview.kind === "Mixed" && preview.provider === "netease"
+									? "home-recommendation-netease-mixed-row"
+									: "home-recommendation-tile-row"
+							}
+						>
+							{preview.cards.map((card, index) => {
+								const title = card.title || card.subtitle || "";
+								const subtitle = card.title && card.subtitle ? card.subtitle : "";
+								return preview.kind === "Mixed" && preview.provider === "netease" ? (
+									<div
+										className="home-recommendation-card home-recommendation-card-netease-mixed"
+										data-home-recommendation-card={index}
+										data-card-kind={card.kind}
+										key={`${preview.provider}-${card.id}-${index}`}
+									>
+										<div className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
+										{title ? <div className="home-recommendation-netease-title"><div className="home-recommendation-title">{title}</div></div> : null}
+										{subtitle ? (
+											<div className="home-recommendation-netease-footer">
+												<div className="home-recommendation-subtitle">{subtitle}</div>
+											</div>
+										) : null}
+									</div>
+								) : (
+									<div
+										className="home-recommendation-media"
+										data-home-recommendation-card={index}
+										data-card-kind={card.kind}
+										key={`${preview.provider}-${card.id}-${index}`}
+									>
+										<div className="home-recommendation-cover-card">
+											<div className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
+										</div>
+										{title ? <div className="home-recommendation-media-text">
+											<div className="home-recommendation-title">{title}</div>
+											{subtitle ? <div className="home-recommendation-subtitle">{subtitle}</div> : null}
+										</div> : null}
+									</div>
+								)
+							;
+						})}
+						</div>
+					)}
 				</section>
 			))}
 		</div>

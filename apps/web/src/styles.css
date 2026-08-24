@@ -1661,6 +1661,7 @@ body.empty-home-active .home-visual {
   text-overflow: ellipsis;
 }
 
+/* 推荐卡片基础类：netease-mixed 等卡片依赖此边框/背景 */
 .home-recommendation-card {
   position: relative;
   min-width: 0;
@@ -1678,6 +1679,58 @@ body.empty-home-active .home-visual {
   min-width: 0;
 }
 
+/* 推荐卡片行：平铺不换行，溢出水平滚动 */
+.home-recommendation-tile-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  overflow-x: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 单曲行：grid 横排。列宽固定为容器的四等分（下限 150px），
+   与卡片数量无关——最左侧恰好显示 4 列填满容器，
+   超过 4 列时横向溢出滚动（保留滚动条）。左右间距固定 12px。 */
+.home-recommendation-track-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max(150px, calc((100% - 36px) / 4));
+  grid-auto-rows: min-content;
+  align-items: start;
+  gap: 12px;
+  overflow-x: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.home-recommendation-track-row::-webkit-scrollbar,
+.home-recommendation-netease-mixed-row::-webkit-scrollbar,
+.home-recommendation-tile-row::-webkit-scrollbar {
+  height: 8px;
+}
+
+.home-recommendation-track-row::-webkit-scrollbar-track,
+.home-recommendation-netease-mixed-row::-webkit-scrollbar-track,
+.home-recommendation-tile-row::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.home-recommendation-track-row::-webkit-scrollbar-thumb,
+.home-recommendation-netease-mixed-row::-webkit-scrollbar-thumb,
+.home-recommendation-tile-row::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .18);
+  border-radius: 999px;
+}
+
+/* 单曲竖排列：每列 3 张纵向堆叠，上下距离固定 10px */
+.home-recommendation-track-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .home-recommendation-module-title {
   color: rgba(255, 255, 255, .94);
   font-size: 14px;
@@ -1689,6 +1742,9 @@ body.empty-home-active .home-visual {
 }
 
 .home-recommendation-media {
+  flex: 0 0 132px;
+  width: 132px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -1703,11 +1759,30 @@ body.empty-home-active .home-visual {
   overflow: hidden;
 }
 
+/* 网易云 mix 行：grid 横排。卡片宽度固定为容器的四等分，
+   夹在 [132px, 300px] 允许范围内，与卡片数量无关；
+   超过 4 张横向溢出滚动（保留滚动条）。
+   间隔固定 12px，卡片保持 3:4 等比（先定宽、再按比例得高）。 */
+.home-recommendation-netease-mixed-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(10%, calc((100% - 36px) / 4), 14%);
+  grid-auto-rows: auto;
+  align-items: start;
+  gap: 15px;
+  overflow-x: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
 .home-recommendation-card-netease-mixed {
   aspect-ratio: 3 / 4;
   height: auto;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--home-accent) 9%, rgba(255, 255, 255, .075));
+  overflow: hidden;
 }
 
 .home-recommendation-media-cover {
@@ -1756,19 +1831,19 @@ body.empty-home-active .home-visual {
   overflow: hidden;
 }
 
+/* 单曲卡片：纯封面 + 文字，无边框背景包裹 */
 .home-recommendation-card-track {
-  height: 66px;
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
+  display: flex;
   align-items: center;
   gap: 10px;
-  padding-right: 12px;
+  min-width: 0;
 }
 
 .home-recommendation-track-cover {
-  width: 100%;
-  height: 100%;
-  border-radius: 19px 0 0 19px;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
   background-color: #16161b;
   background-size: cover;
   background-position: center;
@@ -1778,13 +1853,13 @@ body.empty-home-active .home-visual {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .home-recommendation-title {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 720;
-  color: rgba(255, 255, 255, .90);
+  color: #fff;
   line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
@@ -1792,12 +1867,101 @@ body.empty-home-active .home-visual {
 }
 
 .home-recommendation-subtitle {
-  font-size: 10.5px;
-  color: rgba(255, 255, 255, .42);
+  font-size: 12px;
+  color: #fff;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 单曲卡片调大字号（仅 track 卡片，不影响 media / netease 卡片） */
+.home-recommendation-card-track .home-recommendation-title {
+  font-size: 14px;
+}
+
+.home-recommendation-card-track .home-recommendation-subtitle {
+  font-size: 12px;
+}
+
+/* 独立推荐页：复用 home-playlist-detail 玻璃面板，改为两行栅格 */
+.home-playlist-detail.home-recommendation-page {
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.home-recommendation-page-feed {
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 2px 4px 8px;
+}
+
+/* 推荐页纵向滚动条：与主页 .home-right-pane 滚动条一致
+   （8px 圆角、透明轨道、半透明白 thumb） */
+.home-recommendation-page-feed::-webkit-scrollbar {
+  width: 8px;
+}
+
+.home-recommendation-page-feed::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.home-recommendation-page-feed::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+}
+
+.home-detail-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-detail-refresh {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .11);
+  background: rgba(255, 255, 255, .060);
+  color: rgba(255, 255, 255, .80);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 720;
+  cursor: pointer;
+  transition: background .18s, border-color .18s, color .18s, transform .18s, box-shadow .18s;
+}
+
+.home-detail-refresh:hover {
+  background: color-mix(in srgb, var(--provider-color) 12%, rgba(255, 255, 255, .060));
+  border-color: color-mix(in srgb, var(--provider-color) 42%, rgba(255, 255, 255, .13));
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--provider-color) 10%, transparent);
+}
+
+/* 预览标题 button 化：重置 button 默认外观，保留 rail 标题样式 */
+button.home-recommendation-module-title {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.home-recommendation-module-title:hover {
+  opacity: .82;
+}
+
+/* 推荐页锚点分段高亮 */
+.home-recommendation-page-feed .home-rail-section[data-home-recommendation-anchor="true"] .home-recommendation-module-title {
+  color: #fff;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--home-accent) 55%, transparent);
 }
 
 #empty-home.home-detail-active {
