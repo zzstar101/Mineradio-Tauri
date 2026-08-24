@@ -1,11 +1,11 @@
+mod api_bridge;
 mod app;
 mod commands;
 mod db;
+pub(crate) mod media_protocol;
 mod paths;
 mod platform;
 mod runtime;
-mod api_bridge;
-pub(crate) mod media_protocol;
 #[cfg(feature = "updater-smoke")]
 pub mod updater_smoke;
 

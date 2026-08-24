@@ -27,5 +27,3 @@ pub fn get_database_status(
 pub fn get_runtime_config(state: tauri::State<'_, AppState>) -> crate::RuntimeConfig {
     state.config.clone()
 }
-
-

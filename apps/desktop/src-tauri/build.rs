@@ -24,4 +24,3 @@ fn emit_update_distribution_marker() {
         mode.compiled_marker()
     );
 }
-

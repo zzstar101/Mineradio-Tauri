@@ -314,9 +314,10 @@ fn schedule_background_working_set_trim(app: tauri::AppHandle) {
             .map(|activity| *activity)
             .unwrap_or(WindowActivity::Visible);
         let adapter = runtime::resources::WindowsProcessMemoryAdapter;
-        let outcome = state
-            .resources
-            .trim_working_set(activity, crate::runtime::now_ms(), &adapter);
+        let outcome =
+            state
+                .resources
+                .trim_working_set(activity, crate::runtime::now_ms(), &adapter);
         if matches!(outcome, runtime::resources::TrimOutcome::Failed { .. }) {
             state.diagnostics.record_runtime_error(
                 runtime::diagnostics::DiagnosticProbeKind::ProcessMemory,

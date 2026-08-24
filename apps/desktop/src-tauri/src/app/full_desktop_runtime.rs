@@ -679,7 +679,9 @@ pub fn start_explorer_watcher_after_main_window(app: &tauri::AppHandle) {
         return;
     }
     let stop = Arc::new(AtomicBool::new(false));
-    let policy = Arc::new(Mutex::new(ExplorerReconcilePolicy::new(crate::runtime::now_ms())));
+    let policy = Arc::new(Mutex::new(ExplorerReconcilePolicy::new(
+        crate::runtime::now_ms(),
+    )));
 
     let handle = app.clone();
     let worker_stop = Arc::clone(&stop);

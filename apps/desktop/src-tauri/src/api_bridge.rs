@@ -79,7 +79,17 @@ async fn dispatch(
     let (route, query) = split_path(path);
     let params = parse_query(query);
 
-    match handle_route(api, app_version, schema_version, method, route, &params, body).await {
+    match handle_route(
+        api,
+        app_version,
+        schema_version,
+        method,
+        route,
+        &params,
+        body,
+    )
+    .await
+    {
         Ok(Success::Data(data)) => ok_envelope(data),
         Ok(Success::Raw(raw)) => raw,
         Err(err) => error_envelope(&err),
@@ -117,9 +127,7 @@ async fn handle_route(
             if keyword.trim().is_empty() {
                 return Err(ApiCallError::bad_request("keyword required"));
             }
-            let provider = params
-                .get("provider")
-                .and_then(|raw| parse_provider(raw));
+            let provider = params.get("provider").and_then(|raw| parse_provider(raw));
             let limit = query_u32(params, "limit", 20);
             let tracks = api
                 .search_tracks(keyword, provider, limit)
@@ -331,7 +339,8 @@ async fn handle_provider_route(
 }
 
 fn media_song_url_value(result: mineradio_api::types::SongUrlResult) -> serde_json::Value {
-    let mut value = serde_json::to_value(result).unwrap_or_else(|_| serde_json::json!({ "url": "" }));
+    let mut value =
+        serde_json::to_value(result).unwrap_or_else(|_| serde_json::json!({ "url": "" }));
     if let Some(url) = value.get("url").and_then(serde_json::Value::as_str) {
         if !url.is_empty() && !url.starts_with("http://") && !url.starts_with("https://") {
             value["url"] = serde_json::Value::String(format!(
@@ -403,12 +412,16 @@ fn qr_login(
             ProviderId::Soda => QrLoginKind::Soda,
             ProviderId::Kugou => QrLoginKind::Kugou,
             ProviderId::Spotify | ProviderId::Unknown => {
-                return Err(ApiCallError::not_found("QR login not supported for provider"))
+                return Err(ApiCallError::not_found(
+                    "QR login not supported for provider",
+                ))
             }
         },
     };
     if kind.provider() != provider {
-        return Err(ApiCallError::bad_request("QR login kind does not match provider"));
+        return Err(ApiCallError::bad_request(
+            "QR login kind does not match provider",
+        ));
     }
     api.qr_login(kind)
         .cloned()

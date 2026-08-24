@@ -471,9 +471,7 @@ pub async fn login_netease_complete(
 }
 
 #[tauri::command]
-pub async fn login_qq_complete(
-    app: tauri::AppHandle,
-) -> Result<LoginSessionImportResult, String> {
+pub async fn login_qq_complete(app: tauri::AppHandle) -> Result<LoginSessionImportResult, String> {
     complete_provider_login_from_window(app, LoginProvider::Qq).await
 }
 
