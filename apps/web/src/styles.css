@@ -1689,6 +1689,8 @@ body.empty-home-active .home-visual {
   grid-auto-rows: auto;
   align-items: start;
   gap: 12px;
+  /* 底部留出与滚动条的间隔，避免卡片贴住滚动条 */
+  padding-bottom: 12px;
   overflow-x: auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
@@ -1704,6 +1706,10 @@ body.empty-home-active .home-visual {
   grid-auto-rows: min-content;
   align-items: start;
   gap: 12px;
+  /* 底部留出与滚动条的间隔，避免封面贴住滚动条；
+     顶部留出悬浮上移的余量（overflow-x:auto 会连纵向一起裁切） */
+  padding-top: 6px;
+  padding-bottom: 12px;
   overflow-x: auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
@@ -1775,6 +1781,8 @@ body.empty-home-active .home-visual {
   grid-auto-rows: auto;
   align-items: start;
   gap: 15px;
+  /* 底部留出与滚动条的间隔，避免卡片贴住滚动条 */
+  padding-bottom: 12px;
   overflow-x: auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
@@ -1845,9 +1853,22 @@ body.empty-home-active .home-visual {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  /* 悬浮上移的过渡基底 */
+  transition: transform .18s ease;
+}
+
+/* 可交互卡片统一手型光标 */
+[data-card-interactive] {
+  cursor: pointer;
+}
+
+/* 悬浮：整卡上移 + 封面浮现播放三角 */
+.home-recommendation-card-track:hover {
+  transform: translateY(-4px);
 }
 
 .home-recommendation-track-cover {
+  position: relative;
   flex: 0 0 76px;
   width: 76px;
   height: 76px;
@@ -1855,6 +1876,36 @@ body.empty-home-active .home-visual {
   background-color: #16161b;
   background-size: cover;
   background-position: center;
+  overflow: hidden;
+}
+
+/* 悬浮时的暗色遮罩，保证三角在任何封面上可见 */
+.home-recommendation-track-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 9, 13, .38);
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+
+/* 右向播放三角（SVG 圆角路径 + 描边加粗圆角），悬浮时浮现 */
+.home-recommendation-track-cover::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: 30px;
+  height: 30px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5.14v13.72c0 .8.87 1.29 1.55.87l10.79-6.86c.63-.4.63-1.34 0-1.74L9.55 4.27C8.87 3.85 8 4.34 8 5.14z' fill='%23ffffff' fill-opacity='.95' stroke='%23ffffff' stroke-opacity='.95' stroke-width='2.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / contain;
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+
+.home-recommendation-card-track:hover .home-recommendation-track-cover::before,
+.home-recommendation-card-track:hover .home-recommendation-track-cover::after {
+  opacity: 1;
 }
 
 .home-recommendation-track-text {
