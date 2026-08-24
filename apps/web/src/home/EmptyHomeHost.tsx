@@ -4,14 +4,15 @@ import type {
 	PlaylistSummary,
 	PodcastRadio,
 	ProviderId,
-	RecommendationCard,
 	RecommendationPage,
 	Track,
 	WeatherRadioResponse,
 } from "@mineradio/shared";
 import { resolveVirtualListWindow } from "../components/shell/virtual-list";
 import { HomeDashboardHero } from "../features/home/HomeDashboardHero";
+import { buildHomeRecommendationPreviews } from "../features/home/home-recommendation-preview-policy";
 import { HOME_PROVIDER_LABELS } from "../features/home/home-provider-labels";
+import { RecommendationCard as RecommendationCardView } from "../features/recommendation/RecommendationCard";
 import { RecommendationPage as RecommendationPageScreen } from "../features/recommendation/RecommendationPage";
 import {
 	chunkIntoColumns,
@@ -101,38 +102,6 @@ const HOME_WAVE_BAR_COUNT = 24;
 const HOME_RAIL_MAX_TILES = 32;
 const HOME_RAIL_PRIMARY_SONG_COUNT = 4;
 const HOME_PROVIDER_ORDER: ProviderId[] = ["netease", "qq", "soda"];
-const HOME_RECOMMENDATION_PREVIEW_PROVIDER_ORDER: ProviderId[] = [
-	"netease",
-	"qq",
-	"kugou",
-	"soda",
-];
-const HOME_RECOMMENDATION_PREVIEW_CARD_LIMIT = 8;
-
-interface HomeRecommendationPreview {
-	provider: ProviderId;
-	title: string;
-	kind: RecommendationPage["list"][number]["kind"];
-	cards: RecommendationCard[];
-}
-
-function buildHomeRecommendationPreviews(
-	pages: RecommendationPage[] | null | undefined,
-): HomeRecommendationPreview[] {
-	return HOME_RECOMMENDATION_PREVIEW_PROVIDER_ORDER.flatMap((provider) => {
-		const module = pages
-			?.filter((page) => page.provider === provider)
-			.flatMap((page) => page.list[0] ?? [])
-		.find((module) => module.list.length > 0);
-		if (!module) return [];
-		return [{
-			provider,
-			title: module.title,
-			kind: module.kind,
-			cards: module.list.slice(0, HOME_RECOMMENDATION_PREVIEW_CARD_LIMIT),
-		}];
-	});
-}
 
 const STARTER_TILES = [
 	{ kind: "login", tone: "library", title: "登录同步歌单", sub: "网易云 / QQ 音乐", action: "Login" },
@@ -654,7 +623,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 		dashboard,
 	);
 	const railSections = buildHomeRailSections(tiles, loggedOut);
-	const recommendationPreviews = buildHomeRecommendationPreviews(props.recommendations);
+	const recommendationPreviews = buildHomeRecommendationPreviews(props.recommendations ?? []);
 	const loading = props.loading === true;
 	const hasPublicRecommendations = loggedOut && (discover?.playlists.length ?? 0) > 0;
 	const libraryCover = firstPlaylist?.coverUrl || daily?.coverUrl;
@@ -700,24 +669,15 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 									className="home-recommendation-track-column"
 									key={`${preview.provider}-column-${columnIndex}`}
 								>
-									{column.map((card, index) => {
-										const title = card.title || card.subtitle || "";
-										const subtitle = card.title && card.subtitle ? card.subtitle : "";
-										return (
-											<div
-												className="home-recommendation-card-track"
-												data-home-recommendation-card={index}
-												data-card-kind={card.kind}
-												key={`${preview.provider}-${card.id}-${index}`}
-											>
-												<div className={`home-recommendation-track-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
-												<div className="home-recommendation-track-text">
-													{title ? <div className="home-recommendation-title">{title}</div> : null}
-													{subtitle ? <div className="home-recommendation-subtitle">{subtitle}</div> : null}
-												</div>
-											</div>
-										);
-									})}
+									{column.map((card, index) => (
+										<RecommendationCardView
+											key={`${preview.provider}-${card.id}-${index}`}
+											provider={preview.provider}
+											moduleKind={preview.kind}
+											card={card}
+											index={index}
+										/>
+									))}
 								</div>
 							))}
 						</div>
@@ -729,42 +689,15 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 									: "home-recommendation-tile-row"
 							}
 						>
-							{preview.cards.map((card, index) => {
-								const title = card.title || card.subtitle || "";
-								const subtitle = card.title && card.subtitle ? card.subtitle : "";
-								return preview.kind === "Mixed" && preview.provider === "netease" ? (
-									<div
-										className="home-recommendation-card home-recommendation-card-netease-mixed"
-										data-home-recommendation-card={index}
-										data-card-kind={card.kind}
-										key={`${preview.provider}-${card.id}-${index}`}
-									>
-										<div className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
-										{title ? <div className="home-recommendation-netease-title"><div className="home-recommendation-title">{title}</div></div> : null}
-										{subtitle ? (
-											<div className="home-recommendation-netease-footer">
-												<div className="home-recommendation-subtitle">{subtitle}</div>
-											</div>
-										) : null}
-									</div>
-								) : (
-									<div
-										className="home-recommendation-media"
-										data-home-recommendation-card={index}
-										data-card-kind={card.kind}
-										key={`${preview.provider}-${card.id}-${index}`}
-									>
-										<div className="home-recommendation-cover-card">
-											<div className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`} style={coverStyle(card.coverUrl)} />
-										</div>
-										{title ? <div className="home-recommendation-media-text">
-											<div className="home-recommendation-title">{title}</div>
-											{subtitle ? <div className="home-recommendation-subtitle">{subtitle}</div> : null}
-										</div> : null}
-									</div>
-								)
-							;
-						})}
+							{preview.cards.map((card, index) => (
+								<RecommendationCardView
+									key={`${preview.provider}-${card.id}-${index}`}
+									provider={preview.provider}
+									moduleKind={preview.kind}
+									card={card}
+									index={index}
+								/>
+							))}
 						</div>
 					)}
 				</section>

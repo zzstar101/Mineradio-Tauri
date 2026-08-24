@@ -1679,11 +1679,16 @@ body.empty-home-active .home-visual {
   min-width: 0;
 }
 
-/* 推荐卡片行：平铺不换行，溢出水平滚动 */
+/* 歌单/媒体行：grid 横排。列宽 = 容器的六等分（比例上限即 1/6），
+   夹在 [104px, 208px] 允许范围内；静止时约可见 6-10 张，
+   超出横向溢出滚动（保留滚动条）。间隔固定 12px，封面保持 1:1。 */
 .home-recommendation-tile-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(104px, calc((100% - 60px) / 6), 150px);
+  grid-auto-rows: auto;
+  align-items: start;
+  gap: 12px;
   overflow-x: auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
@@ -1742,8 +1747,6 @@ body.empty-home-active .home-visual {
 }
 
 .home-recommendation-media {
-  flex: 0 0 132px;
-  width: 132px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -1753,20 +1756,22 @@ body.empty-home-active .home-visual {
   width: 100%;
   aspect-ratio: 1;
   border: 1px solid color-mix(in srgb, var(--home-accent) 9%, rgba(255, 255, 255, .075));
-  border-radius: 20px;
+  border-radius: 14px;
   background: linear-gradient(145deg, rgba(255, 255, 255, .060), rgba(255, 255, 255, .025));
   box-shadow: 0 16px 50px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .052);
   overflow: hidden;
 }
 
-/* 网易云 mix 行：grid 横排。卡片宽度固定为容器的四等分，
-   夹在 [132px, 300px] 允许范围内，与卡片数量无关；
-   超过 4 张横向溢出滚动（保留滚动条）。
-   间隔固定 12px，卡片保持 3:4 等比（先定宽、再按比例得高）。 */
+/* 网易云 mix 行：grid 横排。卡片宽度 = 容器四等分与七等分取小
+   （比例上限等效"静止时至少可见约 7 张"，且不随窗口变化），
+   窄容器下限 96px；超过部分横向溢出滚动（保留滚动条）。
+   注意：上限不能用 clamp(x%, y, z%) 写法——WebView2 下 grid 轨道
+   尺寸的 clamp 百分比边界不可靠，会被整条丢弃。
+   间隔固定 15px，卡片保持 3:4 等比（先定宽、再按比例得高）。 */
 .home-recommendation-netease-mixed-row {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: clamp(10%, calc((100% - 36px) / 4), 14%);
+  grid-auto-columns: max(96px, min(calc((100% - 36px) / 4), calc((100% - 90px) / 7)));
   grid-auto-rows: auto;
   align-items: start;
   gap: 15px;
@@ -1780,7 +1785,7 @@ body.empty-home-active .home-visual {
   height: auto;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
-  border-radius: 20px;
+  border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--home-accent) 9%, rgba(255, 255, 255, .075));
   overflow: hidden;
 }
@@ -1816,6 +1821,9 @@ body.empty-home-active .home-visual {
   background: linear-gradient(90deg, rgba(8, 9, 13, .58), rgba(8, 9, 13, .30));
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  /* 自带与卡片一致的底部圆角：backdrop-filter 的模糊会逃出父级
+     overflow:hidden 的圆角裁切（Chromium 老问题），自圆角绕开它 */
+  border-radius: 0 0 13px 13px;
 }
 
 .home-recommendation-netease-title .home-recommendation-title,
@@ -1840,10 +1848,10 @@ body.empty-home-active .home-visual {
 }
 
 .home-recommendation-track-cover {
-  flex: 0 0 64px;
-  width: 64px;
-  height: 64px;
-  border-radius: 14px;
+  flex: 0 0 76px;
+  width: 76px;
+  height: 76px;
+  border-radius: 10px;
   background-color: #16161b;
   background-size: cover;
   background-position: center;
