@@ -898,6 +898,9 @@ test("Home blank dismiss accepts only empty Home surfaces", async () => {
 			<div class="empty-home-shell" id="blank"></div>
 			<button class="home-card" id="card">card</button>
 			<input id="search-input" />
+			<div class="home-recommendation-media" id="rec-media"></div>
+			<div class="home-recommendation-card-track" id="rec-track"></div>
+			<div class="home-recommendation-card-netease-mixed" id="rec-mixed"></div>
 			<div id="bottom-handle"></div>
 			<div id="fx-panel"></div>
 			<div id="playlist-panel"></div>
@@ -909,6 +912,9 @@ test("Home blank dismiss accepts only empty Home surfaces", async () => {
 	expect(isHomeBlankDismissElement(document.getElementById("blank"))).toBe(true);
 	expect(isHomeBlankDismissElement(document.getElementById("card"))).toBe(false);
 	expect(isHomeBlankDismissElement(document.getElementById("search-input"))).toBe(false);
+	expect(isHomeBlankDismissElement(document.getElementById("rec-media"))).toBe(false);
+	expect(isHomeBlankDismissElement(document.getElementById("rec-track"))).toBe(false);
+	expect(isHomeBlankDismissElement(document.getElementById("rec-mixed"))).toBe(false);
 	expect(isHomeBlankDismissElement(document.getElementById("bottom-handle"))).toBe(false);
 	expect(isHomeBlankDismissElement(document.getElementById("fx-panel"))).toBe(false);
 	expect(isHomeBlankDismissElement(document.getElementById("playlist-panel"))).toBe(false);

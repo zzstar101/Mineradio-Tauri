@@ -23,6 +23,10 @@ export function isHomeBlankDismissElement(
       ".home-card",
       ".home-tile",
       ".home-chip",
+      // 推荐卡片：有自己的点击交互（或即将有），不能被当成空白区 dismiss
+      ".home-recommendation-card-track",
+      ".home-recommendation-card-netease-mixed",
+      ".home-recommendation-media",
       "button",
       "a",
       "input",
