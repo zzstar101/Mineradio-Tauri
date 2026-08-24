@@ -27,6 +27,8 @@ export function isHomeBlankDismissElement(
       ".home-recommendation-card-track",
       ".home-recommendation-card-netease-mixed",
       ".home-recommendation-media",
+      // 歌单详情页曲目行（div[role=button]，详情页期间 emptyHomeActive 仍为 true）
+      ".home-detail-track",
       "button",
       "a",
       "input",

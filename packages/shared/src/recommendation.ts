@@ -2,24 +2,24 @@ import { z } from "zod";
 import { ProviderIdSchema } from "./provider";
 
 export const RecommendationCardKindSchema = z.enum([
-	"Track",
-	"Stream",
-	"Playlist",
-	"Unknown",
+	"track",
+	"stream",
+	"playlist",
+	"unknown",
 ]);
 
 export const RecommendationModuleKindSchema = z.enum([
-	"Track",
-	"Mixed",
-	"Playlist",
-	"Unknown",
+	"track",
+	"mixed",
+	"playlist",
+	"unknown",
 ]);
 
 export const RecommendationCardSchema = z.object({
 	id: z.string(),
 	title: z.string().default(""),
 	subtitle: z.string().default(""),
-	kind: RecommendationCardKindSchema.default("Unknown"),
+	kind: RecommendationCardKindSchema.default("unknown"),
 	coverUrl: z.string().default(""),
 	collected: z.boolean().nullable().optional(),
 });
@@ -27,7 +27,7 @@ export const RecommendationCardSchema = z.object({
 export const RecommendationModuleSchema = z.object({
 	title: z.string().default(""),
 	list: z.array(RecommendationCardSchema).default([]),
-	kind: RecommendationModuleKindSchema.default("Unknown"),
+	kind: RecommendationModuleKindSchema.default("unknown"),
 });
 
 export const RecommendationPageSchema = z.object({

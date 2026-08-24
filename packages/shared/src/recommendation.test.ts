@@ -8,11 +8,11 @@ test("RecommendationPageArraySchema accepts provider recommendation pages", () =
 			list: [
 				{
 					title: "每日推荐",
-					kind: "Mixed",
+					kind: "mixed",
 					list: [
 						{
 							id: "track-1",
-							kind: "Track",
+							kind: "track",
 							coverUrl: "https://example.com/cover.jpg",
 						},
 					],
@@ -23,7 +23,7 @@ test("RecommendationPageArraySchema accepts provider recommendation pages", () =
 			provider: "qq",
 			list: [{
 				title: "歌单",
-				kind: "Playlist",
+				kind: "playlist",
 				list: [],
 			}],
 		},
@@ -34,7 +34,7 @@ test("RecommendationPageArraySchema accepts provider recommendation pages", () =
 		id: "track-1",
 		title: "",
 		subtitle: "",
-		kind: "Track",
+		kind: "track",
 		coverUrl: "https://example.com/cover.jpg",
 		collected: undefined,
 	});

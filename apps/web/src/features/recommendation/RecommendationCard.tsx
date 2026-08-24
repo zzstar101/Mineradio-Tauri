@@ -35,12 +35,12 @@ export function RecommendationCard({
 		resolveRecommendationCardDisplay(card);
 
 	const interactive =
-		(card.kind === "Track" && Boolean(onPlayTrack)) ||
-		(card.kind === "Playlist" && Boolean(onOpenPlaylist));
+		(card.kind === "track" && Boolean(onPlayTrack)) ||
+		(card.kind === "playlist" && Boolean(onOpenPlaylist));
 
 	const handleActivate = () => {
-		if (card.kind === "Track") onPlayTrack?.(provider, card);
-		else if (card.kind === "Playlist") onOpenPlaylist?.(provider, card);
+		if (card.kind === "track") onPlayTrack?.(provider, card);
+		else if (card.kind === "playlist") onOpenPlaylist?.(provider, card);
 	};
 
 	const interactiveProps = interactive
@@ -50,7 +50,7 @@ export function RecommendationCard({
 			}
 		: {};
 
-	if (moduleKind === "Track") {
+	if (moduleKind === "track") {
 		return (
 			<div
 				className="home-recommendation-card-track"
@@ -70,7 +70,7 @@ export function RecommendationCard({
 		);
 	}
 
-	if (moduleKind === "Mixed" && provider === "netease") {
+	if (moduleKind === "mixed" && provider === "netease") {
 		return (
 			<div
 				className="home-recommendation-card home-recommendation-card-netease-mixed"

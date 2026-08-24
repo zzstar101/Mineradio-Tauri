@@ -8,16 +8,16 @@ function page(provider: RecommendationPage["provider"], title: string, count = 1
 		list: [
 			{
 				title,
-				kind: "Mixed",
+				kind: "mixed",
 				list: Array.from({ length: count }, (_, index) => ({
 					id: `${provider}-${index}`,
 					title: `歌曲 ${index + 1}`,
 					subtitle: "",
-					kind: "Track",
+					kind: "track",
 					coverUrl: "",
 				})),
 			},
-			{ title: "第二个模块", kind: "Mixed", list: [{ id: "second", title: "", subtitle: "", kind: "Track", coverUrl: "" }] },
+			{ title: "第二个模块", kind: "mixed", list: [{ id: "second", title: "", subtitle: "", kind: "track", coverUrl: "" }] },
 		],
 	};
 }

@@ -222,7 +222,7 @@ test("recommendationPages GETs provider recommendation pages", async () => {
 					title: "每日推荐",
 					list: [{
 						id: "card-1",
-						kind: "Track",
+						kind: "track",
 					}],
 				}],
 			}],

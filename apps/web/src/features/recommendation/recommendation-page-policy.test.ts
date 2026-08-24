@@ -15,12 +15,12 @@ function page(
 		provider,
 		list: modules.map(({ title, count }) => ({
 			title,
-			kind: "Mixed",
+			kind: "mixed",
 			list: Array.from({ length: count }, (_, index) => ({
 				id: `${provider}-${index}`,
 				title: `歌曲 ${index + 1}`,
 				subtitle: "",
-				kind: "Track",
+				kind: "track",
 				coverUrl: "",
 			})),
 		})),
@@ -63,14 +63,14 @@ test("chunkIntoColumns splits items into fixed-size columns", () => {
 });
 
 test("resolveRecommendationCardDisplay applies title fallback rules", () => {
-	expect(resolveRecommendationCardDisplay({ title: "歌名", subtitle: "歌手", id: "1", kind: "Track" } as RecommendationCard)).toEqual({
+	expect(resolveRecommendationCardDisplay({ title: "歌名", subtitle: "歌手", id: "1", kind: "track" } as RecommendationCard)).toEqual({
 		title: "歌名",
 		subtitle: "歌手",
 	});
 	expect(
-		resolveRecommendationCardDisplay({ title: "", subtitle: "只有副标题", id: "2", kind: "Playlist" } as RecommendationCard),
+		resolveRecommendationCardDisplay({ title: "", subtitle: "只有副标题", id: "2", kind: "playlist" } as RecommendationCard),
 	).toEqual({ title: "只有副标题", subtitle: "" });
-	expect(resolveRecommendationCardDisplay({ title: "", subtitle: "", id: "3", kind: "Unknown" } as RecommendationCard)).toEqual({
+	expect(resolveRecommendationCardDisplay({ title: "", subtitle: "", id: "3", kind: "unknown" } as RecommendationCard)).toEqual({
 		title: "",
 		subtitle: "",
 	});
@@ -81,7 +81,7 @@ test("buildTrackFromRecommendationCard synthesizes a playable track", () => {
 		id: "0039MnYb0qxYhV",
 		title: "晴天",
 		subtitle: "周杰伦 / 杨瑞代",
-		kind: "Track",
+		kind: "track",
 		coverUrl: "https://example.com/cover.jpg",
 	} as RecommendationCard);
 
@@ -103,7 +103,7 @@ test("buildTrackFromRecommendationCard falls back to subtitle as title without a
 		id: "42",
 		title: "",
 		subtitle: "只有副标题的歌",
-		kind: "Track",
+		kind: "track",
 		coverUrl: "",
 	} as RecommendationCard);
 
@@ -116,7 +116,7 @@ test("buildTrackFromRecommendationCard tolerates empty card text", () => {
 		id: "x-1",
 		title: "",
 		subtitle: "",
-		kind: "Track",
+		kind: "track",
 		coverUrl: "",
 	} as RecommendationCard);
 

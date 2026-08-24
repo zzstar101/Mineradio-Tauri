@@ -39,7 +39,7 @@ export function RecommendationModuleRail({
 					{heading}
 				</div>
 			</div>
-			{module.kind === "Track" ? (
+			{module.kind === "track" ? (
 				<div className="home-recommendation-track-row">
 					{chunkIntoColumns(module.list, 3).map((column, columnIndex) => (
 						<div
@@ -63,7 +63,7 @@ export function RecommendationModuleRail({
 			) : (
 				<div
 					className={
-						module.kind === "Mixed" && provider === "netease"
+						module.kind === "mixed" && provider === "netease"
 							? "home-recommendation-netease-mixed-row"
 							: "home-recommendation-tile-row"
 					}
