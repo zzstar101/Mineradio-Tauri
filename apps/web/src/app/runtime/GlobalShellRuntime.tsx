@@ -6,6 +6,7 @@ import {
   type AiDepthStatusDetail,
 } from "../../visual/ai-depth-estimator";
 import { applyVisualThemeToRoot } from "../../visual/visual-theme";
+import { attachRecommendationRowWheelScroll } from "../../features/recommendation/recommendation-wheel-scroll";
 
 export interface AiDepthChipState {
   visible: boolean;
@@ -118,6 +119,12 @@ export function useGlobalShellRuntime({
     visible: false,
     text: "AI 深度估计…",
   });
+
+  // 推荐模块行：滚轮横滑替代横向滚动条（空白区域不受影响）
+  useEffect(
+    () => attachRecommendationRowWheelScroll(document),
+    [],
+  );
 
   useEffect(() => {
     if (accountLoggedIn) return;

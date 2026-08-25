@@ -485,10 +485,6 @@ export function useHomeController({
 			value && value.key === key ? { ...value, loadingMore: true } : value,
 		);
 		try {
-			console.log("[playlist-page] request", {
-				offset,
-				limit: HOME_PLAYLIST_PAGE_SIZE,
-			}); // TODO(debug)
 			const page = await current.library.playlistDetail(
 				view.playlist.provider,
 				view.playlist.id,
@@ -498,31 +494,20 @@ export function useHomeController({
 				if (!value || (key != null && value.key !== key)) return value;
 				if (playlistLoadedCountRef.current !== offset) {
 					// 陈旧响应：期间列表已被其他写入推进，丢弃本页（不判尽）
-					console.log("[playlist-page] stale drop", {
-						requestedOffset: offset,
-						currentCount: playlistLoadedCountRef.current,
-					}); // TODO(debug)
 					return { ...value, loadingMore: false };
 				}
 				const merged = applyPlaylistPageAtOffset(value.tracks, offset, page.tracks);
 				playlistLoadedCountRef.current = merged.length;
-				const exhausted = !playlistHasNextPage({
-					loadedCount: merged.length,
-					pageCount: page.tracks.length,
-					pageSize: HOME_PLAYLIST_PAGE_SIZE,
-					totalCount: value.playlist.trackCount ?? null,
-				});
-				console.log("[playlist-page] apply", {
-					offset,
-					got: page.tracks.length,
-					total: merged.length,
-					exhausted,
-				}); // TODO(debug)
 				return {
 					...value,
 					tracks: merged,
 					loadingMore: false,
-					exhausted,
+					exhausted: !playlistHasNextPage({
+						loadedCount: merged.length,
+						pageCount: page.tracks.length,
+						pageSize: HOME_PLAYLIST_PAGE_SIZE,
+						totalCount: value.playlist.trackCount ?? null,
+					}),
 				};
 			});
 		} catch {

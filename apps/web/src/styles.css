@@ -1715,23 +1715,17 @@ body.empty-home-active .home-visual {
   -webkit-overflow-scrolling: touch;
 }
 
+/* 模块行横向滚动改由鼠标滚轮驱动，隐藏原生横向滚动条 */
+.home-recommendation-track-row,
+.home-recommendation-netease-mixed-row,
+.home-recommendation-tile-row {
+  scrollbar-width: none;
+}
+
 .home-recommendation-track-row::-webkit-scrollbar,
 .home-recommendation-netease-mixed-row::-webkit-scrollbar,
 .home-recommendation-tile-row::-webkit-scrollbar {
-  height: 8px;
-}
-
-.home-recommendation-track-row::-webkit-scrollbar-track,
-.home-recommendation-netease-mixed-row::-webkit-scrollbar-track,
-.home-recommendation-tile-row::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.home-recommendation-track-row::-webkit-scrollbar-thumb,
-.home-recommendation-netease-mixed-row::-webkit-scrollbar-thumb,
-.home-recommendation-tile-row::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, .18);
-  border-radius: 999px;
+  display: none;
 }
 
 /* 单曲竖排列：每列 3 张纵向堆叠，上下距离固定 10px */
