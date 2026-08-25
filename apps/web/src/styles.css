@@ -1817,12 +1817,20 @@ body.empty-home-active .home-visual {
   padding: 0 10px;
 }
 
+/* footer 绝对定位覆盖在封面底部：backdrop-filter 才能糊到封面画面，
+   挤开式布局会让它只能糊到卡片背后的页面（读起来像色块） */
 .home-recommendation-netease-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
   min-width: 0;
   padding: 8px 10px;
-  background: linear-gradient(90deg, rgba(8, 9, 13, .58), rgba(8, 9, 13, .30));
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* 真·背景模糊：低不透明度深色仅作文字衬底，主视觉来自 backdrop blur */
+  background: rgba(10, 11, 16, .32);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
   /* 自带与卡片一致的底部圆角：backdrop-filter 的模糊会逃出父级
      overflow:hidden 的圆角裁切（Chromium 老问题），自圆角绕开它 */
   border-radius: 0 0 13px 13px;
@@ -1833,10 +1841,14 @@ body.empty-home-active .home-visual {
   color: #fff;
 }
 
+/* 强制两排高度：无论一行/空都撑满两行，文字从上排开始；
+   超出两行截断。footer 因此在所有卡片上高度齐平 */
 .home-recommendation-netease-footer .home-recommendation-subtitle {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  min-height: calc(2 * 1.2em);
+  line-height: 1.2;
   white-space: normal;
   overflow: hidden;
 }

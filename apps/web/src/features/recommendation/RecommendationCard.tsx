@@ -87,11 +87,10 @@ export function RecommendationCard({
 						<div className="home-recommendation-title">{cardTitle}</div>
 					</div>
 				) : null}
-				{cardSubtitle ? (
-					<div className="home-recommendation-netease-footer">
-						<div className="home-recommendation-subtitle">{cardSubtitle}</div>
-					</div>
-				) : null}
+				{/* footer 无条件渲染：保证所有卡片底部模糊层高度齐平 */}
+				<div className="home-recommendation-netease-footer">
+					{cardSubtitle ? <div className="home-recommendation-subtitle">{cardSubtitle}</div> : null}
+				</div>
 			</div>
 		);
 	}
