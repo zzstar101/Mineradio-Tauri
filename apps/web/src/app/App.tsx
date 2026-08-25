@@ -564,6 +564,7 @@ export function App({
     openRecommendations: openHomeRecommendations,
     closeRecommendations: closeHomeRecommendations,
     playRecommendationTrack: playHomeRecommendationTrack,
+    playRecommendationStream: playHomeRecommendationStream,
     openRecommendationPlaylist: openHomeRecommendationPlaylist,
     loadMorePlaylistTracks: loadHomeMorePlaylistTracks,
     searchPlaylistDetailArtist: searchHomePlaylistDetailArtist,
@@ -661,6 +662,10 @@ export function App({
     applyCustomCoverImage: (file, track) =>
       applyCustomCoverImageRef.current(file, track),
     showToast,
+    streamNext: (provider, id) => {
+      if (!applicationPorts) throw new Error("api not ready");
+      return applicationPorts.music.discover.streamNext(provider, id);
+    },
   });
 
   const getPlaybackSessionSnapshot = useCallback(() => {
@@ -1706,6 +1711,8 @@ export function App({
         onOpenRecommendations: (provider) => void openHomeRecommendations(provider),
         onCloseRecommendations: closeHomeRecommendations,
         onPlayRecommendationTrack: playHomeRecommendationTrack,
+        onPlayRecommendationStream: (provider, card) =>
+          void playHomeRecommendationStream(provider, card),
         onOpenRecommendationPlaylist: (provider, card) =>
           void openHomeRecommendationPlaylist(provider, card.id),
       },

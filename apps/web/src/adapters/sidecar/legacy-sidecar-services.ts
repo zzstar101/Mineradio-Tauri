@@ -43,6 +43,7 @@ export function createLegacySidecarServices(client: SidecarClient): MusicService
 			weatherRadio: (params) => client.weatherRadio(params),
 			discoverHome: () => client.discoverHome(),
 			recommendationPages: (options) => client.recommendationPages(options),
+			streamNext: (provider, id) => client.streamNext(provider, id),
 			podcastDetail: (id) => client.podcastDetail(id),
 			podcastMy: () => client.podcastMy(),
 			podcastMyItems: (key, limit, offset) => client.podcastMyItems(key, limit, offset),

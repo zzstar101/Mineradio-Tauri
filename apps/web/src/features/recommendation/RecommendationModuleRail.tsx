@@ -14,6 +14,7 @@ export interface RecommendationModuleRailProps {
 	anchor?: boolean;
 	onPlayTrack?: (provider: ProviderId, card: RecommendationCardData) => void;
 	onOpenPlaylist?: (provider: ProviderId, card: RecommendationCardData) => void;
+	onPlayStream?: (provider: ProviderId, card: RecommendationCardData) => void;
 }
 
 /** 推荐页里单条 module rail：Provider 分段标题 + 卡片行。 */
@@ -23,6 +24,7 @@ export function RecommendationModuleRail({
 	anchor,
 	onPlayTrack,
 	onOpenPlaylist,
+	onPlayStream,
 }: RecommendationModuleRailProps): ReactElement {
 	const label = HOME_PROVIDER_LABELS[provider];
 	const heading = module.title.trim() ? `${label} · ${module.title}` : label;
@@ -55,6 +57,7 @@ export function RecommendationModuleRail({
 									index={index}
 									onPlayTrack={onPlayTrack}
 									onOpenPlaylist={onOpenPlaylist}
+									onPlayStream={onPlayStream}
 								/>
 							))}
 						</div>
@@ -77,6 +80,7 @@ export function RecommendationModuleRail({
 							index={index}
 							onPlayTrack={onPlayTrack}
 							onOpenPlaylist={onOpenPlaylist}
+							onPlayStream={onPlayStream}
 						/>
 					))}
 				</div>

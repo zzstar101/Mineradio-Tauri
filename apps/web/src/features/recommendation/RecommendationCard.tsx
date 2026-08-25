@@ -17,11 +17,12 @@ export interface RecommendationCardProps {
 	index: number;
 	onPlayTrack?: (provider: ProviderId, card: RecommendationCardData) => void;
 	onOpenPlaylist?: (provider: ProviderId, card: RecommendationCardData) => void;
+	onPlayStream?: (provider: ProviderId, card: RecommendationCardData) => void;
 }
 
 /**
  * 推荐卡片渲染（按模块 kind 决定三段布局）+ 点击交互（按卡片 kind 分发）：
- * Track → 播放；Playlist → 打开歌单；Stream 本轮不做，保持无交互。
+ * Track → 播放；Playlist → 打开歌单；Stream → 流式电台续播。
  */
 export function RecommendationCard({
 	provider,
@@ -30,17 +31,20 @@ export function RecommendationCard({
 	index,
 	onPlayTrack,
 	onOpenPlaylist,
+	onPlayStream,
 }: RecommendationCardProps): ReactElement {
 	const { title: cardTitle, subtitle: cardSubtitle } =
 		resolveRecommendationCardDisplay(card);
 
 	const interactive =
 		(card.kind === "track" && Boolean(onPlayTrack)) ||
-		(card.kind === "playlist" && Boolean(onOpenPlaylist));
+		(card.kind === "playlist" && Boolean(onOpenPlaylist)) ||
+		(card.kind === "stream" && Boolean(onPlayStream));
 
 	const handleActivate = () => {
 		if (card.kind === "track") onPlayTrack?.(provider, card);
 		else if (card.kind === "playlist") onOpenPlaylist?.(provider, card);
+		else if (card.kind === "stream") onPlayStream?.(provider, card);
 	};
 
 	const interactiveProps = interactive

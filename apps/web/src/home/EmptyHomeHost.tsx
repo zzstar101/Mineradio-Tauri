@@ -83,6 +83,7 @@ export interface EmptyHomeHostProps {
 	onCloseRecommendations?: () => void;
 	onPlayRecommendationTrack?: (provider: ProviderId, card: RecommendationCardData) => void;
 	onOpenRecommendationPlaylist?: (provider: ProviderId, card: RecommendationCardData) => void;
+	onPlayRecommendationStream?: (provider: ProviderId, card: RecommendationCardData) => void;
 	onPlaylistDetailArtist?: (artist: string, track: Track) => void;
 	onNotice?: (message: string) => void;
 	heroVideoRepository?: HomeHeroVideoRepository;
@@ -733,6 +734,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 											index={index}
 											onPlayTrack={props.onPlayRecommendationTrack}
 											onOpenPlaylist={props.onOpenRecommendationPlaylist}
+											onPlayStream={props.onPlayRecommendationStream}
 										/>
 									))}
 								</div>
@@ -755,6 +757,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 									index={index}
 									onPlayTrack={props.onPlayRecommendationTrack}
 									onOpenPlaylist={props.onOpenRecommendationPlaylist}
+									onPlayStream={props.onPlayRecommendationStream}
 								/>
 							))}
 						</div>

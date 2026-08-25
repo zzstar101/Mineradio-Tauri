@@ -77,6 +77,7 @@ export function RecommendationPage({
 								}
 								onPlayTrack={props.onPlayRecommendationTrack}
 								onOpenPlaylist={props.onOpenRecommendationPlaylist}
+								onPlayStream={props.onPlayRecommendationStream}
 							/>
 						))
 					)}

@@ -50,6 +50,7 @@ import {
 	SongLikeCheckAckSchema,
 	TrackQualityAvailability,
 	TrackQualityAvailabilitySchema,
+	TrackSchema,
 	SongUrlResultSchema,
 	WeatherRadioResponse,
 	WeatherRadioResponseSchema,
@@ -386,6 +387,16 @@ export class SidecarClient {
 			"GET",
 			`/providers/${provider}/playlists`,
 			PlaylistSummaryArraySchema,
+		);
+	}
+
+	/** 流式电台续拉：POST /providers/:id/stream-next，body { id }，返回一首新 Track */
+	async streamNext(provider: ProviderId, id: string): Promise<Track> {
+		return this.request(
+			"POST",
+			`/providers/${provider}/stream-next`,
+			TrackSchema,
+			{ id },
 		);
 	}
 

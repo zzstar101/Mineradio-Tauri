@@ -33,6 +33,7 @@ const legacyMethodOperations = {
 	weatherRadio: "discover.weatherRadio",
 	discoverHome: "discover.discoverHome",
 	recommendationPages: "discover.recommendationPages",
+	streamNext: "discover.streamNext",
 	podcastDetail: "discover.podcastDetail",
 	podcastMy: "discover.podcastMy",
 	podcastMyItems: "discover.podcastMyItems",

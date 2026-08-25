@@ -26,6 +26,12 @@ struct LikeBody {
     liked: bool,
 }
 
+/// 流式电台续拉请求体：推荐 Stream 卡片的句柄 id（不解析内部结构）
+#[derive(Deserialize)]
+struct StreamNextBody {
+    id: String,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PlaylistAddSongBody {
@@ -240,6 +246,14 @@ async fn handle_provider_route(
             let parsed = parse_body::<LikeBody>(&body)?;
             let result = provider_api
                 .like_song(&parsed.id, parsed.liked)
+                .await
+                .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(serde_json::to_value(result).unwrap()))
+        }
+        ("POST", ["stream-next"]) => {
+            let parsed = parse_body::<StreamNextBody>(&body)?;
+            let result = provider_api
+                .stream_next(&parsed.id)
                 .await
                 .map_err(|err| ApiCallError::from_api_error(&err))?;
             Ok(Success::Data(serde_json::to_value(result).unwrap()))

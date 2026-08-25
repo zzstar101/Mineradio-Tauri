@@ -8,6 +8,7 @@ import type {
 	WeatherRadioResponse,
 } from "@mineradio/shared";
 import type { DiscoverPort } from "../../ports/music/discover-port";
+import { usePlaybackStore } from "../../stores/playback-store";
 import type { LibraryPort } from "../../ports/music/library-port";
 import type { SearchExperiencePort } from "../../ports/music/search-port";
 import type { HomePlaylistDetailView } from "../../home/EmptyHomeHost";
@@ -69,6 +70,7 @@ export interface HomeControllerResult {
 	openRecommendations(anchorProvider: ProviderId): void;
 	closeRecommendations(): void;
 	playRecommendationTrack(provider: ProviderId, card: RecommendationCardData): void;
+	playRecommendationStream(provider: ProviderId, card: RecommendationCardData): Promise<void>;
 	openRecommendationPlaylist(provider: ProviderId, id: string): Promise<void>;
 	searchPlaylistDetailArtist(artist: string): void;
 	openPodcast(index: number): Promise<void>;
@@ -545,6 +547,29 @@ export function useHomeController({
 		[enterPlayback],
 	);
 
+	/** 流式电台：首拉一首即播并登记 streamSource，
+	 *  之后由播放会话 ended 钩子按需续拉生长队列。 */
+	const playRecommendationStream = useCallback(
+		async (provider: ProviderId, card: RecommendationCardData) => {
+			const current = dependenciesRef.current;
+			if (!current.library || !discoverPort) {
+				current.showToast("API 未就绪，稍后再试");
+				return;
+			}
+			try {
+				const track = await discoverPort.streamNext(provider, card.id);
+				current.playback.setQueue([track]);
+				usePlaybackStore.getState().setStreamSource({ provider, id: card.id });
+				current.playback.playAt(0);
+				enterPlayback();
+				current.showToast("电台已连接");
+			} catch {
+				current.showToast("流式电台连接失败");
+			}
+		},
+		[discoverPort, enterPlayback],
+	);
+
 	/** 打开推荐歌单：与 openPlaylist 同一套详情页/导航样板，
 	 *  但按 provider + card.id 定位（不依赖 discover 数组下标）。
 	 *  playlist 先放最小占位，playlistDetail 返回后整体替换。 */
@@ -776,6 +801,7 @@ export function useHomeController({
 		openRecommendations,
 		closeRecommendations,
 		playRecommendationTrack,
+		playRecommendationStream,
 		openRecommendationPlaylist,
 		loadMorePlaylistTracks,
 		searchPlaylistDetailArtist,

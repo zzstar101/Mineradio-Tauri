@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type RefObject } from "react";
-import type { Track } from "@mineradio/shared";
+import type { ProviderId, Track } from "@mineradio/shared";
 import type { PlayerController, TimeUpdatePayload } from "../../audio/player-controller";
 import {
 	LOCAL_AUDIO_ACCEPT,
@@ -50,6 +50,7 @@ export function usePlaybackUiController({
 	clearCurrentBeatMap,
 	applyCustomCoverImage,
 	showToast,
+	streamNext,
 }: {
 	controllerRef: RefObject<PlayerController | null>;
 	lyricsPayloadRef: RefObject<LyricPayload | null>;
@@ -70,10 +71,14 @@ export function usePlaybackUiController({
 	clearCurrentBeatMap(): void;
 	applyCustomCoverImage(file: Blob, track?: Track): Promise<void>;
 	showToast(message: string): void;
+	/** 缺省时视为不支持流式续播，ended 直接走普通队列前进 */
+	streamNext?(provider: ProviderId, id: string): Promise<Track>;
 }): PlaybackUiControllerResult {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const localAudioUrlsRef = useRef(new Map<string, string>());
 	const lastRuntimeDurationRef = useRef<number | null>(null);
+	/** 流式电台续拉单飞闸门：ended 事件可能连发，进行中忽略重入 */
+	const streamFetchInFlightRef = useRef(false);
 	const dependenciesRef = useRef({
 		playbackMode,
 		setPositionMs,
@@ -92,6 +97,7 @@ export function usePlaybackUiController({
 		clearCurrentBeatMap,
 		applyCustomCoverImage,
 		showToast,
+		streamNext,
 	});
 	dependenciesRef.current = {
 		playbackMode,
@@ -111,6 +117,7 @@ export function usePlaybackUiController({
 		clearCurrentBeatMap,
 		applyCustomCoverImage,
 		showToast,
+		streamNext,
 	};
 
 	const openLocalFileImport = useCallback(() => {
@@ -232,6 +239,51 @@ export function usePlaybackUiController({
 		const current = dependenciesRef.current;
 		current.finalizeListenSession(true);
 		current.setPositionMs(0);
+
+		// 流式电台续播：当前曲已是队尾且 streamSource 激活 → 先续拉再前进。
+		// 到尽头/失败都吞掉本次事件并降级为普通队列行为，页面不越轨。
+		const state = usePlaybackStore.getState();
+		const source = state.streamSource;
+		const queueTail = state.queue[state.queue.length - 1] ?? null;
+		const atStreamTail =
+			source !== null &&
+			state.currentTrack !== null &&
+			queueTail !== null &&
+			`${state.currentTrack.provider}:${state.currentTrack.id}` ===
+				`${queueTail.provider}:${queueTail.id}`;
+		const { streamNext } = current;
+		if (
+			source &&
+			atStreamTail &&
+			typeof streamNext === "function"
+		) {
+			if (streamFetchInFlightRef.current) return; // 单飞：进行中忽略重入
+			streamFetchInFlightRef.current = true;
+			void (async () => {
+				try {
+					const track = await streamNext(source.provider, source.id);
+					const latest = usePlaybackStore.getState();
+					if (
+						!latest.streamSource ||
+						latest.streamSource.id !== source.id
+					) {
+						// 期间源已被切换/清空：静默丢弃，走普通前进
+						return;
+					}
+					latest.enqueue(track);
+					latest.ended();
+				} catch {
+					const latest = usePlaybackStore.getState();
+					latest.setStreamSource(null);
+					current.showToast("流式续播失败");
+					usePlaybackStore.getState().ended();
+				} finally {
+					streamFetchInFlightRef.current = false;
+				}
+			})();
+			return;
+		}
+
 		usePlaybackStore.getState().ended();
 	}, []);
 
