@@ -5130,6 +5130,20 @@ html.control-glass-svg-ok #fx-panel {
   -webkit-backdrop-filter: none !important;
 }
 
+/* 歌单面板的全部迷你按钮与队列行内操作：字形强制白色，
+   避免继承到深色字在深底上不可见（⌖ 常开 / ♡ 喜欢 / ＋ 收藏 / 刷新 / 登录等） */
+#playlist-panel .fx-mini-btn,
+#playlist-pin-btn,
+.qi-act button {
+  color: rgba(255, 255, 255, .88) !important;
+}
+
+#playlist-panel .fx-mini-btn:hover,
+#playlist-pin-btn:hover,
+.qi-act button:hover {
+  color: #fff !important;
+}
+
 html.control-glass-svg-ok .icon-btn,
 html.control-glass-svg-ok .fx-mini-btn,
 html.control-glass-svg-ok .fx-toggle,

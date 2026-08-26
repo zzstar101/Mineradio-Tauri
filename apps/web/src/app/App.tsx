@@ -1519,6 +1519,7 @@ export function App({
     setAccountDropdownOpen,
     dismissEmptyHome,
     showToast,
+    setPlaylistPanelOpen,
   });
 
   const shellProps: AppShellProps = {
