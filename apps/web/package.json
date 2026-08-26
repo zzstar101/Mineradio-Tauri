@@ -15,7 +15,7 @@
     "@mineradio/visual-engine": "workspace:*",
     "@vitejs/plugin-react": "^5.1.2",
     "vite": "^7.3.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "three": "^0.180.0",
