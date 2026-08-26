@@ -1,6 +1,5 @@
 export const FROZEN_DESKTOP_COMMANDS = [
 	"get_runtime_config",
-	"get_sidecar_status",
 	"get_database_status",
 	"configure_global_hotkeys",
 	"window_minimize",
@@ -93,7 +92,6 @@ export const M8_DESKTOP_COMMAND_INTERFACES = Object.freeze({
 
 export const DESKTOP_COMMAND_REGISTRATION_ORDER = Object.freeze([
 	"get_runtime_config",
-	"get_sidecar_status",
 	"get_database_status",
 	"get_preferences_snapshot",
 	"commit_preferences_transaction",
@@ -154,7 +152,6 @@ export const DESKTOP_COMMAND_REGISTRATION_ORDER = Object.freeze([
 
 export const FROZEN_DESKTOP_COMMAND_INTERFACES = Object.freeze({
 	get_runtime_config: "fn get_runtime_config(state: tauri::State<'_, AppState>) -> crate::RuntimeConfig",
-	get_sidecar_status: "fn get_sidecar_status(state: tauri::State<'_, AppState>) -> Result<sidecar::SidecarRuntimeSnapshot, String>",
 	get_database_status: "fn get_database_status(state: tauri::State<'_, AppState>) -> Result<db::DatabaseStatus, String>",
 	configure_global_hotkeys: "fn configure_global_hotkeys(app: tauri::AppHandle, bindings: Vec<GlobalHotkeyBinding>) -> ConfigureGlobalHotkeysResult",
 	window_minimize: "fn window_minimize(app: tauri::AppHandle) -> Result<(), String>",
@@ -185,30 +182,10 @@ export const FROZEN_DESKTOP_SERIALIZATION_CONTRACTS = Object.freeze({
 		kind: "struct",
 		serde: [],
 		fields: [
-			"sidecar_base_url: String",
 			"app_data_dir: String",
 			"app_version: String",
 			"schema_version: String",
 			"updater_public_key_configured: bool",
-		],
-	},
-	SidecarPhase: {
-		kind: "enum",
-		serde: ['rename_all = "camelCase"'],
-		variants: ["Starting", "Ready", "Recovering", "Stopped", "Error"],
-	},
-	SidecarRuntimeSnapshot: {
-		kind: "struct",
-		serde: ['rename_all = "camelCase"'],
-		fields: [
-			"phase: SidecarPhase",
-			"base_url: String",
-			"pid: Option<u32>",
-			"restarts: u32",
-			"last_error: Option<String>",
-			"last_health_ok_ms: Option<u64>",
-			"providers: Vec<String>",
-			"log_path: String",
 		],
 	},
 	DatabaseStatus: {

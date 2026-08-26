@@ -49,7 +49,9 @@ test("CI-only Rust source 不读取 GitHub token，也不依赖 Sidecar runtime"
     expect(content).not.toContain("sidecar_base_url");
   }
   expect(harness).toContain("struct SmokeNativeInstallOwners;");
-  expect(harness).toContain("gate_supervisor_and_stop_exact_sidecar");
+  // sidecar supervisor 门已随 rust-crate 迁移移除；
+  // smoke 安装流程改走 UpdateInstallGate 门禁，断言之以防绕过
+  expect(harness).toContain("UpdateInstallGate");
 });
 
 test("受保护发布必须先冻结 Draft、完成 N−1→N smoke，再公开 exact release", () => {

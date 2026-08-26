@@ -114,7 +114,15 @@ function readRecord(path: string): SourceRecord {
 
 function listFiles(root: string): string[] {
 	const files: string[] = [];
-	for (const entry of readdirSync(root, { withFileTypes: true })) {
+	let entries: ReturnType<typeof readdirSync>;
+	try {
+		entries = readdirSync(root, { withFileTypes: true });
+	} catch {
+		// sidecars/ 已随 rust-crate 迁移整体删除：视为空集，
+		// 边界断言继续守卫"不得引用 sidecars 路径"
+		return files;
+	}
+	for (const entry of entries) {
 		if (["node_modules", "dist", "target", ".turbo"].includes(entry.name)) continue;
 		const absolutePath = resolve(root, entry.name);
 		if (entry.isDirectory()) {
