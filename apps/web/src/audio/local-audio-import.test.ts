@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 import {
-  LOCAL_AUDIO_ACCEPT,
-  createLocalAudioTrack,
-  firstLocalAudioFile,
+	LOCAL_AUDIO_ACCEPT,
+	LOCAL_AUDIO_IMPORT_LIMIT,
+	createLocalAudioTrack,
+	firstLocalAudioFile,
+	localAudioFiles,
   firstLocalCoverFile,
   isLocalAudioFile,
   isLocalCoverFile,
@@ -24,6 +26,16 @@ test("firstLocalAudioFile picks the first audio file from a mixed import selecti
   ];
 
   expect(firstLocalAudioFile(files)?.name).toBe("live.m4a");
+});
+
+test("localAudioFiles deduplicates exact file identity and caps large selections", () => {
+	const files = [
+		{ name: "a.mp3", size: 1, lastModified: 2 },
+		{ name: "a.mp3", size: 1, lastModified: 2 },
+		{ name: "b.flac", size: 2, lastModified: 3 },
+	];
+	expect(localAudioFiles(files).map((file) => file.name)).toEqual(["a.mp3", "b.flac"]);
+	expect(LOCAL_AUDIO_IMPORT_LIMIT).toBe(5000);
 });
 
 test("local cover helpers pick image files and preserve image MIME in data URLs", async () => {

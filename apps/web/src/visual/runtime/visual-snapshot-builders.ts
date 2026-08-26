@@ -43,7 +43,14 @@ function resolveBackgroundPolicy(value: unknown): VisualBackgroundPolicy {
 	return value === "keep" || value === "release" ? value : "auto";
 }
 
-function resolveForegroundFramePolicy(): ForegroundFramePolicy {
+export function resolveForegroundFramePolicy(
+	quality: unknown,
+): ForegroundFramePolicy {
+	if (quality === "eco") return Object.freeze({ mode: "fixed", fps: 30 });
+	if (quality === "balanced") return Object.freeze({ mode: "fixed", fps: 45 });
+	if (quality === "ultra" || quality === "high" || quality == null) {
+		return Object.freeze({ mode: "vsync" });
+	}
 	return Object.freeze({ mode: "vsync" });
 }
 
@@ -110,7 +117,7 @@ export function buildVisualSettingsSnapshot(
 		coverResolution: input.coverResolution,
 		wallpaperSafe: input.wallpaperSafe,
 		backgroundPolicy: resolveBackgroundPolicy(fx.performanceBackground),
-		foregroundFramePolicy: resolveForegroundFramePolicy(),
+		foregroundFramePolicy: resolveForegroundFramePolicy(fx.performanceQuality),
 		prefersReducedMotion: input.prefersReducedMotion,
 	});
 }

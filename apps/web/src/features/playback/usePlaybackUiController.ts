@@ -4,8 +4,8 @@ import type { PlayerController, TimeUpdatePayload } from "../../audio/player-con
 import {
 	LOCAL_AUDIO_ACCEPT,
 	createLocalAudioTrack,
-	firstLocalAudioFile,
 	firstLocalCoverFile,
+	localAudioFiles,
 } from "../../audio/local-audio-import";
 import { withStoredCustomCover } from "../../cover/custom-cover";
 import type { LyricPayload } from "@mineradio/shared";
@@ -123,25 +123,29 @@ export function usePlaybackUiController({
 	const importLocalFiles = useCallback((files: FileList | File[] | null) => {
 		if (!files) return;
 		const current = dependenciesRef.current;
-		const file = firstLocalAudioFile(files);
+		const audioFiles = localAudioFiles(files);
+		const file = audioFiles[0] ?? null;
 		const coverFile = firstLocalCoverFile(files);
-		if (!file && !coverFile) {
+		if (!audioFiles.length && !coverFile) {
 			current.showToast("请选择音频或图片文件");
 			return;
 		}
 		if (file) {
-			const url = URL.createObjectURL(file);
-			const track = withStoredCustomCover(createLocalAudioTrack(file));
-			const key = `${track.provider}:${track.id}`;
-			const previousUrl = localAudioUrlsRef.current.get(key);
-			if (previousUrl && previousUrl !== url) URL.revokeObjectURL(previousUrl);
-			localAudioUrlsRef.current.set(key, url);
-			usePlaybackStore.getState().setQueue([track]);
+			const tracks = audioFiles.map((audioFile) => {
+				const track = withStoredCustomCover(createLocalAudioTrack(audioFile));
+				const key = `${track.provider}:${track.id}`;
+				const url = URL.createObjectURL(audioFile as Blob);
+				const previousUrl = localAudioUrlsRef.current.get(key);
+				if (previousUrl && previousUrl !== url) URL.revokeObjectURL(previousUrl);
+				localAudioUrlsRef.current.set(key, url);
+				return track;
+			});
+			usePlaybackStore.getState().setQueue(tracks);
 			usePlaybackStore.getState().playAt(0);
 			current.enterPlaybackSurface();
 			current.clearCurrentBeatMap();
-			current.showToast(track.title);
-			if (coverFile) void current.applyCustomCoverImage(coverFile, track);
+			current.showToast(tracks.length > 1 ? `已导入 ${tracks.length} 首本地音乐` : tracks[0].title);
+			if (coverFile) void current.applyCustomCoverImage(coverFile, tracks[0]);
 			return;
 		}
 		if (coverFile) void current.applyCustomCoverImage(coverFile);

@@ -24,6 +24,7 @@ import { useSearchStore } from "../stores/search-store";
 import { useShelfStore } from "../stores/shelf-store";
 import { useUiStore } from "../stores/ui-store";
 import { useVisualStore } from "../stores/visual-store";
+import { usePlaybackUiPosition } from "../stores/playback-ui-position";
 import type {
   DesktopJsonValue,
   DesktopRuntimePort,
@@ -316,7 +317,7 @@ export function App({
   const playbackIntentId = usePlaybackStore((s) => s.playbackIntentId);
   const queue = usePlaybackStore((s) => s.queue);
   const isPlaying = usePlaybackStore((s) => s.isPlaying);
-  const positionMs = usePlaybackStore((s) => s.positionMs);
+  const positionMs = usePlaybackUiPosition();
   const durationMs = usePlaybackStore((s) => s.durationMs);
   const volume = usePlaybackStore((s) => s.volume);
   const muted = usePlaybackStore((s) => s.muted);

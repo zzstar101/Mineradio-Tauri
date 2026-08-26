@@ -124,15 +124,15 @@ function buildSettingsForPolicy(performanceQuality: string, prefersReducedMotion
 	});
 }
 
-test("eco quality does not change the global foreground frame policy", () => {
-	expect(buildSettingsForPolicy("eco").foregroundFramePolicy).toEqual({ mode: "vsync" });
+test("eco quality bounds the foreground visual scheduler at 30fps", () => {
+	expect(buildSettingsForPolicy("eco").foregroundFramePolicy).toEqual({ mode: "fixed", fps: 30 });
 });
 
-test("balanced quality does not change the global foreground frame policy", () => {
-	expect(buildSettingsForPolicy("balanced").foregroundFramePolicy).toEqual({ mode: "vsync" });
+test("balanced quality bounds the foreground visual scheduler at 45fps", () => {
+	expect(buildSettingsForPolicy("balanced").foregroundFramePolicy).toEqual({ mode: "fixed", fps: 45 });
 });
 
-test("high quality keeps the global foreground frame policy on vsync", () => {
+test("high quality keeps the foreground visual scheduler on vsync", () => {
 	expect(buildSettingsForPolicy("high").foregroundFramePolicy).toEqual({ mode: "vsync" });
 });
 
@@ -140,10 +140,10 @@ test("ultra quality keeps the global foreground frame policy on vsync", () => {
 	expect(buildSettingsForPolicy("ultra").foregroundFramePolicy).toEqual({ mode: "vsync" });
 });
 
-test("reduced motion remains independent from the global foreground frame policy", () => {
+test("reduced motion remains independent from the selected foreground frame policy", () => {
 	const settings = buildSettingsForPolicy("eco", true);
 	expect(settings.prefersReducedMotion).toBe(true);
-	expect(settings.foregroundFramePolicy).toEqual({ mode: "vsync" });
+	expect(settings.foregroundFramePolicy).toEqual({ mode: "fixed", fps: 30 });
 });
 
 test("visual media clock prefers the read-only audio frame and falls back to React playback state", () => {

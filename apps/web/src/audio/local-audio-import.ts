@@ -1,6 +1,7 @@
 import type { Track } from "@mineradio/shared";
 
 export const LOCAL_AUDIO_ACCEPT = ".mp3,.flac,.wav,.ogg,.m4a,.jpg,.jpeg,.png,.webp";
+export const LOCAL_AUDIO_IMPORT_LIMIT = 5000;
 
 type LocalFileLike = {
   name: string;
@@ -26,6 +27,25 @@ export function firstLocalAudioFile<T extends LocalFileLike>(files: Iterable<T> 
     ? Array.from(files as Iterable<T>)
     : Array.from(files as ArrayLike<T>);
   return list.find(isLocalAudioFile) ?? null;
+}
+
+export function localAudioFiles<T extends LocalFileLike>(
+	files: Iterable<T> | ArrayLike<T>,
+): T[] {
+	const list = typeof (files as Iterable<T>)[Symbol.iterator] === "function"
+		? Array.from(files as Iterable<T>)
+		: Array.from(files as ArrayLike<T>);
+	const seen = new Set<string>();
+	const result: T[] = [];
+	for (const file of list) {
+		if (!isLocalAudioFile(file)) continue;
+		const key = `${file.name}\u0000${file.size ?? 0}\u0000${file.lastModified ?? 0}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		result.push(file);
+		if (result.length >= LOCAL_AUDIO_IMPORT_LIMIT) break;
+	}
+	return result;
 }
 
 export function firstLocalCoverFile<T extends LocalFileLike>(files: Iterable<T> | ArrayLike<T>): T | null {
