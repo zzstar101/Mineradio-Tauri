@@ -129,7 +129,7 @@ export function parseM8WindowsReleaseArguments(argv) {
 }
 
 function usage() {
-	return `用法: node scripts/perf/m8-windows-release-evidence.mjs --exe <path> [options]
+	return `用法: bun scripts/perf/m8-windows-release-evidence.mjs --exe <path> [options]
 
   --arg <value>          传给应用的单个参数，可重复
   --manual <path>       GPU/frame 等人工或外部工具采集 JSON

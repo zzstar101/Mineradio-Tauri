@@ -6,7 +6,7 @@
 
 **Architecture:** Tested Node/Bun helpers own release-version validation and updater-manifest generation. GitHub Actions call those helpers before any privileged build, run language-specific validation in separate jobs, build with the repository-pinned Tauri CLI, and publish assets as a draft before verifying and exposing the release.
 
-**Tech Stack:** GitHub Actions, Bun 1.3.14, TypeScript/JavaScript, Rust 1.95.0, Tauri 2, PowerShell.
+**Tech Stack:** GitHub Actions, Bun 1.4.0, TypeScript/JavaScript, Rust 1.95.0, Tauri 2, PowerShell.
 
 ---
 
@@ -42,7 +42,7 @@
 
 - [ ] Run Clippy and record the existing `too_many_arguments` and `let_and_return` failures.
 - [ ] Add narrow Chinese-commented lint allowances where the argument lists model stable boundaries; simplify the unnecessary test helper binding.
-- [ ] Pin Rust 1.95.0 with Clippy and rustfmt components and Bun 1.3.14 via `packageManager`.
+- [ ] Pin Rust 1.95.0 with Clippy and rustfmt components and Bun 1.4.0 via `packageManager`.
 - [ ] Run format, Clippy, and Rust tests.
 
 ### Task 4: Harden CI and release workflows

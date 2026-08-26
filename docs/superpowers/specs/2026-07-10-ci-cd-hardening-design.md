@@ -20,7 +20,7 @@
 
 - Linux job 保留 Bun 安装、类型检查、测试和 Web 构建。
 - Windows job 执行 Rust format、Clippy、测试和 Cargo lock 校验，覆盖实际桌面目标平台。
-- 两个 job 使用固定 Bun 1.3.14；Rust 使用仓库内固定 toolchain。
+- 两个 job 使用固定 Bun 1.4.0；Rust 使用仓库内固定 toolchain。
 - QQ session-cookie 路由测试通过依赖注入使用本地 adapter，不访问真实第三方 API。
 
 ## 发布运行器隔离
