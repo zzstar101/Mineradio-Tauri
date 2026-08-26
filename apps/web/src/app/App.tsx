@@ -457,7 +457,7 @@ export function App({
   const toggleMute = usePlaybackStore((s) => s.toggleMute);
   const setPlaybackMode = usePlaybackStore((s) => s.setMode);
   const playbackMode = usePlaybackStore((s) => s.mode);
-  const nextTrack = usePlaybackStore((s) => s.next);
+  // nextTrack 改由流式感知的 handleManualNext 提供（见 usePlaybackUiController 解构处）
   const previousTrack = usePlaybackStore((s) => s.previous);
   const playQueueAt = usePlaybackStore((s) => s.playAt);
   const removeQueueAt = usePlaybackStore((s) => s.removeAt);
@@ -641,6 +641,7 @@ export function App({
     handleRuntimeTimeUpdate: handleUiRuntimeTimeUpdate,
     handleRuntimeDurationChange: handleUiRuntimeDurationChange,
     handleRuntimeEnded: handleUiRuntimeEnded,
+    handleManualNext: nextTrack,
   } = usePlaybackUiController({
     controllerRef,
     lyricsPayloadRef,

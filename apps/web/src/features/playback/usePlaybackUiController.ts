@@ -25,6 +25,7 @@ export interface PlaybackUiControllerResult {
 	shufflePlaylistPanelQueue(): void;
 	clearPlaylistPanelQueue(): void;
 	seekPlayback(position: number): void;
+	handleManualNext(): void;
 	handleRuntimeTimeUpdate(payload: TimeUpdatePayload): void;
 	handleRuntimeDurationChange(payload: TimeUpdatePayload): void;
 	handleRuntimeEnded(): void;
@@ -287,6 +288,58 @@ export function usePlaybackUiController({
 		usePlaybackStore.getState().ended();
 	}, []);
 
+	/** 手动前进（切歌按钮/快捷键）：流式会话在队尾时必须续拉新歌，
+	 *  绝不按 loop 回卷到旧歌；拉取失败原地保留（不清源、不动页面），可重试。
+	 *  非流式会话或队列中段则走普通 next。 */
+	const handleManualNext = useCallback(() => {
+		const current = dependenciesRef.current;
+		const state = usePlaybackStore.getState();
+		const source = state.streamSource;
+		if (!source) {
+			state.next();
+			return;
+		}
+		const queueTail = state.queue[state.queue.length - 1] ?? null;
+		const currentIsTail =
+			state.currentTrack !== null &&
+			queueTail !== null &&
+			`${state.currentTrack.provider}:${state.currentTrack.id}` ===
+				`${queueTail.provider}:${queueTail.id}`;
+		if (!currentIsTail) {
+			usePlaybackStore.getState().next();
+			return;
+		}
+		const { streamNext } = current;
+		if (typeof streamNext !== "function") {
+			current.showToast("流式电台不可用");
+			return;
+		}
+		if (streamFetchInFlightRef.current) {
+			current.showToast("正在连接下一首…");
+			return;
+		}
+		streamFetchInFlightRef.current = true;
+		void (async () => {
+			try {
+				const track = await streamNext(source.provider, source.id);
+				const latest = usePlaybackStore.getState();
+				if (
+					!latest.streamSource ||
+					latest.streamSource.id !== source.id
+				) {
+					// 期间源已被切换/清空：静默丢弃
+					return;
+				}
+				latest.enqueue(track);
+				latest.next();
+			} catch {
+				current.showToast("流式电台暂时没有下一首，稍后再试");
+			} finally {
+				streamFetchInFlightRef.current = false;
+			}
+		})();
+	}, []);
+
 	useEffect(
 		() => () => {
 			for (const url of localAudioUrlsRef.current.values()) URL.revokeObjectURL(url);
@@ -306,6 +359,7 @@ export function usePlaybackUiController({
 		shufflePlaylistPanelQueue,
 		clearPlaylistPanelQueue,
 		seekPlayback,
+		handleManualNext,
 		handleRuntimeTimeUpdate,
 		handleRuntimeDurationChange,
 		handleRuntimeEnded,
