@@ -207,7 +207,15 @@ export function AppShell({
         <PlaybackSurface {...playback} />
         <PlaybackCustomizationOverlay {...playbackCustomization} />
         <LibraryOverlaySurface {...libraryOverlay} />
-        <AccountOverlaySurface {...accountOverlay} />
+        {/*
+          账号登录弹窗按需挂载（M10 perf：关闭时不保留 useSyncExternalStore 订阅与副作用）。
+          安全性：provider 顺序存放在模块级 sharedProviderOrderStore 单例中，
+          常驻的 AccountSurface 使用同一单例并持续驱动 hydrate/commit 广播；
+          弹窗重新挂载时 useSyncExternalStore 会立即读到最新快照。
+        */}
+        {accountOverlay.modalOpen ? (
+          <AccountOverlaySurface {...accountOverlay} />
+        ) : null}
         <PlaybackNoticeOverlay {...playbackNotices} />
       </div>
       <PlaybackRuntimeSurface {...playbackRuntime} />
