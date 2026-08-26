@@ -276,6 +276,27 @@ export const HOME_LISTEN_LEDGER_PREFERENCE = createJsonPreferenceKey({
 	},
 });
 
+export const ACCOUNT_PROVIDER_ORDER_PREFERENCE = createJsonPreferenceKey({
+	name: "accounts.providerOrder.v1",
+	schemaVersion: 1,
+	defaultValue: (): JsonObject => ({
+		version: 1,
+		order: [],
+		visible: [],
+	}),
+	parse(value): JsonObject | undefined {
+		const parsed = parseObject(value);
+		if (
+			parsed?.version !== 1 ||
+			!Array.isArray(parsed.order) ||
+			!Array.isArray(parsed.visible)
+		) {
+			return undefined;
+		}
+		return parsed;
+	},
+});
+
 export const SEARCH_HISTORY_PREFERENCE = createJsonPreferenceKey({
 	name: "search.history",
 	schemaVersion: 1,
@@ -296,6 +317,7 @@ export const M8_PREFERENCE_KEYS: readonly PreferenceKey<unknown>[] = Object.free
 	SETTINGS_FAB_AUTO_HIDE_PREFERENCE,
 	WALLPAPER_SELECTION_PREFERENCE,
 	HOME_LISTEN_LEDGER_PREFERENCE,
+	ACCOUNT_PROVIDER_ORDER_PREFERENCE,
 	SEARCH_HISTORY_PREFERENCE,
 ]);
 

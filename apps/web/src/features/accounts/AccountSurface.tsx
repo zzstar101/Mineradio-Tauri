@@ -1,4 +1,10 @@
-import type { ReactElement, RefObject } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactElement,
+  RefObject,
+} from "react";
 import type {
   ProviderId,
   ProviderLoginStatus,
@@ -7,12 +13,16 @@ import type {
 import { TopRightControls, VipBadge } from "../../components/shell/TopRightControls";
 import type { AccountStatusByProvider } from "./useAccountSessionController";
 import {
-  LOGIN_QR_PROVIDERS,
   type LoginModalMode,
   type LoginProviderId,
   type LoginQrByProvider,
   type LoginQrStatusByProvider,
 } from "./useLoginQrRuntime";
+import { useFlipReorder, flipEntriesFromContainer } from "./useFlipReorder";
+import {
+	useProviderOrderController,
+	type ProviderOrderStore,
+} from "./useProviderOrderController";
 
 type AccountVipBadge = {
   text: string;
@@ -83,6 +93,8 @@ export interface AccountSurfaceProps {
   onRefreshStatus(provider: LoginProviderId): void;
   onLogout(provider: LoginProviderId): void;
   onOpenSingleProvider(provider: LoginProviderId): void;
+  /** DI 注入口；缺省时使用应用共享单例。 */
+  providerOrderStore?: ProviderOrderStore;
 }
 
 export interface AccountOverlaySurfaceProps {
@@ -105,17 +117,40 @@ export interface AccountOverlaySurfaceProps {
   onImportCookie(provider: LoginProviderId): void;
   onLogout(provider: LoginProviderId): void;
   onOpenSingleProvider(provider: LoginProviderId): void;
+  /** DI 注入口；缺省时使用应用共享单例。 */
+  providerOrderStore?: ProviderOrderStore;
 }
 
-function providerCollections(statuses: AccountStatusByProvider) {
-  const logged = LOGIN_QR_PROVIDERS.flatMap((provider) => {
+function providerCollections(
+  statuses: AccountStatusByProvider,
+  orderedProviders: readonly LoginProviderId[],
+) {
+  const logged = orderedProviders.flatMap((provider) => {
     const status = statuses[provider];
     return status?.loggedIn ? [{ provider, status }] : [];
   });
-  const missing = LOGIN_QR_PROVIDERS.filter(
+  const missing = orderedProviders.filter(
     (provider) => !statuses[provider]?.loggedIn,
   );
   return { logged, missing };
+}
+
+/** 上游 topAccountPillClickSuppressed 同款阈值：位移超过 4px 才视为拖拽。 */
+const PROVIDER_DRAG_THRESHOLD_PX = 4;
+
+function providerKeyFromPoint(x: number, y: number): LoginProviderId | null {
+  if (
+    typeof document === "undefined" ||
+    typeof document.elementFromPoint !== "function"
+  ) {
+    return null;
+  }
+  const element = document.elementFromPoint(x, y);
+  if (!(element instanceof Element)) return null;
+  const row = element.closest("[data-flip-key]");
+  if (!row) return null;
+  const key = row.getAttribute("data-flip-key");
+  return key === "netease" || key === "qq" || key === "soda" ? key : null;
 }
 
 export function AccountSurface({
@@ -128,13 +163,102 @@ export function AccountSurface({
   onRefreshStatus,
   onLogout,
   onOpenSingleProvider,
+  providerOrderStore,
 }: AccountSurfaceProps): ReactElement {
-  const { logged, missing } = providerCollections(statuses);
+  const orderController = useProviderOrderController({
+    store: providerOrderStore,
+  });
+  const flip = useFlipReorder();
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const [draggingProvider, setDraggingProvider] =
+    useState<LoginProviderId | null>(null);
+  const suppressNextClickRef = useRef(false);
+
+  const orderedProviders = orderController.orderedProviders();
+  const { logged, missing } = providerCollections(statuses, orderedProviders);
   const topStatus =
-    LOGIN_QR_PROVIDERS.map((provider) => statuses[provider]).find(
-      (status) => status?.loggedIn,
-    ) ?? null;
+    orderedProviders
+      .map((provider) => statuses[provider])
+      .find((status) => status?.loggedIn) ?? null;
   const topVipBadge = accountVipBadge(topStatus);
+
+  const collectRows = useCallback(
+    () => flipEntriesFromContainer(listRef.current),
+    [],
+  );
+
+  useLayoutEffect(() => {
+    flip.replay(collectRows());
+  });
+
+  const beginProviderRowDrag = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>, provider: LoginProviderId) => {
+      if (event.button !== 0) return;
+      const startX = event.clientX;
+      const startY = event.clientY;
+      let active = false;
+
+      const handleMove = (moveEvent: PointerEvent) => {
+        if (active) return;
+        const distance = Math.hypot(
+          moveEvent.clientX - startX,
+          moveEvent.clientY - startY,
+        );
+        if (distance < PROVIDER_DRAG_THRESHOLD_PX) return;
+        active = true;
+        setDraggingProvider(provider);
+      };
+      const finish = (upEvent: PointerEvent) => {
+        window.removeEventListener("pointermove", handleMove);
+        window.removeEventListener("pointerup", finish);
+        window.removeEventListener("pointercancel", cancel);
+        if (!active) return;
+        // 上游 topAccountPillClickSuppressed：真实拖拽后吞掉紧随的 click。
+        suppressNextClickRef.current = true;
+        setDraggingProvider(null);
+        const target = providerKeyFromPoint(upEvent.clientX, upEvent.clientY);
+        flip.capture(collectRows());
+        if (target && target !== provider) {
+          void orderController.moveProviderBefore(provider, target);
+        }
+      };
+      const cancel = () => {
+        window.removeEventListener("pointermove", handleMove);
+        window.removeEventListener("pointerup", finish);
+        window.removeEventListener("pointercancel", cancel);
+        if (active) setDraggingProvider(null);
+      };
+
+      window.addEventListener("pointermove", handleMove);
+      window.addEventListener("pointerup", finish);
+      window.addEventListener("pointercancel", cancel);
+    },
+    [collectRows, flip, orderController],
+  );
+
+  const handleProviderRowKeyDown = useCallback(
+    (
+      event: ReactKeyboardEvent<HTMLDivElement>,
+      provider: LoginProviderId,
+      index: number,
+    ) => {
+      if (!event.altKey) return;
+      if (event.key === "ArrowUp") {
+        const target = orderedProviders[index - 1];
+        if (!target) return;
+        event.preventDefault();
+        flip.capture(collectRows());
+        void orderController.moveProviderBefore(provider, target);
+      } else if (event.key === "ArrowDown") {
+        const target = orderedProviders[index + 1];
+        if (!target) return;
+        event.preventDefault();
+        flip.capture(collectRows());
+        void orderController.moveProviderBefore(target, provider);
+      }
+    },
+    [collectRows, flip, orderedProviders, orderController],
+  );
 
   return (
     <>
@@ -159,15 +283,39 @@ export function AccountSurface({
           aria-label="账号信息"
         >
           <div className="account-dropdown-title">账号信息</div>
-          <div className="account-dropdown-list">
-            {logged.map(({ provider, status }) => {
+          <div
+            className="account-dropdown-list"
+            ref={listRef}
+            onClickCapture={(event) => {
+              if (!suppressNextClickRef.current) return;
+              event.preventDefault();
+              event.stopPropagation();
+              suppressNextClickRef.current = false;
+            }}
+          >
+            {logged.map(({ provider, status }, index) => {
               const displayName = status.nickname ?? status.userId ?? "已登录";
               const vipBadge = accountVipBadge(status);
+              const isDragging = draggingProvider === provider;
               return (
                 <div
                   key={provider}
                   id={`account-dropdown-provider-${provider}`}
                   className={`account-dropdown-row account-pill ${provider}`}
+                  data-flip-key={provider}
+                  tabIndex={0}
+                  aria-label={`${providerLabel(provider)}账号，可拖拽或使用 Alt+方向键调整顺序`}
+                  style={{
+                    cursor: isDragging ? "grabbing" : "grab",
+                    userSelect: "none",
+                    ...(isDragging ? { opacity: 0.55 } : {}),
+                  }}
+                  onPointerDown={(event) =>
+                    beginProviderRowDrag(event, provider)
+                  }
+                  onKeyDown={(event) =>
+                    handleProviderRowKeyDown(event, provider, index)
+                  }
                 >
                   {status.avatarUrl ? (
                     <img
@@ -254,9 +402,14 @@ export function AccountOverlaySurface({
   onImportCookie,
   onLogout,
   onOpenSingleProvider,
+  providerOrderStore,
 }: AccountOverlaySurfaceProps): ReactElement | null {
+  const orderController = useProviderOrderController({
+    store: providerOrderStore,
+  });
   if (!modalOpen) return null;
-  const { logged, missing } = providerCollections(statuses);
+  const orderedProviders = orderController.orderedProviders();
+  const { logged, missing } = providerCollections(statuses, orderedProviders);
   const loggedSummaries = logged.map(
     ({ provider: id, status }) =>
       `${providerLabel(id)} ${status.nickname ?? status.userId ?? "已登录"}`,
@@ -282,7 +435,7 @@ export function AccountOverlaySurface({
       >
         {modalMode === "full" ? (
           <div className="login-platform-tabs" id="login-platform-tabs">
-            {LOGIN_QR_PROVIDERS.map((id) => (
+            {orderedProviders.map((id) => (
               <button
                 key={id}
                 id={`login-provider-${id}`}
