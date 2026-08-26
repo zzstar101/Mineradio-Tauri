@@ -23,7 +23,7 @@ import type {
 	TimeUpdatePayload,
 } from "../../audio/player-controller";
 import type { AppServices } from "../../app/app-services";
-import { resolveLyricsForTrack } from "../../lyrics/custom-lyrics";
+import { getCustomLyricTextForTrack, resolveLyricsForTrack } from "../../lyrics/custom-lyrics";
 import type {
 	ConsumePlaybackCheckpointAutoplayRequest,
 	PlaybackCheckpointRestoreAuthority,
@@ -58,11 +58,31 @@ export interface PlaybackSessionSnapshot {
 	isPlaying: boolean;
 }
 
+/**
+ * Persistent local-library bridge (Tauri only). Session blob URLs always win;
+ * the library registry resolves protocol URLs and on-demand lyrics.
+ */
+export interface LocalLibraryPlaybackBridge {
+	getLocalAudioUrl(key: string): string | null;
+	getLocalMeta(key: string): { localFileId: string; hasLyric: boolean } | null;
+	isLibraryTrackKey(key: string): boolean;
+	cachedLyric(key: string): LyricPayload | null;
+	loadLyric(
+		key: string,
+		guards: {
+			expectedQueueKey: string;
+			currentQueueKey(): string;
+			isCurrent(): boolean;
+		},
+	): Promise<{ payload: LyricPayload | null; rejected: boolean }>;
+}
+
 export interface PlaybackSessionRuntimeOptions {
 	appServices: AppServices | null;
 	coordinator?: PlaybackSessionCoordinator;
 	controllerRef: RefObject<PlayerController | null>;
 	localAudioUrlsRef: RefObject<Map<string, string>>;
+	localLibrary?: LocalLibraryPlaybackBridge | null;
 	currentTrack: Track | null;
 	playbackIntentId: number;
 	positionMs: number;
@@ -238,6 +258,7 @@ export function usePlaybackSessionRuntime({
 	coordinator: providedCoordinator,
 	controllerRef,
 	localAudioUrlsRef,
+	localLibrary = null,
 	currentTrack,
 	playbackIntentId,
 	positionMs,
@@ -296,6 +317,7 @@ export function usePlaybackSessionRuntime({
 		appServices,
 		controllerRef,
 		localAudioUrlsRef,
+		localLibrary,
 		currentTrack,
 		playbackIntentId,
 		queue,
@@ -309,6 +331,7 @@ export function usePlaybackSessionRuntime({
 		appServices,
 		controllerRef,
 		localAudioUrlsRef,
+		localLibrary,
 		currentTrack,
 		playbackIntentId,
 		queue,
@@ -353,7 +376,10 @@ export function usePlaybackSessionRuntime({
 					throw new Error("podcast 不参与 gapless 预加载");
 				}
 				const key = playbackKeyForTrack(candidate);
-				const localUrl = inputs.localAudioUrlsRef.current.get(key);
+				// 解析顺序：session blob 优先，其次持久本地库协议 URL。
+				const localUrl = inputs.localAudioUrlsRef.current.get(key)
+					?? inputs.localLibrary?.getLocalAudioUrl(key)
+					?? null;
 				if (localUrl) return { audioUrl: localUrl, rawUrl: localUrl };
 				const services = inputs.appServices;
 				if (!services) throw new Error("gapless playback service unavailable");
@@ -479,7 +505,11 @@ export function usePlaybackSessionRuntime({
 		if (!controller || !services || !track) return false;
 
 		const key = playbackKeyForTrack(track);
-		if (!key || localAudioUrlsRef.current.has(key)) return false;
+		if (
+			!key
+			|| localAudioUrlsRef.current.has(key)
+			|| localLibrary?.isLibraryTrackKey(key)
+		) return false;
 
 		const reload = coordinator.beginReload(reason);
 		if (!reload) return false;
@@ -546,6 +576,7 @@ export function usePlaybackSessionRuntime({
 		getPlaybackSnapshot,
 		loadBeatMap,
 		localAudioUrlsRef,
+		localLibrary,
 		now,
 		playbackIntentId,
 		playbackQuality,
@@ -790,7 +821,13 @@ export function usePlaybackSessionRuntime({
 		const track = currentTrack;
 		const playback = appServices?.music.playback;
 		const key = playbackKeyForTrack(track);
-		if (!track || !playback || !key || localAudioUrlsRef.current.has(key)) {
+		if (
+			!track
+			|| !playback
+			|| !key
+			|| localAudioUrlsRef.current.has(key)
+			|| localLibrary?.isLibraryTrackKey(key)
+		) {
 			setTrackQualityOptions((current) =>
 				current.length > 0 ? [] : current,
 			);
@@ -820,6 +857,7 @@ export function usePlaybackSessionRuntime({
 		appServices,
 		currentTrack,
 		localAudioUrlsRef,
+		localLibrary,
 		playbackQuality,
 		setPlaybackQuality,
 	]);
@@ -890,7 +928,10 @@ export function usePlaybackSessionRuntime({
 				currentTrackRef: checkpointRestore.currentTrackRef,
 			});
 		};
-		const localAudioUrl = localAudioUrlsRef.current.get(key);
+		// 解析顺序：session blob 优先（不变），其次本地库协议 URL。
+		const localAudioUrl = localAudioUrlsRef.current.get(key)
+			?? localLibrary?.getLocalAudioUrl(key)
+			?? null;
 		if (!adopted) {
 			const diagnostics = gaplessRuntime?.diagnostics();
 			if (diagnostics?.phase === "handoff") {
@@ -931,6 +972,51 @@ export function usePlaybackSessionRuntime({
 			durationMs: getPlaybackSnapshot().durationMs ?? currentTrack.durationMs,
 		});
 		setLyricsPayload(resolvedFallbackLyric.payload);
+
+		// Upstream applyLocalTrackLyricOnDemand：本地库曲目按需读歌词。
+		// 本代码库里 fallback 歌词在分支前已同步落位（无 pending 定时器可取消），
+		// 因此这里只需在 fallback 之后按需拉取并经现有 pathway 应用（persist=false：
+		// 只写 originalLyricsPayloadRef + lyrics store，不触碰 custom-lyrics 存储）。
+		const applyLocalLibraryLyricOnDemand = (
+			track: Track,
+			trackKey: string,
+			session: PlaybackLoadHandle,
+		): void => {
+			if (!localLibrary) return;
+			const meta = localLibrary.getLocalMeta(trackKey);
+			if (!meta || !meta.hasLyric) return;
+			// 用户自定义歌词优先，保持现有 pathway 已应用的结果。
+			if (getCustomLyricTextForTrack(track)) return;
+			const applyFetchedLyric = (payload: LyricPayload): void => {
+				// 生成 token（session handle）+ 队列键身份双守卫。
+				if (!coordinator.isLyricCurrent(session)) return;
+				if (playbackKeyForTrack(getPlaybackSnapshot().currentTrack) !== trackKey) return;
+				originalLyricsPayloadRef.current = payload;
+				const resolved = resolveLyricsForTrack({
+					track,
+					original: payload,
+					durationMs: getPlaybackSnapshot().durationMs ?? track.durationMs,
+				});
+				setLyricsPayload(resolved.payload);
+			};
+			const cached = localLibrary.cachedLyric(trackKey);
+			if (cached) {
+				applyFetchedLyric(cached);
+				return;
+			}
+			void Promise.resolve()
+				.then(() => localLibrary.loadLyric(trackKey, {
+					expectedQueueKey: trackKey,
+					currentQueueKey: () =>
+						playbackKeyForTrack(getPlaybackSnapshot().currentTrack),
+					isCurrent: () => coordinator.isLyricCurrent(session),
+				}))
+				.then((result) => {
+					if (result.rejected) return; // 失败/取消 → 静默留在 fallback
+					if (result.payload) applyFetchedLyric(result.payload);
+				})
+				.catch(() => undefined);
+		};
 
 		if (adopted && adoptedMatches) {
 			const capableController = gaplessCapableController(controller);
@@ -979,6 +1065,7 @@ export function usePlaybackSessionRuntime({
 			setTrialBanner(null);
 			if (adoptedIsLocal) {
 				setLyricsLoading(false);
+				if (localAudioUrl) applyLocalLibraryLyricOnDemand(currentTrack, key, session);
 				return;
 			}
 			if (!services) return;
@@ -1042,6 +1129,7 @@ export function usePlaybackSessionRuntime({
 					if (shouldAutoplay) await controller.play();
 					if (!coordinator.isPlaybackCurrent(session)) return;
 					setLyricsLoading(false);
+					applyLocalLibraryLyricOnDemand(currentTrack, key, session);
 				} catch (error) {
 					if (!coordinator.isPlaybackCurrent(session)) return;
 					const message = error instanceof Error ? error.message : "playback error";
@@ -1156,6 +1244,7 @@ export function usePlaybackSessionRuntime({
 		gaplessRuntimeEpoch,
 		loadBeatMap,
 		localAudioUrlsRef,
+		localLibrary,
 		now,
 		playbackIntentId,
 		playbackQuality,

@@ -38,6 +38,7 @@ import {
 } from "../features/playback/usePlaybackSessionRuntime";
 import { useSourceSwitchController } from "../features/playback/useSourceSwitchController";
 import { usePlaybackAudioSettings } from "../features/playback/usePlaybackAudioSettings";
+import { usePlaybackSessionPersistence } from "../features/playback/usePlaybackSessionPersistence";
 import {
   LOCAL_AUDIO_ACCEPT,
   usePlaybackUiController,
@@ -139,6 +140,10 @@ import {
 } from "../preferences/keys";
 import { useGlobalShellRuntime } from "./runtime/GlobalShellRuntime";
 export { isHomeBlankDismissElement } from "./runtime/GlobalShellRuntime";
+import {
+  localLibraryController,
+} from "../features/library/local-library-controller";
+import { useLocalLibraryRuntime } from "../features/library/useLocalLibraryRuntime";
 
 const SHOW_SPLASH = import.meta.env.VITE_SPLASH !== "0";
 const DESKTOP_RUNTIME_SEARCH_TERMS = Object.freeze([
@@ -665,6 +670,18 @@ export function App({
       applyCustomCoverImageRef.current(file, track),
     showToast,
   });
+  const { handleUploadAction, uploadFolderHandler } = useLocalLibraryRuntime({
+    showToast,
+    enterPlaybackSurface,
+    clearCurrentBeatMapRef,
+    applyCustomCoverImageRef,
+    browserFallbackUpload: openLocalFileImport,
+  });
+  // startup-resume 捕获循环（上游 ~2500ms 节流 + unload flush）；更新静默事务活跃时暂停。
+  usePlaybackSessionPersistence({
+    hasActiveQuiescenceOperation: () =>
+      playbackQuiescenceAdapter?.hasActiveQuiescenceOperation?.() ?? false,
+  });
 
   const getPlaybackSessionSnapshot = useCallback(() => {
     const state = usePlaybackStore.getState();
@@ -706,6 +723,7 @@ export function App({
     appServices: applicationPorts,
     controllerRef,
     localAudioUrlsRef,
+    localLibrary: localLibraryController,
     currentTrack,
     playbackIntentId,
     positionMs,
@@ -776,6 +794,7 @@ export function App({
     if (!currentTrack) return true;
     const key = `${currentTrack.provider}:${currentTrack.id}`;
     if (localAudioUrlsRef.current.has(key)) return true;
+    if (localLibraryController.isLibraryTrackKey(key)) return true;
     const extended = currentTrack as Track & {
       programId?: string;
       radioId?: string;
@@ -1220,13 +1239,13 @@ export function App({
       showToast("已打开歌单库");
       return;
     }
-    openLocalFileImport();
+    handleUploadAction();
   }, [
     closeHomePlaylistDetail,
+    handleUploadAction,
     homeDiscover?.loggedIn,
     neteaseStatus?.loggedIn,
     closeShelf,
-    openLocalFileImport,
     openPlaylistPanelTab,
     qqStatus?.loggedIn,
     sodaStatus?.loggedIn,
@@ -1670,7 +1689,7 @@ export function App({
         onOpenLibrary: openHomeLibrary,
         onOpenConsole: openHomePlayerConsole,
         onSearchQuery: searchQuery,
-        onUpload: openLocalFileImport,
+        onUpload: handleUploadAction,
         onGuide: openHomeProductGuide,
         onOpenLogin: openLoginModal,
         onPlayDaily: playHomeDaily,
@@ -1695,7 +1714,8 @@ export function App({
       searchProps: {
         client: applicationPorts?.music.search ?? null,
         onFocus: focusSearch,
-        onUpload: openLocalFileImport,
+        onUpload: handleUploadAction,
+        onUploadFolder: uploadFolderHandler,
         onClearCustomCover: clearCustomCoverImage,
         onResultPlay: enterPlaybackSurface,
         onResultNext: insertSearchResultNext,

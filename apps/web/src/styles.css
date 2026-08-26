@@ -9911,3 +9911,14 @@ html.control-glass-svg-ok .search-detail-podcast-back {
 	letter-spacing: 0.08em;
 	pointer-events: none;
 }
+
+/* Tauri 本地库拖入提示（subtle drop-active hint） */
+body.local-library-drop-active #desktop-window-shell::after {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	border: 2px dashed rgba(160, 222, 255, 0.45);
+	background: rgba(10, 20, 34, 0.18);
+	pointer-events: none;
+}
