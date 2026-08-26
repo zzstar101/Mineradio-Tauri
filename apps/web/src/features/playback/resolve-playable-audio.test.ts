@@ -43,11 +43,10 @@ function createFixture(result: SongUrlResult) {
 	return { calls, playback, mediaUrl };
 }
 
-test("resolvePlayableAudio routes ordinary remote URLs through audioProxyUrl", async () => {
+test("resolvePlayableAudio routes ordinary remote URLs through playableUrl", async () => {
 	const fixture = createFixture({
 		url: "https://example.com/audio.flac",
 		quality: "lossless",
-		proxied: false,
 	});
 
 	const resolved = await resolvePlayableAudio({
@@ -57,11 +56,11 @@ test("resolvePlayableAudio routes ordinary remote URLs through audioProxyUrl", a
 		quality: "lossless",
 	});
 
-	expect(resolved.audioUrl).toBe("audio-proxy:https://example.com/audio.flac");
+	expect(resolved.audioUrl).toBe("playable:https://example.com/audio.flac");
 	expect(resolved.result.quality).toBe("lossless");
 	expect(fixture.calls).toEqual([
 		"resolve:track-1:lossless",
-		"audio:https://example.com/audio.flac",
+		"playable:https://example.com/audio.flac",
 	]);
 });
 
@@ -69,7 +68,6 @@ test("resolvePlayableAudio routes provider proxy paths through playableUrl", asy
 	const fixture = createFixture({
 		url: "/providers/soda/audio-proxy?id=track-1",
 		quality: "standard",
-		proxied: true,
 	});
 
 	const resolved = await resolvePlayableAudio({
@@ -91,7 +89,6 @@ test("resolvePlayableAudio preserves the current unavailable URL message", async
 	const fixture = createFixture({
 		url: "",
 		quality: "standard",
-		proxied: false,
 		message: "当前音源不可用",
 	});
 

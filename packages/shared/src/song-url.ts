@@ -83,7 +83,6 @@ export type PlaybackRestriction = z.infer<typeof PlaybackRestrictionSchema>;
 
 export const SongUrlResultSchema = z.object({
 	url: z.string().nullable(),
-	proxied: z.boolean(),
 	provider: z.string().optional(),
 	trial: z.boolean().optional(),
 	playable: z.boolean().optional(),

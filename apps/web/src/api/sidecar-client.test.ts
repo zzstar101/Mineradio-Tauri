@@ -387,7 +387,6 @@ test("songUrl POSTs the Track body and parses the SongUrlResult envelope", async
 		const client = new SidecarClient();
 		const result = await client.songUrl(SAMPLE_TRACK);
 		expect(result.url).toBe("https://proxied/a.mp3");
-		expect(result.proxied).toBe(true);
 		expect((receivedBody as { id: string }).id).toBe("t1");
 	});
 });
@@ -402,12 +401,11 @@ test("resolveSongUrl POSTs to the cross-source song-url endpoint", async () => {
 		receivedBody = body;
 		return {
 			ok: true,
-			data: { url: "https://media.example/a.mp3", proxied: false, requestedQuality: "lossless" },
+			data: { url: "https://media.example/a.mp3", requestedQuality: "lossless" },
 		};
 	}, async () => {
 		const client = new SidecarClient();
 		const result = await client.resolveSongUrl(SAMPLE_TRACK, "lossless");
-		expect(result.proxied).toBe(false);
 		expect(result.requestedQuality).toBe("lossless");
 		expect(receivedBody).toEqual({ track: SAMPLE_TRACK, quality: "lossless" });
 		if (!result.url) throw new Error("expected playable test url");

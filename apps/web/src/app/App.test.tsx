@@ -165,7 +165,7 @@ function installAppStubAudio(): () => void {
 function playbackSidecarClientStubs() {
 	return {
 		async resolveSongUrl(track: Track) {
-			return { url: `https://example.com/${track.id}.mp3`, quality: "standard", proxied: false };
+			return { url: `https://example.com/${track.id}.mp3`, quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return `http://127.0.0.1:39999/audio-proxy?url=${encodeURIComponent(url)}`;
@@ -1333,7 +1333,7 @@ test("App applies baseline lyric fallback when provider lyric fetch rejects", as
 
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -1404,7 +1404,7 @@ test("App replaces stale lyrics with current track fallback while provider lyric
 
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -1457,7 +1457,6 @@ test("App loads sidecar audio-proxy URL into the audio element for raw provider 
 		usePlaybackStore.getState().clearQueue();
 		useLyricsStore.getState().reset();
 		const rawProviderUrl = "https://media.example.test/song.mp3?token=raw-provider";
-		const proxiedUrl = `http://127.0.0.1:39999/audio-proxy?url=${encodeURIComponent(rawProviderUrl)}`;
 		usePlaybackStore.getState().setCurrentTrack({
 			provider: "netease",
 			id: "proxy-audio-1",
@@ -1475,11 +1474,7 @@ test("App loads sidecar audio-proxy URL into the audio element for raw provider 
 		const fakeClient = {
 			async resolveSongUrl() {
 				resolveCount += 1;
-				return { url: rawProviderUrl, quality: "standard", proxied: false };
-			},
-			audioProxyUrl(url: string) {
-				expect(url).toBe(rawProviderUrl);
-				return proxiedUrl;
+				return { url: rawProviderUrl, quality: "standard" };
 			},
 			async lyric() {
 				return {
@@ -1502,14 +1497,13 @@ test("App loads sidecar audio-proxy URL into the audio element for raw provider 
 		root = createRoot(host);
 		flushSync(() => root?.render(<App updateController={APP_UPDATE_CONTROLLER} SplashComponent={() => null} VisualComponent={() => <div id="visual-host" />} applicationRuntime={legacyRuntimeForTest(rootConfig, fakeClient)} />));
 
-		for (let i = 0; i < 12 && appStubAudioInstances[0]?.src !== proxiedUrl; i += 1) {
+		for (let i = 0; i < 12 && appStubAudioInstances[0]?.src !== rawProviderUrl; i += 1) {
 			await new Promise((resolve) => setTimeout(resolve, 0));
 		}
 
 		expect(resolveCount).toBe(1);
-		expect(appStubAudioInstances[0]?.src).toBe(proxiedUrl);
-		expect(appStubAudioInstances[0]?.src).toContain("/audio-proxy?url=");
-		expect(appStubAudioInstances[0]?.src).not.toBe(rawProviderUrl);
+		// 代理统一由 Rust 侧完成：直链地址原样进 audio 元素
+		expect(appStubAudioInstances[0]?.src).toBe(rawProviderUrl);
 		expect(appStubAudioInstances[0]?.loadCalled).toBeGreaterThan(0);
 	} finally {
 		root?.unmount();
@@ -1662,7 +1656,7 @@ test("App retries playback after applying an automatic quality fallback", async 
 				if (quality === "m4a") {
 					return { url: "", quality, proxied: false, message: "quality unavailable" };
 				}
-				return { url: "https://media.example.test/fallback-flac.mp3", quality, proxied: false };
+				return { url: "https://media.example.test/fallback-flac.mp3", quality, };
 			},
 			audioProxyUrl(url: string) {
 				return `http://127.0.0.1:39999/audio-proxy?url=${encodeURIComponent(url)}`;
@@ -1694,7 +1688,8 @@ test("App retries playback after applying an automatic quality fallback", async 
 		}
 
 		expect(resolveQualities).toEqual(["m4a", "flac"]);
-		expect(audio?.src).toContain(encodeURIComponent("https://media.example.test/fallback-flac.mp3"));
+		// 代理统一由 Rust 侧完成：直链地址不再被前端 audio-proxy 包装
+		expect(audio?.src).toBe("https://media.example.test/fallback-flac.mp3");
 		expect(localStorage.getItem("mineradio-playback-quality-v1")).toBe("flac");
 	} finally {
 		root?.unmount();
@@ -2570,7 +2565,7 @@ test("App resolves playback beatmap and forwards it to visual host", async () =>
 	const map = { cameraBeats: [{ t: 1.2, strength: 0.8 }], analyzedAt: 123, duration: 120, tempoSource: "podcast-dj-offline" };
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/beat.mp3", quality: "standard", proxied: false };
+			return { url: "https://example.com/beat.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return `http://127.0.0.1:39999/audio-proxy?url=${encodeURIComponent(url)}`;
@@ -2650,7 +2645,7 @@ test("App does not run the podcast DJ beatmap analyzer for ordinary songs", asyn
 	const beatmapCalls: unknown[] = [];
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/song.mp3", quality: "standard", proxied: false };
+			return { url: "https://example.com/song.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -2703,7 +2698,7 @@ test("App starts baseline Home private radar from discover songs", async () => {
 
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/rain.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/rain.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3217,7 +3212,7 @@ test("App applies and clears a custom cover image from the baseline import contr
 			};
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3303,7 +3298,7 @@ test("App plays centered shelf playlist hotspots by loading the playlist into th
 			return { provider, id, name: "Shelf Mix", coverUrl: "", trackCount: tracks.length, tracks };
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3678,7 +3673,7 @@ test("App checks current Netease like state and wires bottom heart mutations thr
 			return { provider, id, liked, code: 200 };
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3759,7 +3754,7 @@ test("App shows QQ unsupported notice for bottom heart without calling like muta
 			throw new Error("QQ should not run like mutation");
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3829,7 +3824,7 @@ test("App checks current Soda like state and wires bottom heart mutations throug
 			return { provider, id, liked, code: 200 };
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3905,7 +3900,7 @@ test("App rolls back bottom heart state and shows baseline failure copy when Net
 			throw new Error("like failed");
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3979,7 +3974,7 @@ test("App opens login modal when Netease heart mutation requires login", async (
 			});
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;

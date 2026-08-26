@@ -21,8 +21,6 @@ export async function resolvePlayableAudio(input: {
 	if (!result.url) throw new Error(result.message || "播放地址不可用");
 	return {
 		result: { ...result, url: result.url },
-		audioUrl: result.proxied
-			? input.mediaUrl.playableUrl(result.url)
-			: input.mediaUrl.audioProxyUrl(result.url),
+		audioUrl: input.mediaUrl.playableUrl(result.url),
 	};
 }
