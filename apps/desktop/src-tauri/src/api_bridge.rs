@@ -124,9 +124,9 @@ async fn handle_route(
                 return Err(ApiCallError::bad_request("url required"));
             }
             let intro_sec = params.get("intro").and_then(|raw| raw.parse::<u32>().ok());
-            let audio = download_podcast_audio(url)
-                .await
-                .map_err(|err| ApiCallError::internal(&format!("podcast audio download failed: {err}")))?;
+            let audio = download_podcast_audio(url).await.map_err(|err| {
+                ApiCallError::internal(&format!("podcast audio download failed: {err}"))
+            })?;
             let analyzer_params = PodcastDjAnalyzerParams {
                 format: guess_podcast_audio_format(url),
                 intro_sec,
@@ -136,13 +136,9 @@ async fn handle_route(
                 analyze_podcast_dj_beatmap(&audio, &analyzer_params)
             })
             .await
-            .map_err(|err| {
-                ApiCallError::internal(&format!("podcast analyze join failed: {err}"))
-            })?
+            .map_err(|err| ApiCallError::internal(&format!("podcast analyze join failed: {err}")))?
             .map_err(|err| ApiCallError::from_api_error(&err))?;
-            Ok(Success::Data(
-                serde_json::json!({ "ok": true, "map": map }),
-            ))
+            Ok(Success::Data(serde_json::json!({ "ok": true, "map": map })))
         }
         ("GET", "/recommendations/pages") => {
             let refresh = params
