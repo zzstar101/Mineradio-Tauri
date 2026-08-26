@@ -4,7 +4,7 @@
 
 | baseline_role | repository | tag | peeled_commit | tree | package_version |
 | --- | --- | --- | --- | --- | --- |
-| active | XxHuberrr/Mineradio | v2.0.3 | 432c713061759e7724eb3e40e77a5e250ac1aa58 | 6c425be30784088169f761edbbf28f9c476f7d3a | 2.0.3 |
+| active | XxHuberrr/Mineradio | v2.1.0 | 96091d123b36783f5604d1acd47b00b0708cabbd | b1b9f80a72d96afcbc8b4685256c3adba9014551 | 2.1.0 |
 
 `current_tauri` 只使用五种状态：`baseline` 表示当前已有并需要冻结，`implemented` 表示当前阶段界定的代码目标已实现并具备自动验证（不代表已经完成 Windows 实机或 release 验证），`partial` 表示已有部分实现，`missing` 表示尚未迁移，`blocked` 表示等待 `blocked_by` 指明的外部项目、证据或维护者决定；`blocked` 行必须提供非 `none` blocker。
 
@@ -12,7 +12,7 @@
 
 | capability_id | domain | upstream_source | target_module | current_tauri | parity_level | convergence_mode | owner_layer | api_dependency | state_migration | verification | feature_gate | blocked_by | performance_budget |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| baseline.electron-2.0.3 | baseline | `XxHuberrr/Mineradio` tag `v2.0.3` | `scripts/architecture/convergence-baseline.mjs`、本矩阵与 `upstream-source-map.md` | implemented | P0 | parity | architecture guard + parity docs | none | none | tag object、peeled commit、release branch 同 tree 与 package `2.0.3` 的离线结构化门禁；历史 2.0.2 证据保留 | none | none | verification offline and startup-neutral |
+| baseline.electron-2.1.0 | baseline | `XxHuberrr/Mineradio` tag `v2.1.0` | `scripts/architecture/convergence-baseline.mjs`、本矩阵与 `upstream-source-map.md` | implemented | P0 | parity | architecture guard + parity docs | none | none | annotated tag object、peeled commit、tree 与 package `2.1.0` 的离线结构化门禁；历史 2.0.2/2.0.3 evidence 保留但不再活动 | none | none | verification offline and startup-neutral |
 | app.sidecar-recovery | app | `desktop/main.js`、`server.js` | `app/runtime/SidecarRecoveryRuntime.tsx` | baseline | P0 | parity | runtime | legacy-frozen | none | `bun test apps/web/src/app/runtime apps/web/src/components/shell/SidecarRecoveryNotice.test.tsx apps/web/src/app/App.test.tsx`；`512c97c` | none | none | polling remains bounded |
 | app.dependency-assembly | app | current Tauri composition | `app/AppRuntimeProvider.tsx` | baseline | P0 | parity | app | legacy-frozen | none | `bun test apps/web/src/app/AppRuntimeProvider.test.tsx apps/web/src/app/App.test.tsx`；`5105427` | none | none | no startup regression >10% |
 | app.api-readiness | app | current Tauri Sidecar composition | `ports/application-runtime-port.ts`、`adapters/sidecar/legacy-application-runtime.ts`、`ports/music/music-services.conformance.ts`、`ports/media-url-port.ts`、Visual opaque media pipeline | implemented | P0 | parity | port/adapter/runtime | legacy-frozen | none | Application Runtime connect exactly-once/unavailable、28/28 Music 委托与 result/error identity、API Runtime conformance、media URI 字节 parity/显式 fallback、M9 architecture/freeze guard；Bun `2263 passed`、Rust `292 + 7 passed` | none | none | 单次连接只产生一个 coherent Port generation；不增加 transport/process 开销；visual 不解析 route/query |

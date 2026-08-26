@@ -1,19 +1,18 @@
-# Mineradio 2.0.3 上游源码映射
+# Mineradio 2.1.0 上游源码映射
 
 下表是活动上游行为身份的唯一机器可读记录。正式 tag 是 annotated tag，活动行为身份只使用其 peeled commit；tag object 与 release branch tip 均不得替代该 commit。
 
 | baseline_role | repository | tag | peeled_commit | tree | package_version |
 | --- | --- | --- | --- | --- | --- |
-| active | XxHuberrr/Mineradio | v2.0.3 | 432c713061759e7724eb3e40e77a5e250ac1aa58 | 6c425be30784088169f761edbbf28f9c476f7d3a | 2.0.3 |
+| active | XxHuberrr/Mineradio | v2.1.0 | 96091d123b36783f5604d1acd47b00b0708cabbd | b1b9f80a72d96afcbc8b4685256c3adba9014551 | 2.1.0 |
 
-以下 provenance 记录解释 tag peel 与 release branch 同树关系，不构成第二个活动身份。
+以下 provenance 记录 annotated tag 的实际 peel 结果，不构成第二个活动身份。
 
 | provenance_role | ref | object_id | resolved_commit | tree | package_version |
 | --- | --- | --- | --- | --- | --- |
-| release_tag | refs/tags/v2.0.3 | 631813e4baaea1c2115182050be736b6491097e5 | 432c713061759e7724eb3e40e77a5e250ac1aa58 | 6c425be30784088169f761edbbf28f9c476f7d3a | 2.0.3 |
-| release_branch | refs/heads/release/2.0.3 | 7974c52270c628d7ddb7427eaa0269e024cc0d3f | 7974c52270c628d7ddb7427eaa0269e024cc0d3f | 6c425be30784088169f761edbbf28f9c476f7d3a | 2.0.3 |
+| release_tag | refs/tags/v2.1.0 | 37993d337c73b130e4a81da7c973b8d246fe32a3 | 96091d123b36783f5604d1acd47b00b0708cabbd | b1b9f80a72d96afcbc8b4685256c3adba9014551 | 2.1.0 |
 
-2.0.3 reviewed delta 的活动映射如下。`partial`、`missing` 和 `blocked` 是代码或决策缺口，不能降格为 Field Validation Pending。
+历史 2.0.3 reviewed delta 的继承映射如下。`partial`、`missing` 和 `blocked` 是代码或决策缺口，不能降格为 Field Validation Pending；2.1.0 新增 delta 见本文后续 M10 审计表。
 
 | delta_id | current_tauri | convergence_mode | evidence |
 | --- | --- | --- | --- |

@@ -1,6 +1,6 @@
-# Mineradio 2.0.3 reviewed delta 状态
+# Mineradio 2.1.0 reviewed delta 状态
 
-本文只记录 `XxHuberrr/Mineradio@v2.0.3` reviewed delta 的当前事实，不是完整能力对齐声明。`missing`、`partial`、`blocked` 与 Field Validation Pending 必须继续保留；只有真实外部门禁证据才能改变对应状态。
+本文以 `XxHuberrr/Mineradio@v2.1.0` 为活动产品行为基线；历史 2.0.3 evidence 继续保留，但不再构成活动基线。本文不是完整能力对齐声明。`missing`、`partial`、`blocked` 与 Field Validation Pending 必须继续保留；只有真实外部门禁证据才能改变对应状态。
 
 ## D0–D3 状态
 
@@ -26,7 +26,7 @@ D1 已由生产 `StageLyricsLifecycle`、Shelf supplier、真实 WebGL render-li
 
 `overall_blocked_by=#56` 表示无法用仓库内自动化消除的最终外部门禁。
 
-当前不得关闭 #59，也不得声称完整复现、完整对齐或 100% 覆盖 Mineradio 2.0.3。
+当前不得关闭 #59，也不得声称完整复现、完整对齐或 100% 覆盖 Mineradio 2.1.0。
 
 ## 未解决能力快照
 

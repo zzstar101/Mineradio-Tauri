@@ -23,7 +23,7 @@ const EXPECTED_UPDATER_AUTHORITY = {
 	convergence_mode: "architecture-replacement",
 };
 const D0_INVENTORY_CAPABILITIES = new Map([
-	["baseline.electron-2.0.3", ["implemented", "P0", "parity", "none"]],
+	["baseline.electron-2.1.0", ["implemented", "P0", "parity", "none"]],
 	["lyrics.stage-v2", ["implemented", "P0", "parity", "none"]],
 	["visual.cursor-activity", ["implemented", "P0", "parity", "none"]],
 	["visual.shelf-cursor-layer", ["implemented", "P0", "parity", "none"]],
@@ -65,10 +65,10 @@ const D0_SOURCE_MAP_COLUMNS = [
 const EXTRACTION_HEADER = "| symbol | kind | purity | current_side_effects | target_module | evidence | migration_order |";
 const ACTIVE_UPSTREAM_IDENTITY = {
 	repository: "XxHuberrr/Mineradio",
-	tag: "v2.0.3",
-	peeled_commit: "432c713061759e7724eb3e40e77a5e250ac1aa58",
-	tree: "6c425be30784088169f761edbbf28f9c476f7d3a",
-	package_version: "2.0.3",
+	tag: "v2.1.0",
+	peeled_commit: "96091d123b36783f5604d1acd47b00b0708cabbd",
+	tree: "b1b9f80a72d96afcbc8b4685256c3adba9014551",
+	package_version: "2.1.0",
 };
 const ACTIVE_UPSTREAM_IDENTITY_COLUMNS = [
 	"baseline_role",
@@ -84,16 +84,9 @@ const UPSTREAM_PROVENANCE_COLUMNS = [
 ];
 const EXPECTED_UPSTREAM_PROVENANCE = {
 	release_tag: {
-		ref: "refs/tags/v2.0.3",
-		object_id: "631813e4baaea1c2115182050be736b6491097e5",
+		ref: "refs/tags/v2.1.0",
+		object_id: "37993d337c73b130e4a81da7c973b8d246fe32a3",
 		resolved_commit: ACTIVE_UPSTREAM_IDENTITY.peeled_commit,
-		tree: ACTIVE_UPSTREAM_IDENTITY.tree,
-		package_version: ACTIVE_UPSTREAM_IDENTITY.package_version,
-	},
-	release_branch: {
-		ref: "refs/heads/release/2.0.3",
-		object_id: "7974c52270c628d7ddb7427eaa0269e024cc0d3f",
-		resolved_commit: "7974c52270c628d7ddb7427eaa0269e024cc0d3f",
 		tree: ACTIVE_UPSTREAM_IDENTITY.tree,
 		package_version: ACTIVE_UPSTREAM_IDENTITY.package_version,
 	},
@@ -130,10 +123,10 @@ const SONIC_WORKSHOP_REQUIRED_POLICY_LINES = [
 ];
 // 这些文档共同定义当前收口事实，整篇锁定可避免用正则猜测自由文本的语义。
 const CONVERGENCE_POLICY_SNAPSHOT_DIGESTS = new Map([
-	["upstream-source-map", "b44fc29c4c1793a07fc1d4a138b12e8e26f10c08a511476c99076e94f2bba4ff"],
+	["upstream-source-map", "41c3ca99cdfb7cc38864938c52624a64ecb3bf92d873d06b1167b6145d51be8d"],
 	["sonic-workshop-provenance", "ec07b553add89d5549e6ca5c0a12d1607228d4d83a7c117f2efdf74cd3841c89"],
 	["sonic-workshop-module-design", "c0eff31bb364fa9f42247741ec914e5851ddd219b7da93ed496d07fb33da5c1e"],
-	["reviewed-delta-status", "3b6bf71761c111cd5b0fe23acaf96a690496532af8198042d66632a8d5d346cf"],
+	["reviewed-delta-status", "e6f9a177a8ee6c0ec3e5b15574559bd698786360f5af5392797fd98f280d5c77"],
 ]);
 const SONIC_WORKSHOP_DECISION_COLUMNS = [
 	"decision_id",
@@ -239,7 +232,7 @@ const EXPECTED_REVIEWED_DELTA_SUMMARY = new Map([
 	["sidecar_api", "legacy-frozen"],
 ]);
 const REVIEWED_DELTA_REQUIRED_POLICY_LINES = [
-	"当前不得关闭 #59，也不得声称完整复现、完整对齐或 100% 覆盖 Mineradio 2.0.3。",
+	"当前不得关闭 #59，也不得声称完整复现、完整对齐或 100% 覆盖 Mineradio 2.1.0。",
 ];
 const CANONICAL_FIELD_VALIDATION_PENDING = "Field Validation Pending (non-blocking)";
 const FIELD_VALIDATION_RESERVED_CLEARANCE_LANGUAGE = /(?:已解除|已通过实机验证|resolved|cleared|Field Validated|Release Verified)/i;

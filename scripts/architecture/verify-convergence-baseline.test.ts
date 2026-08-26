@@ -60,7 +60,7 @@ const updaterCapability = {
 };
 const updaterCapabilityRow = renderCapability(updaterCapability);
 const d0InventoryCapabilities = [
-	["baseline.electron-2.0.3", "implemented", "P0", "parity", "none"],
+	["baseline.electron-2.1.0", "implemented", "P0", "parity", "none"],
 	["lyrics.stage-v2", "implemented", "P0", "parity", "none"],
 	["visual.cursor-activity", "implemented", "P0", "parity", "none"],
 	["visual.shelf-cursor-layer", "implemented", "P0", "parity", "none"],
@@ -175,13 +175,12 @@ const completeCapabilityRows = [
 const activeUpstreamIdentity = [
 	"| baseline_role | repository | tag | peeled_commit | tree | package_version |",
 	"| --- | --- | --- | --- | --- | --- |",
-	"| active | XxHuberrr/Mineradio | v2.0.3 | 432c713061759e7724eb3e40e77a5e250ac1aa58 | 6c425be30784088169f761edbbf28f9c476f7d3a | 2.0.3 |",
+	"| active | XxHuberrr/Mineradio | v2.1.0 | 96091d123b36783f5604d1acd47b00b0708cabbd | b1b9f80a72d96afcbc8b4685256c3adba9014551 | 2.1.0 |",
 ].join("\n");
 const upstreamReleaseProvenance = [
 	"| provenance_role | ref | object_id | resolved_commit | tree | package_version |",
 	"| --- | --- | --- | --- | --- | --- |",
-	"| release_tag | refs/tags/v2.0.3 | 631813e4baaea1c2115182050be736b6491097e5 | 432c713061759e7724eb3e40e77a5e250ac1aa58 | 6c425be30784088169f761edbbf28f9c476f7d3a | 2.0.3 |",
-	"| release_branch | refs/heads/release/2.0.3 | 7974c52270c628d7ddb7427eaa0269e024cc0d3f | 7974c52270c628d7ddb7427eaa0269e024cc0d3f | 6c425be30784088169f761edbbf28f9c476f7d3a | 2.0.3 |",
+	"| release_tag | refs/tags/v2.1.0 | 37993d337c73b130e4a81da7c973b8d246fe32a3 | 96091d123b36783f5604d1acd47b00b0708cabbd | b1b9f80a72d96afcbc8b4685256c3adba9014551 | 2.1.0 |",
 ].join("\n");
 const withActiveUpstreamIdentity = (body: string) => `${activeUpstreamIdentity}\n\n${body}`;
 const sonicWorkshopDecision = readRepositoryFile("docs/parity/sonic-workshop-provenance.md");
@@ -211,7 +210,7 @@ const validDocuments = {
 	reviewedDeltaStatus,
 };
 
-test("M0 baseline accepts the active Mineradio v2.0.3 release identity", () => {
+test("M10 baseline accepts the active Mineradio v2.1.0 release identity", () => {
 	expect(validateConvergenceBaseline(validDocuments)).toEqual([]);
 });
 
@@ -252,10 +251,10 @@ test("M0 baseline rejects the legacy Mineradio v2.0.2 active identity", () => {
 	})).toContain("capability-matrix: missing active upstream identity");
 });
 
-test("M0 baseline rejects a release branch commit used as the active identity", () => {
-	const branchCommit = "7974c52270c628d7ddb7427eaa0269e024cc0d3f";
+test("M10 baseline rejects the annotated tag object used as the peeled identity", () => {
+	const branchCommit = "37993d337c73b130e4a81da7c973b8d246fe32a3";
 	const mismatchedIdentity = activeUpstreamIdentity.replace(
-		"432c713061759e7724eb3e40e77a5e250ac1aa58",
+		"96091d123b36783f5604d1acd47b00b0708cabbd",
 		branchCommit,
 	);
 	const errors = validateConvergenceBaseline({
@@ -267,14 +266,14 @@ test("M0 baseline rejects a release branch commit used as the active identity", 
 		upstreamSourceMap: `${mismatchedIdentity}\n\n${upstreamReleaseProvenance}`,
 	});
 	expect(errors).toContain(
-		`capability-matrix: active upstream identity line 3 field peeled_commit must be 432c713061759e7724eb3e40e77a5e250ac1aa58; received ${branchCommit}`,
+		`capability-matrix: active upstream identity line 3 field peeled_commit must be 96091d123b36783f5604d1acd47b00b0708cabbd; received ${branchCommit}`,
 	);
 	expect(errors).toContain(
-		`upstream-source-map: active upstream identity line 3 field peeled_commit must be 432c713061759e7724eb3e40e77a5e250ac1aa58; received ${branchCommit}`,
+		`upstream-source-map: active upstream identity line 3 field peeled_commit must be 96091d123b36783f5604d1acd47b00b0708cabbd; received ${branchCommit}`,
 	);
 });
 
-test("M0 baseline requires tag and release branch provenance", () => {
+test("M10 baseline requires annotated tag provenance", () => {
 	expect(validateConvergenceBaseline({
 		...validDocuments,
 		upstreamSourceMap: activeUpstreamIdentity,
@@ -283,7 +282,7 @@ test("M0 baseline requires tag and release branch provenance", () => {
 
 test("M0 baseline rejects duplicate release provenance tables", () => {
 	const duplicateProvenance = upstreamReleaseProvenance.replace(
-		"631813e4baaea1c2115182050be736b6491097e5",
+		"37993d337c73b130e4a81da7c973b8d246fe32a3",
 		"1111111111111111111111111111111111111111",
 	);
 	const errors = validateConvergenceBaseline({
@@ -294,7 +293,7 @@ test("M0 baseline rejects duplicate release provenance tables", () => {
 		error.startsWith("upstream-source-map: duplicate release provenance headers at lines "))).toBe(true);
 });
 
-test("M0 baseline rejects legacy active markers beside the v2.0.3 identity", () => {
+test("M10 baseline rejects legacy active markers beside the v2.1.0 identity", () => {
 	const errors = validateConvergenceBaseline({
 		...validDocuments,
 		capabilityMatrix: `${validDocuments.capabilityMatrix}\n\n上游行为基线：\`XxHuberrr/Mineradio@4abaa190de42c632365ae4244e041bad16443224\`。`,
@@ -326,9 +325,9 @@ test("M0 parser ignores fenced legacy history while the policy snapshot still re
 		error.startsWith("upstream-source-map: policy snapshot digest must be"))).toBe(true);
 });
 
-test("D0 inventory reports missing reviewed v2.0.3 and inherited gaps", () => {
+test("D0 inventory reports missing reviewed v2.1.0 and inherited gaps", () => {
 	const missingCapabilityIds = new Set([
-		"baseline.electron-2.0.3",
+		"baseline.electron-2.1.0",
 		"visual.cursor-activity",
 		"playback.startup-resume",
 	]);
@@ -341,12 +340,12 @@ test("D0 inventory reports missing reviewed v2.0.3 and inherited gaps", () => {
 			missingInventory,
 		),
 	});
-	expect(errors).toContain("capability-matrix: missing D0 inventory capability baseline.electron-2.0.3");
+	expect(errors).toContain("capability-matrix: missing D0 inventory capability baseline.electron-2.1.0");
 	expect(errors).toContain("capability-matrix: missing D0 inventory capability visual.cursor-activity");
 	expect(errors).toContain("capability-matrix: missing D0 inventory capability playback.startup-resume");
 });
 
-test("D0 source map requires every reviewed v2.0.3 delta", () => {
+test("D0 source map requires every inherited reviewed delta", () => {
 	const errors = validateConvergenceBaseline({
 		...validDocuments,
 		upstreamSourceMap: validDocuments.upstreamSourceMap
