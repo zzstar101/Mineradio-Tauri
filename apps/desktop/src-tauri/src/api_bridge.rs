@@ -4,10 +4,11 @@
 //! maps the frontend contract (`{ ok, data }` / `{ ok, error }`) onto the
 //! in-process `mineradio_api` crate.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::OnceLock, time::Duration};
 
 use mineradio_api::{
-    Api, ApiError, ApiErrorCode, ProviderApi, ProviderId, QrLoginKind, SongUrlOptions, Track,
+    analyze_podcast_dj_beatmap, Api, ApiError, ApiErrorCode, PodcastAudioFormat,
+    PodcastDjAnalyzerParams, ProviderApi, ProviderId, QrLoginKind, SongUrlOptions, Track,
 };
 use serde::Deserialize;
 
@@ -114,6 +115,35 @@ async fn handle_route(
     match (method, route) {
         ("GET", "/health") => Ok(Success::Raw(health_body(app_version, schema_version))),
         ("GET", "/providers/capabilities") => Ok(Success::Data(capabilities_matrix())),
+        ("GET", "/podcast/dj-beatmap") => {
+            let url = params
+                .get("url")
+                .map(|value| value.as_str())
+                .unwrap_or_default();
+            if url.trim().is_empty() {
+                return Err(ApiCallError::bad_request("url required"));
+            }
+            let intro_sec = params.get("intro").and_then(|raw| raw.parse::<u32>().ok());
+            let audio = download_podcast_audio(url)
+                .await
+                .map_err(|err| ApiCallError::internal(&format!("podcast audio download failed: {err}")))?;
+            let analyzer_params = PodcastDjAnalyzerParams {
+                format: guess_podcast_audio_format(url),
+                intro_sec,
+            };
+            // 音频解码+节拍分析是重 CPU 同步任务，丢到阻塞线程池避免卡住异步运行时
+            let map = tauri::async_runtime::spawn_blocking(move || {
+                analyze_podcast_dj_beatmap(&audio, &analyzer_params)
+            })
+            .await
+            .map_err(|err| {
+                ApiCallError::internal(&format!("podcast analyze join failed: {err}"))
+            })?
+            .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(
+                serde_json::json!({ "ok": true, "map": map }),
+            ))
+        }
         ("GET", "/recommendations/pages") => {
             let refresh = params
                 .get("refresh")
@@ -581,4 +611,40 @@ fn is_retryable(code: &ApiErrorCode) -> bool {
         code,
         ApiErrorCode::Internal | ApiErrorCode::Unavailable | ApiErrorCode::InvalidResponse
     )
+}
+
+/// 下载远端播客音频供节拍分析（超时策略对齐媒体代理）。
+async fn download_podcast_audio(url: &str) -> Result<Vec<u8>, String> {
+    const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(300);
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    let client = CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(DOWNLOAD_TIMEOUT)
+            .build()
+            .expect("failed to build podcast audio http client")
+    });
+    let response = client
+        .get(url)
+        .header(reqwest::header::USER_AGENT, "MineRadio/1.0")
+        .send()
+        .await
+        .map_err(|err| err.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("http {}", response.status()));
+    }
+    let bytes = response.bytes().await.map_err(|err| err.to_string())?;
+    Ok(bytes.to_vec())
+}
+
+/// 从 URL 路径扩展名猜测音频格式，猜不出按 mp3 处理。
+fn guess_podcast_audio_format(url: &str) -> PodcastAudioFormat {
+    let path = url.split(['?', '#']).next().unwrap_or(url);
+    let ext = path.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    match ext.as_str() {
+        "ogg" | "oga" | "opus" => PodcastAudioFormat::Ogg,
+        "m4a" | "mp4" | "aac" => PodcastAudioFormat::M4a,
+        "flac" => PodcastAudioFormat::Flac,
+        "wav" => PodcastAudioFormat::Wav,
+        _ => PodcastAudioFormat::Mp3,
+    }
 }
