@@ -220,6 +220,16 @@ export class PlaybackQuiescenceController {
 		return { status: "prepared", checkpoint };
 	}
 
+	/**
+	 * 只读所有权信号：更新静默事务持有未释放的 owner lease（prepare 已接受且尚未
+	 * released/consumed）时为 true。startup-resume 持久化 hook 用它暂停自己的
+	 * checkpoint 捕获，避免与更新事务的 checkpoint 所有权互相踩踏；它不改变任何
+	 * 事务状态。
+	 */
+	hasActiveOperation(): boolean {
+		return this.active !== null && this.active.phase !== "released";
+	}
+
 	hydratePersistedCheckpoint(
 		identity: PlaybackQuiescenceOperationIdentity,
 		checkpoint: PlaybackExitCheckpointV1 | null,

@@ -63,12 +63,20 @@ export interface TauriPlaybackQuiescenceTransport {
 export interface TauriPlaybackQuiescenceAdapter {
 	setPlayerController(controller: PlayerController | null): void;
 	dispose(): void;
+	/**
+	 * 只读所有权信号（仅 production 桥提供）：更新静默事务持有未释放 owner lease
+	 * 时为 true。startup-resume 持久化据此暂停自己的 checkpoint 捕获；无桥或测试
+	 * 注入的 adapter 缺省视为 false。
+	 */
+	readonly hasActiveQuiescenceOperation?: () => boolean;
 }
 
 export interface CreateTauriPlaybackQuiescenceAdapterOptions {
 	readonly controller: PlaybackQuiescenceControllerPort;
 	readonly transport?: TauriPlaybackQuiescenceTransport;
 	readonly setPlayerController?: (controller: PlayerController | null) => void;
+	/** 只读所有权信号注入点（production 桥由 PlaybackQuiescenceController 提供）。 */
+	readonly hasActiveQuiescenceOperation?: () => boolean;
 }
 
 export interface CreateProductionTauriPlaybackQuiescenceAdapterOptions {
@@ -360,6 +368,7 @@ export async function createTauriPlaybackQuiescenceAdapter(
 		setPlayerController(controller: PlayerController | null) {
 			if (!disposed) options.setPlayerController?.(controller);
 		},
+		hasActiveQuiescenceOperation: options.hasActiveQuiescenceOperation,
 		dispose() {
 			if (disposed) return;
 			disposed = true;
@@ -428,5 +437,6 @@ export async function createProductionTauriPlaybackQuiescenceAdapter(
 		controller,
 		transport: options.transport,
 		setPlayerController: (player) => audio.setController(player),
+		hasActiveQuiescenceOperation: () => controller.hasActiveOperation(),
 	});
 }

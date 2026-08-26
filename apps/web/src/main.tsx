@@ -19,6 +19,8 @@ import {
 	createHomeListenLegacyPreferenceMapping,
 	createPreferencesHomeListenRepository,
 } from "./features/home/home-preferences-adapter";
+import { loadPlaybackSessionCheckpoint } from "./adapters/tauri/tauri-playback-session";
+import { applyStartupPlaybackSessionPayload } from "./features/playback/usePlaybackSessionPersistence";
 import { configureSearchPreferences } from "./features/search/search-session-runtime";
 import { createUpdateExperienceController } from "./features/updater/update-experience-controller";
 import { createPreferencesRepository } from "./preferences/create-preferences-repository";
@@ -39,6 +41,15 @@ async function createApplicationRoot(): Promise<React.ReactNode> {
 				})),
 			),
 		);
+	}
+	// 上游 2.1 startup-resume：React 首帧前恢复上次播放 checkpoint（曲目/队列/位置/
+	// 音量/mode），autoplay 由 envelope.autoplayOnStartup 门控。必须在 App 挂载前完成，
+	// 先于其内部 useLocalLibraryRuntime 的 hydration 队列合并；失败只降级为全新会话。
+	try {
+		const persistedSession = await loadPlaybackSessionCheckpoint();
+		applyStartupPlaybackSessionPayload(persistedSession);
+	} catch (error) {
+		console.warn("playback session restore skipped", error);
 	}
 	// 更新 Port/Controller 的生命周期属于 bootstrap；StrictMode 重挂不能重建 native listener。
 	let updateRuntime: DisposableUpdateRuntimePort;
