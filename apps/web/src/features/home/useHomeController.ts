@@ -436,6 +436,7 @@ export function useHomeController({
 								tracks: detail.tracks,
 								loading: false,
 								exhausted: !playlistHasNextPage({
+									hasMore: detail.hasMore ?? null,
 									loadedCount: detail.tracks.length,
 									pageCount: detail.tracks.length,
 									pageSize: HOME_PLAYLIST_PAGE_SIZE,
@@ -505,6 +506,7 @@ export function useHomeController({
 					tracks: merged,
 					loadingMore: false,
 					exhausted: !playlistHasNextPage({
+						hasMore: page.hasMore ?? null,
 						loadedCount: merged.length,
 						pageCount: page.tracks.length,
 						pageSize: HOME_PLAYLIST_PAGE_SIZE,
@@ -609,6 +611,7 @@ export function useHomeController({
 								tracks: detail.tracks,
 								loading: false,
 								exhausted: !playlistHasNextPage({
+									hasMore: detail.hasMore ?? null,
 									loadedCount: detail.tracks.length,
 									pageCount: detail.tracks.length,
 									pageSize: HOME_PLAYLIST_PAGE_SIZE,

@@ -15,7 +15,9 @@ export const PlaylistSummarySchema = z.object({
 export const PlaylistSummaryArraySchema = z.array(PlaylistSummarySchema);
 
 export const PlaylistDetailSchema = PlaylistSummarySchema.extend({
-  tracks: z.array(TrackSchema).default([])
+  tracks: z.array(TrackSchema).default([]),
+  /** 服务端权威翻页信号：true=还有下一页，false=到头，null/缺省=未提供 */
+  hasMore: z.boolean().nullable().optional()
 });
 
 export type PlaylistSummary = z.infer<typeof PlaylistSummarySchema>;

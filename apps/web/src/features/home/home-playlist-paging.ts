@@ -26,17 +26,19 @@ export function applyPlaylistPageAtOffset(
 
 /**
  * 是否还有下一页：
- * - 空页 → 没有；
- * - 短页（服务端提前截断）→ 没有；
- * - 已知总数且已载满 → 没有；
- * 其余情况继续提供下一页。不依赖"是否有新增曲目"判断。
+ * - 服务端 hasMore 权威信号优先（true/false 直接采信）；
+ * - 未提供时退回启发式：空页/短页（服务端提前截断）/总数载满 → 判尽。
+ *   注意短页判尽对"窗口内跳过不可用歌曲"的服务端会误判，
+ *   因此只作为无信号时的兜底。
  */
 export function playlistHasNextPage(input: {
+	hasMore?: boolean | null;
 	loadedCount: number;
 	pageCount: number;
 	pageSize: number;
 	totalCount?: number | null;
 }): boolean {
+	if (input.hasMore != null) return input.hasMore;
 	if (input.pageCount === 0) return false;
 	if (input.totalCount != null && input.loadedCount >= input.totalCount) {
 		return false;
