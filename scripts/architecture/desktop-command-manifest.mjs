@@ -70,6 +70,21 @@ export const M8_ADDITIVE_DESKTOP_COMMANDS = Object.freeze([
 	"migrate_legacy_preferences",
 ]);
 
+// M10 追加持久本地音乐库五命令（upstream 2.1 local library 收敛）。
+export const M10_ADDITIVE_DESKTOP_COMMANDS = Object.freeze([
+	"local_library_import_dialog",
+	"local_library_import_paths",
+	"local_library_list",
+	"local_library_lyric",
+	"local_library_remove",
+]);
+
+// M11 追加播放会话 checkpoint 两命令（upstream 2.1 last-playback startup-resume 收敛）。
+export const PLAYBACK_SESSION_ADDITIVE_DESKTOP_COMMANDS = Object.freeze([
+	"playback_session_checkpoint_save",
+	"playback_session_checkpoint_load",
+]);
+
 // D2 用唯一 Rust Runtime Port 原子替换旧 plugin updater 三命令。
 export const D2_UPDATE_RUNTIME_COMMANDS = Object.freeze([
 	"get_update_runtime_snapshot",
@@ -106,6 +121,13 @@ export const DESKTOP_COMMAND_REGISTRATION_ORDER = Object.freeze([
 	"choose_cache_directory",
 	"set_cache_root",
 	"clear_cache_category",
+	"local_library_import_dialog",
+	"local_library_import_paths",
+	"local_library_list",
+	"local_library_lyric",
+	"local_library_remove",
+	"playback_session_checkpoint_save",
+	"playback_session_checkpoint_load",
 	"configure_global_hotkeys",
 	"get_update_runtime_snapshot",
 	"dispatch_update_runtime_intent",

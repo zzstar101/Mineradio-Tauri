@@ -33,6 +33,8 @@ time = { version = "0.3", features = ["formatting", "parsing"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 tokio = { version = "=1.52.3", features = ["fs", "io-util", "macros", "sync", "time"] }
 tokio-util = { version = "=0.7.18", default-features = false }
+lofty = "0.22"
+encoding_rs = "0.8"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 webview2-com = "=0.38.2"

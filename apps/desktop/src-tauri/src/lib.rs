@@ -202,6 +202,11 @@ pub fn run() {
         }
     };
 
+    // 本地音乐库：索引损坏时内部静默回退空库，构造本身不会失败。
+    let local_library_state = Some(Arc::new(Mutex::new(
+        runtime::local_library::LocalMusicLibraryRuntime::open(&app_data_dir),
+    )));
+
     let state = AppState::new(
         base_url.clone(),
         app_data_dir.to_string_lossy().to_string(),
@@ -213,6 +218,7 @@ pub fn run() {
         db_init_error,
         cache_state,
         cache_init_error,
+        local_library_state,
         runtime_settings,
     );
 
@@ -249,6 +255,24 @@ pub fn run() {
                 });
             },
         )
+        .register_asynchronous_uri_scheme_protocol(
+            "mineradio-local",
+            |context, request, responder| {
+                let app = context.app_handle().clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let state = app.state::<AppState>();
+                    let guard = state
+                        .local_library
+                        .as_ref()
+                        .and_then(|library| library.lock().ok());
+                    let response = runtime::local_library::build_local_media_response(
+                        request,
+                        guard.as_deref(),
+                    );
+                    responder.respond(response);
+                });
+            },
+        )
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             commands::get_runtime_config,
@@ -265,6 +289,13 @@ pub fn run() {
             commands::choose_cache_directory,
             commands::set_cache_root,
             commands::clear_cache_category,
+            commands::local_library_import_dialog,
+            commands::local_library_import_paths,
+            commands::local_library_list,
+            commands::local_library_lyric,
+            commands::local_library_remove,
+            commands::playback_session_checkpoint_save,
+            commands::playback_session_checkpoint_load,
             commands::configure_global_hotkeys,
             commands::get_update_runtime_snapshot,
             commands::dispatch_update_runtime_intent,
@@ -406,6 +437,7 @@ mod tests {
             "0.1.0".into(),
             false,
             PathBuf::from("/logs/sidecar-runtime.log"),
+            None,
             None,
             None,
             None,

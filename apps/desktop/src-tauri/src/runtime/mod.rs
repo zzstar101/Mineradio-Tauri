@@ -4,6 +4,8 @@ pub mod diagnostics;
 #[allow(dead_code)]
 pub mod full_desktop;
 pub mod hotkeys;
+pub mod local_library;
+pub mod playback_session;
 pub mod resources;
 pub mod settings;
 #[allow(dead_code)]

@@ -177,6 +177,7 @@ pub struct AppState {
     pub runtime_settings: Arc<Mutex<runtime::settings::RuntimeSettingsStore>>,
     pub cache: Option<Arc<Mutex<runtime::cache::CacheRuntime>>>,
     pub cache_init_error: Option<String>,
+    pub local_library: Option<Arc<Mutex<runtime::local_library::LocalMusicLibraryRuntime>>>,
     pub diagnostics: runtime::diagnostics::DiagnosticsRuntime,
     pub resources: runtime::resources::ResourceGovernor,
     pub window_activity: Mutex<runtime::resources::WindowActivity>,
@@ -212,6 +213,7 @@ impl AppState {
         db_init_error: Option<String>,
         cache: Option<Arc<Mutex<runtime::cache::CacheRuntime>>>,
         cache_init_error: Option<String>,
+        local_library: Option<Arc<Mutex<runtime::local_library::LocalMusicLibraryRuntime>>>,
         runtime_settings: Arc<Mutex<runtime::settings::RuntimeSettingsStore>>,
     ) -> Self {
         let settings_snapshot = runtime_settings
@@ -314,6 +316,7 @@ impl AppState {
             runtime_settings,
             cache,
             cache_init_error,
+            local_library,
             diagnostics,
             resources: runtime::resources::ResourceGovernor::default(),
             window_activity: Mutex::new(runtime::resources::WindowActivity::Foreground),
@@ -434,6 +437,7 @@ mod tests {
             None,
             None,
             Some("cache disabled in unit test".to_string()),
+            None,
             Arc::new(Mutex::new(
                 runtime::settings::RuntimeSettingsStore::with_path(&settings_path),
             )),
@@ -512,6 +516,7 @@ mod tests {
             "0.1.0".into(),
             false,
             test_dir.join("sidecar-runtime.log"),
+            None,
             None,
             None,
             None,
