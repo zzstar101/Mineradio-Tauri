@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../..");
-const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+// Windows checkout（core.autocrlf=true）会把 LF 规范化为 CRLF；
+// 守卫断言的是内容结构而非换行字节，这里统一折叠后再匹配，CI（LF）行为不变。
+const read = (path: string) =>
+	readFileSync(resolve(root, path), "utf8").replaceAll("\r\n", "\n");
 
 test("Draft source 只通过 updater-smoke feature 和专用 example 暴露", () => {
   const cargo = read("apps/desktop/src-tauri/Cargo.toml");

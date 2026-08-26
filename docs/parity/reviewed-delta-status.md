@@ -30,20 +30,19 @@ D1 已由生产 `StageLyricsLifecycle`、Shelf supplier、真实 WebGL render-li
 
 ## 未解决能力快照
 
-下表必须与活动 capability matrix 保持逐项一致，共 16 项。它们是代码、迁移或依赖缺口，不得改写成待实测。
+下表必须与活动 capability matrix 保持逐项一致，共 13 项。它们是代码、迁移或依赖缺口，不得改写成待实测。
+
+M10 收敛后移出本表：`playback.startup-resume`（session checkpoint 持久化 + 首帧恢复，implemented）、`accounts.provider-order`（typed preference + 拖拽/键盘重排，implemented；Tauri 跨重启持久化待 db.rs allowlist 追加一行）、`local-import.expanded`（Rust 持久本地库 + 协议流式播放，implemented）。`library.drag-sort` 保留为 missing——upstream 2.1.0 未引入歌单拖动排序，非本阶段 delta。
 
 | capability_id | current_tauri | parity_level | convergence_mode | blocked_by |
 | --- | --- | --- | --- | --- |
 | search.multi-provider-offset | partial | P1 | parity | none |
-| playback.startup-resume | missing | P0 | parity | none |
 | beatmap.local-song | partial | P1 | parity | none |
 | queue.drag-sort | missing | P1 | parity | none |
 | lyrics.track-offset | missing | P1 | parity | none |
 | visual.archive | missing | P1 | parity | none |
 | visual.camera-gesture | missing | P2 | parity | none |
-| accounts.provider-order | missing | P1 | parity | none |
 | library.drag-sort | missing | P1 | parity | none |
-| local-import.expanded | partial | P1 | parity | none |
 | hotkeys.editor | missing | P1 | parity | none |
 | wallpaper.library | partial | P1 | parity | none |
 | wallpaper.wgc | missing | P1 | parity | none |
@@ -53,16 +52,18 @@ D1 已由生产 `StageLyricsLifecycle`、Shelf supplier、真实 WebGL render-li
 
 ## 已实现但仍待实机验证
 
-以下 17 项的自动化实现状态是 `implemented`，但正向实机证据仍为非阻塞 Field Validation Pending。删除待实测标记不能提升其证据等级。
+以下 19 项的自动化实现状态是 `implemented`，但正向实机证据仍为非阻塞 Field Validation Pending。删除待实测标记不能提升其证据等级。M10 新增：`local-import.expanded`、`playback.startup-resume` 的 Windows 真机验证项（`accounts.provider-order` 持久化依赖 db.rs allowlist 追加，暂不列入）。
 
 | capability_id | current_tauri | validation_status |
 | --- | --- | --- |
 | playback.gapless | implemented | Field Validation Pending (non-blocking) |
 | playback.output-routing | implemented | Field Validation Pending (non-blocking) |
+| playback.startup-resume | implemented | Field Validation Pending (non-blocking) |
 | lyrics.stage-v2 | implemented | Field Validation Pending (non-blocking) |
 | visual.cursor-activity | implemented | Field Validation Pending (non-blocking) |
 | visual.sonic-workshop | implemented | Field Validation Pending (non-blocking) |
 | home.dashboard | implemented | Field Validation Pending (non-blocking) |
+| local-import.expanded | implemented | Field Validation Pending (non-blocking) |
 | desktop.tray-close | implemented | Field Validation Pending (non-blocking) |
 | desktop.lyrics | implemented | Field Validation Pending (non-blocking) |
 | desktop.window | implemented | Field Validation Pending (non-blocking) |

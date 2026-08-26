@@ -66,27 +66,29 @@ const d0InventoryCapabilities = [
 	["visual.shelf-cursor-layer", "implemented", "P0", "parity", "none"],
 	["visual.sonic-workshop", "implemented", "P0", "parity", "none"],
 	["wallpaper.idle-dispose", "implemented", "P0", "parity", "none"],
-	["playback.startup-resume", "missing", "P0", "parity", "none"],
+	["playback.startup-resume", "implemented", "P0", "parity", "none"],
 	["queue.drag-sort", "missing", "P1", "parity", "none"],
 	["library.drag-sort", "missing", "P1", "parity", "none"],
 	["lyrics.track-offset", "missing", "P1", "parity", "none"],
 	["beatmap.local-song", "partial", "P1", "parity", "none"],
-	["local-import.expanded", "partial", "P1", "parity", "none"],
+	["local-import.expanded", "implemented", "P1", "parity", "none"],
 	["hotkeys.editor", "missing", "P1", "parity", "none"],
 	["visual.archive", "missing", "P1", "parity", "none"],
 	["visual.camera-gesture", "missing", "P2", "parity", "none"],
 	["wallpaper.library", "partial", "P1", "parity", "none"],
 	["wallpaper.wgc", "missing", "P1", "parity", "none"],
-	["accounts.provider-order", "missing", "P1", "parity", "none"],
+	["accounts.provider-order", "implemented", "P1", "parity", "none"],
 	["search.multi-provider-offset", "partial", "P1", "parity", "none"],
 ] as const;
 const positiveFieldValidationCapabilities = new Set([
 	"playback.gapless",
 	"playback.output-routing",
+	"playback.startup-resume",
 	"lyrics.stage-v2",
 	"visual.cursor-activity",
 	"visual.sonic-workshop",
 	"home.dashboard",
+	"local-import.expanded",
 	"desktop.tray-close",
 	"desktop.lyrics",
 	"desktop.window",
@@ -628,7 +630,7 @@ test("#59 guard keeps D0-D3 truthful and cannot clear the #56 human gate", () =>
 	}
 });
 
-test("#59 guard freezes all 16 unresolved capability tuples", () => {
+test("#59 guard freezes all 13 unresolved capability tuples", () => {
 	const missingStatusGap = reviewedDeltaStatus.replace(
 		"| visual.archive | missing | P1 | parity | none |\n",
 		"",
@@ -638,7 +640,7 @@ test("#59 guard freezes all 16 unresolved capability tuples", () => {
 		reviewedDeltaStatus: missingStatusGap,
 	});
 	expect(errors).toContain(
-		"reviewed-delta-status: expected exactly 16 unresolved capability rows; found 15",
+		"reviewed-delta-status: expected exactly 13 unresolved capability rows; found 12",
 	);
 	expect(errors).toContain(
 		"reviewed-delta-status: missing unresolved capability visual.archive",
@@ -653,7 +655,7 @@ test("#59 guard freezes all 16 unresolved capability tuples", () => {
 		capabilityMatrix: missingMatrixGap,
 	});
 	expect(errors).toContain(
-		"capability-matrix: expected exactly 16 unresolved capability rows; found 15",
+		"capability-matrix: expected exactly 13 unresolved capability rows; found 12",
 	);
 	expect(errors).toContain(
 		"capability-matrix: missing unresolved capability provider.kugou",
@@ -706,7 +708,7 @@ test("#59 guard preserves the implemented Sonic tuple and all 17 positive Field 
 		),
 	});
 	expect(errors).toContain(
-		"reviewed-delta-status: expected exactly 17 positive Field Validation Pending capability rows; found 16",
+		"reviewed-delta-status: expected exactly 19 positive Field Validation Pending capability rows; found 18",
 	);
 	expect(errors).toContain(
 		"reviewed-delta-status: missing positive Field Validation Pending capability home.dashboard",
@@ -720,7 +722,7 @@ test("#59 guard preserves the implemented Sonic tuple and all 17 positive Field 
 		),
 	});
 	expect(errors).toContain(
-		"capability-matrix: expected exactly 17 positive Field Validation Pending capability rows; found 16",
+		"capability-matrix: expected exactly 19 positive Field Validation Pending capability rows; found 18",
 	);
 	expect(errors).toContain(
 		"capability-matrix: missing positive Field Validation Pending capability lyrics.stage-v2",
