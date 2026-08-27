@@ -110,6 +110,7 @@ export function useHomeController({
 	showToast,
 	storage = defaultHomeListenRepository,
 	autoRefresh = true,
+	discoverHomeAvailable = true,
 }: {
 	discover: DiscoverPort | null;
 	library: LibraryPort | null;
@@ -136,6 +137,8 @@ export function useHomeController({
 	showToast(message: string): void;
 	storage?: HomeListenStorage;
 	autoRefresh?: boolean;
+	/** MineRadio-api 未提供 discover/home 时由 composition root 显式关闭。 */
+	discoverHomeAvailable?: boolean;
 }): HomeControllerResult {
 	const [discover, setDiscover] = useState<DiscoverHomeResponse | null>(null);
 	const [recommendations, setRecommendations] = useState<RecommendationPage[]>([]);
@@ -215,6 +218,12 @@ export function useHomeController({
 	}, []);
 
 	const refreshDiscover = useCallback(async () => {
+		if (!discoverHomeAvailable) {
+			setDiscover(null);
+			setDiscoverLoading(false);
+			setDiscoverError(null);
+			return null;
+		}
 		const port = dependenciesRef.current.discoverPort;
 		if (!port) {
 			setDiscover(null);
@@ -249,7 +258,7 @@ export function useHomeController({
 		} finally {
 			if (sequence === discoverRequestRef.current) setDiscoverLoading(false);
 		}
-	}, []);
+	}, [discoverHomeAvailable]);
 
 	const refreshRecommendations = useCallback(async (
 		options: { refresh?: boolean } = {},

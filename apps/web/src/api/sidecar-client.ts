@@ -153,12 +153,7 @@ export class SidecarClient {
 		path: string,
 		body?: unknown,
 	): Promise<unknown | null> {
-		const tauriResult = await invokeTauriCommand("api_call", { method, path, body: body ?? null });
-		if (tauriResult !== null) {
-			console.log("[api]: ", path, body, tauriResult);
-			return tauriResult;
-		}
-		return tauriResult;
+		return invokeTauriCommand("api_call", { method, path, body: body ?? null });
 	}
 
 	private async request<T>(

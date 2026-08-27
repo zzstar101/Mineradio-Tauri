@@ -283,3 +283,36 @@ test("playlist generation rejects a stale first page and fast-scroll load-more s
 	root.unmount();
 	host.remove();
 });
+
+test("native capability gate keeps unavailable discover home out of production calls", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	let discoverCalls = 0;
+	const discover = {
+		discoverHome: async () => {
+			discoverCalls += 1;
+			return home(1);
+		},
+	} as unknown as DiscoverPort;
+	const controllerRef: { current: HomeControllerResult | null } = { current: null };
+
+	function Harness() {
+		controllerRef.current = useHomeController({
+			...createOptions(discover),
+			discoverHomeAvailable: false,
+		});
+		return null;
+	}
+
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	flushSync(() => root.render(<Harness />));
+	const result = await controllerRef.current!.refreshDiscover();
+
+	expect(result).toBeNull();
+	expect(discoverCalls).toBe(0);
+	expect(controllerRef.current?.discoverError).toBeNull();
+
+	root.unmount();
+	host.remove();
+});

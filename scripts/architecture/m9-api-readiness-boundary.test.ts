@@ -30,6 +30,44 @@ function repositoryPath(path: string): string {
 	return relative(repositoryRoot, path).replaceAll("\\", "/");
 }
 
+type NativeRoute = `${"GET" | "POST" | "DELETE"} ${string}`;
+
+function clientNativeRoutes(source: string): NativeRoute[] {
+	const routes = new Set<NativeRoute>();
+	const calls = /this\.(?:request|invokeApiJson)\(\s*"(GET|POST|DELETE)"\s*,\s*(["'`])([\s\S]*?)\2\s*[,)]/gu;
+	for (const match of source.matchAll(calls)) {
+		let route = match[3];
+		route = route.split("${query ?", 1)[0] ?? route;
+		route = route.replaceAll("${suffix}", "");
+		route = route.replace(/\$\{[^}]*provider[^}]*\}/gu, ":provider");
+		route = route.replace(/\$\{encodeURIComponent\([^}]+\)\}/gu, ":id");
+		route = route.replace(/\$\{[^}]+\}/gu, ":id");
+		route = route.split("?", 1)[0] ?? route;
+		routes.add(`${match[1]} ${route}` as NativeRoute);
+	}
+	return [...routes].sort();
+}
+
+function bridgeNativeRoutes(source: string): NativeRoute[] {
+	const routes = new Set<NativeRoute>();
+	for (const match of source.matchAll(/\("(GET|POST|DELETE)",\s*"(\/[^"?]+)"\)/gu)) {
+		routes.add(`${match[1]} ${match[2]}` as NativeRoute);
+	}
+	for (const match of source.matchAll(
+		/\("(GET|POST|DELETE)",\s*\[([^\]]+)\]\)/gu,
+	)) {
+		const segments = match[2]
+			.split(",")
+			.map((item) => item.trim())
+			.filter(Boolean)
+			.map((item) => item.startsWith('"') ? item.slice(1, -1) : ":id");
+		if (segments.length === 0) continue;
+		const suffix = segments.join("/");
+		routes.add(`${match[1]} /providers/:provider/${suffix}` as NativeRoute);
+	}
+	return [...routes].sort();
+}
+
 test("native API compatibility client stays behind application ports", () => {
 	const webRoot = resolve(repositoryRoot, "apps/web/src");
 	const allowedPrefixes = [
@@ -148,4 +186,58 @@ test("canonical provider path is Tauri invoke to api_bridge and MineRadio-api", 
 	expect(bridgeSource).toContain("api: &Api");
 	expect(bridgeSource).toContain("pub async fn api_call");
 	expect(desktopSource).toContain("api_bridge::api_call");
+});
+
+test("every Web native API route is handled by the Rust bridge or explicitly gated", () => {
+	const clientSource = readFileSync(
+		resolve(repositoryRoot, "apps/web/src/api/sidecar-client.ts"),
+		"utf8",
+	);
+	const bridgeSource = readFileSync(
+		resolve(repositoryRoot, "apps/desktop/src-tauri/src/api_bridge.rs"),
+		"utf8",
+	);
+	const gatedRoutes = new Set<NativeRoute>([
+		"GET /discover/home",
+		"POST /shared-playlist/import",
+	]);
+	const bridgeRoutes = new Set(bridgeNativeRoutes(bridgeSource));
+	const uncovered = clientNativeRoutes(clientSource).filter(
+		(route) => !bridgeRoutes.has(route) && !gatedRoutes.has(route),
+	);
+
+	expect(uncovered).toEqual([]);
+	for (const required of [
+		"GET /weather/radio",
+		"GET /discover/home",
+		"GET /podcast/search",
+		"GET /podcast/hot",
+		"GET /podcast/detail",
+		"GET /podcast/programs",
+		"GET /podcast/my",
+		"GET /podcast/my/items",
+		"POST /shared-playlist/import",
+	] satisfies NativeRoute[]) {
+		expect(clientNativeRoutes(clientSource)).toContain(required);
+	}
+
+	const appSource = readFileSync(
+		resolve(repositoryRoot, "apps/web/src/app/App.tsx"),
+		"utf8",
+	);
+	expect(appSource).toContain("discoverHomeAvailable: false");
+	expect(appSource).toContain("onSharedPlaylistImport: undefined");
+});
+
+test("production native API transport never logs request or response payloads", () => {
+	const clientSource = readFileSync(
+		resolve(repositoryRoot, "apps/web/src/api/sidecar-client.ts"),
+		"utf8",
+	);
+	const invokeBody = clientSource.match(
+		/private async invokeApiJson[\s\S]*?\n\t\}\n\n\tprivate async request/u,
+	)?.[0] ?? "";
+
+	expect(invokeBody).not.toContain("console.log");
+	expect(invokeBody).not.toMatch(/console\.(?:debug|info|warn|error)\s*\([^)]*(?:body|tauriResult)/u);
 });

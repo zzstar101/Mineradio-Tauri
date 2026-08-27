@@ -9,6 +9,7 @@ use std::{collections::HashMap, sync::OnceLock, time::Duration};
 use mineradio_api::{
     analyze_podcast_dj_beatmap, Api, ApiError, ApiErrorCode, PodcastAudioFormat,
     PodcastDjAnalyzerParams, ProviderApi, ProviderId, QrLoginKind, SongUrlOptions, Track,
+    WeatherRadioParams,
 };
 use serde::Deserialize;
 
@@ -115,6 +116,94 @@ async fn handle_route(
     match (method, route) {
         ("GET", "/health") => Ok(Success::Raw(health_body(app_version, schema_version))),
         ("GET", "/providers/capabilities") => Ok(Success::Data(capabilities_matrix())),
+        ("GET", "/weather/radio") => {
+            let value = api
+                .weather_radio(WeatherRadioParams {
+                    city: params.get("city").cloned(),
+                    q: params.get("q").cloned(),
+                    location: params.get("location").cloned(),
+                    lat: query_f64_value(params, "lat"),
+                    lon: query_f64_value(params, "lon"),
+                    timezone: params.get("timezone").cloned(),
+                })
+                .await
+                .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(value))
+        }
+        ("GET", "/discover/home") => Err(ApiCallError::unavailable(
+            "discover home is not available in the current MineRadio-api",
+        )),
+        ("GET", "/podcast/search") => {
+            let keywords = params
+                .get("keywords")
+                .or_else(|| params.get("keyword"))
+                .cloned()
+                .unwrap_or_default();
+            let value = api
+                .podcast_search(keywords, query_u32(params, "limit", 18))
+                .await
+                .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(value))
+        }
+        ("GET", "/podcast/hot") => {
+            let value = api
+                .podcast_hot(
+                    query_u32(params, "limit", 18),
+                    query_u32_allow_zero(params, "offset", 0),
+                )
+                .await
+                .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(value))
+        }
+        ("GET", "/podcast/detail") => {
+            let rid = params
+                .get("id")
+                .or_else(|| params.get("rid"))
+                .cloned()
+                .unwrap_or_default();
+            let value = api
+                .podcast_detail(rid)
+                .await
+                .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(value))
+        }
+        ("GET", "/podcast/programs") => {
+            let rid = params
+                .get("id")
+                .or_else(|| params.get("rid"))
+                .cloned()
+                .unwrap_or_default();
+            let value = api
+                .podcast_programs(
+                    rid,
+                    query_u32(params, "limit", 30),
+                    query_u32_allow_zero(params, "offset", 0),
+                )
+                .await
+                .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(value))
+        }
+        ("GET", "/podcast/my") => {
+            let value = api
+                .podcast_my()
+                .await
+                .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(value))
+        }
+        ("GET", "/podcast/my/items") => {
+            let value = api
+                .podcast_my_items(
+                    params
+                        .get("key")
+                        .cloned()
+                        .unwrap_or_else(|| "collect".to_owned()),
+                    query_u32(params, "limit", 36),
+                    query_u32_allow_zero(params, "offset", 0),
+                )
+                .await
+                .map_err(|err| ApiCallError::from_api_error(&err))?;
+            Ok(Success::Data(value))
+        }
         ("GET", "/podcast/dj-beatmap") => {
             let url = params
                 .get("url")
@@ -175,6 +264,9 @@ async fn handle_route(
                 .map_err(|err| ApiCallError::from_api_error(&err))?;
             Ok(Success::Data(media_song_url_value(result)))
         }
+        ("POST", "/shared-playlist/import") => Err(ApiCallError::unavailable(
+            "shared playlist import is not available in the current MineRadio-api",
+        )),
         _ => handle_provider_route(api, method, route, params, body).await,
     }
 }
@@ -504,6 +596,21 @@ fn query_u32(params: &HashMap<String, String>, key: &str, default: u32) -> u32 {
         .unwrap_or(default)
 }
 
+fn query_u32_allow_zero(params: &HashMap<String, String>, key: &str, default: u32) -> u32 {
+    params
+        .get(key)
+        .and_then(|value| value.parse::<u32>().ok())
+        .unwrap_or(default)
+}
+
+fn query_f64_value(params: &HashMap<String, String>, key: &str) -> Option<serde_json::Value> {
+    params
+        .get(key)
+        .and_then(|value| value.parse::<f64>().ok())
+        .filter(|value| value.is_finite())
+        .map(serde_json::Value::from)
+}
+
 fn health_body(app_version: &str, schema_version: &str) -> serde_json::Value {
     serde_json::json!({
         "ok": true,
@@ -598,6 +705,14 @@ impl ApiCallError {
             code: "INTERNAL".to_string(),
             message: message.to_string(),
             retryable: true,
+        }
+    }
+
+    fn unavailable(message: &str) -> Self {
+        Self {
+            code: "UNAVAILABLE".to_string(),
+            message: message.to_string(),
+            retryable: false,
         }
     }
 }

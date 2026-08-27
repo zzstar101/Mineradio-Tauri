@@ -182,6 +182,8 @@ function playbackPatchForTrack(track: Track | null) {
 		isPlaying: track ? true : false,
 		positionMs: 0,
 		durationMs: track?.durationMs ?? null,
+		previewRange: null,
+		trialBanner: null,
 	};
 }
 
@@ -191,6 +193,8 @@ function stopPlaybackPatch() {
 		isPlaying: false,
 		positionMs: 0,
 		durationMs: null,
+		previewRange: null,
+		trialBanner: null,
 	};
 }
 
@@ -416,7 +420,12 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 	setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)), muted: volume <= 0 }),
 	toggleMute: () => set((s) => ({ muted: !s.muted })),
 	setMode: (mode) => set({ mode }),
-	setQueue: (tracks) => set({ queue: tracks, streamSource: null, previewRange: null }),
+	setQueue: (tracks) => set({
+		queue: tracks,
+		streamSource: null,
+		previewRange: null,
+		trialBanner: null,
+	}),
 	setPreviewRange: (range) => set({ previewRange: range }),
 	setTrialBanner: (banner) => set({ trialBanner: banner }),
 	enqueue: (track) => set((s) => ({ queue: [...s.queue, track] })),
@@ -462,6 +471,8 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 				currentTrack: request.candidate,
 				positionMs: Math.max(0, request.preservePositionMs),
 				durationMs: request.candidate.durationMs ?? state.durationMs,
+				previewRange: null,
+				trialBanner: null,
 				playbackIntentId: nextPlaybackIntent(state),
 			};
 		});
@@ -538,7 +549,6 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 		set((s) => ({
 			queue: [],
 			streamSource: null,
-			previewRange: null,
 			...stopPlaybackPatch(),
 			playbackIntentId: nextPlaybackIntent(s),
 		})),
@@ -703,6 +713,8 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 				isPlaying: restoredCurrentTrack ? checkpoint.wasPlaying : false,
 				positionMs: restoredCurrentTrack ? checkpoint.positionMs : 0,
 				durationMs: restoredCurrentTrack ? checkpoint.durationMs : null,
+				previewRange: null,
+				trialBanner: null,
 				mode: checkpoint.mode,
 				volume: checkpoint.volume,
 				muted: checkpoint.muted,

@@ -506,6 +506,8 @@ export function usePlaybackSessionRuntime({
 
 		const reload = coordinator.beginReload(reason);
 		if (!reload) return false;
+		setTrialBanner(null);
+		usePlaybackStore.getState().setPreviewRange(null);
 		const resumeAt = preservePosition
 			? Math.max(0, getPlaybackSnapshot().positionMs)
 			: 0;

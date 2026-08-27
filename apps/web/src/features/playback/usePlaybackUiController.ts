@@ -82,6 +82,10 @@ export function usePlaybackUiController({
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const localAudioUrlsRef = useRef(new Map<string, string>());
 	const lastRuntimeDurationRef = useRef<number | null>(null);
+	const previewDecisionIdentityRef = useRef<{
+		playbackIntentId: number;
+		previewRange: { startMs: number; endMs: number } | null;
+	} | null>(null);
 	/** 流式电台续拉单飞闸门：ended 事件可能连发，进行中忽略重入 */
 	const streamFetchInFlightRef = useRef(false);
 	const dependenciesRef = useRef({
@@ -223,6 +227,19 @@ export function usePlaybackUiController({
 		(payload: TimeUpdatePayload) => {
 			const current = dependenciesRef.current;
 			current.setPositionMs(payload.positionMs);
+			const storeState = usePlaybackStore.getState();
+			const previousPreviewIdentity = previewDecisionIdentityRef.current;
+			if (
+				!previousPreviewIdentity
+				|| previousPreviewIdentity.playbackIntentId !== storeState.playbackIntentId
+				|| previousPreviewIdentity.previewRange !== storeState.previewRange
+			) {
+				previewDecisionIdentityRef.current = {
+					playbackIntentId: storeState.playbackIntentId,
+					previewRange: storeState.previewRange,
+				};
+				lastRuntimeDurationRef.current = null;
+			}
 			if (
 				payload.durationMs !== null &&
 				payload.durationMs !== lastRuntimeDurationRef.current
@@ -232,7 +249,6 @@ export function usePlaybackUiController({
 
 				// 试听判定挂在这条最可靠的时长到达路径上：
 				// 实测音频时长 vs song_url 返回的试听区间（±5s）
-				const storeState = usePlaybackStore.getState();
 				const outcome = evaluatePreviewResult({
 					previewRange: storeState.previewRange,
 					actualDurationMs: payload.durationMs,
