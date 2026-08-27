@@ -9,6 +9,7 @@ export const PlaylistSummarySchema = z.object({
   coverUrl: z.string().optional().default(""),
   trackCount: z.number().int().nonnegative().optional(),
   trackIds: z.array(z.string()).default([]),
+  collected: z.boolean().nullable().optional(),
   subscribed: z.boolean().optional().default(false)
 });
 

@@ -377,7 +377,6 @@ for (const restoredPlayback of [
 						return {
 							url: `https://media.example/${track.id}.mp3`,
 							quality: "standard",
-							trial: false,
 						};
 					},
 				},
@@ -623,26 +622,23 @@ test("a newer playback intent for the same track rejects the stale URL result", 
 	const firstUrl = deferred<{
 		url: string;
 		quality: string;
-		trial: boolean;
-		loggedIn: boolean;
-		message: string;
 	}>();
 	const secondUrl = deferred<{
 		url: string;
 		quality: string;
-		trial: boolean;
-		loggedIn: boolean;
-		message: string;
+		previewRange?: { startMs: number; endMs: number };
 	}>();
 	const loadedUrls: string[] = [];
 	let playCount = 0;
 	let resolveCount = 0;
+	let lastLoadContext: object | null = null;
 	const runtimeRef: { current: PlaybackSessionRuntimeResult | null } = {
 		current: null,
 	};
 	const controller = {
-		load(url: string) {
+		load(url: string, loadContext?: object) {
 			loadedUrls.push(url);
+			lastLoadContext = loadContext ?? null;
 		},
 		seek() {},
 		async play() {
@@ -721,9 +717,6 @@ test("a newer playback intent for the same track rejects the stale URL result", 
 	firstUrl.resolve({
 		url: "https://media.example/stale-intent.mp3",
 		quality: "standard",
-		trial: true,
-		loggedIn: false,
-		message: "stale intent banner",
 	});
 	await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -734,9 +727,7 @@ test("a newer playback intent for the same track rejects the stale URL result", 
 	secondUrl.resolve({
 		url: "https://media.example/current-intent.mp3",
 		quality: "standard",
-		trial: true,
-		loggedIn: false,
-		message: "current intent banner",
+		previewRange: { startMs: 0, endMs: 30000 },
 	});
 	for (let i = 0; i < 8 && playCount < 1; i += 1) {
 		await new Promise((resolve) => setTimeout(resolve, 0));
@@ -744,7 +735,6 @@ test("a newer playback intent for the same track rejects the stale URL result", 
 
 	expect(loadedUrls).toEqual(["https://media.example/current-intent.mp3"]);
 	expect(playCount).toBe(1);
-	expect(runtimeRef.current?.trialBanner?.text).toBe("current intent banner");
 
 	root.unmount();
 	host.remove();
@@ -2135,7 +2125,6 @@ test("media error 与 stalled 共用一次 fresh URL recovery 预算", async () 
 					return {
 						url: `https://media.example/recovery-${resolveCount}.mp3`,
 						quality: "standard",
-						trial: false,
 					};
 				},
 			},
@@ -2261,9 +2250,7 @@ test("a trial media error clears the banner without resolving another source", a
 					return {
 						url: "https://media.example/trial.mp3",
 						quality: "standard",
-						trial: true,
-						loggedIn: false,
-						message: "当前未登录 · 仅播放试听片段",
+						previewRange: { startMs: 0, endMs: 30_000 },
 					};
 				},
 			},
@@ -2323,11 +2310,17 @@ test("a trial media error clears the banner without resolving another source", a
 	document.body.appendChild(host);
 	const root = createRoot(host);
 	flushSync(() => root.render(<Harness />));
-	for (let i = 0; i < 8 && (loadCount < 1 || !runtimeRef.current?.trialBanner); i += 1) {
+	for (let i = 0; i < 8 && loadCount < 1; i += 1) {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 	}
 
-	expect(runtimeRef.current?.trialBanner?.text).toBe("当前未登录 · 仅播放试听片段");
+	// 预置一个横幅（模拟测量确认后的状态），验证媒体错误会清掉它
+	runtimeRef.current?.setTrialBanner({
+		text: "此歌曲为试听片段 · 完整版需要会员",
+		provider: "netease",
+		showLogin: false,
+	});
+
 	runtimeRef.current!.handleRuntimeError(errorEventPayload(
 		loadedContext,
 		"trial media failed",
@@ -2606,7 +2599,6 @@ test("gapless 预加载只准备下一 deck，queue 变化立即收回且不改�
 					return {
 						url: `https://media.example/${track.id}.mp3`,
 						quality: "standard",
-						trial: false,
 					};
 				},
 			},
@@ -2794,7 +2786,6 @@ test("prepared handoff 采用已播放 deck 且不二次 songUrl、load 或 play
 					return {
 						url: `https://media.example/${track.id}.mp3`,
 						quality: "standard",
-						trial: false,
 					};
 				},
 			},
@@ -2960,7 +2951,6 @@ test("新手动 intent 会取消迟到的 gapless candidate 预加载", async ()
 	const pendingCandidate = deferred<{
 		url: string;
 		quality: string;
-		trial: boolean;
 	}>();
 	const loads: string[] = [];
 	let firstResolveCount = 0;
@@ -2996,7 +2986,6 @@ test("新手动 intent 会取消迟到的 gapless candidate 预加载", async ()
 					return {
 						url: `https://media.example/manual-first-${firstResolveCount}.mp3`,
 						quality: "standard",
-						trial: false,
 					};
 				},
 			},
@@ -3083,7 +3072,6 @@ test("新手动 intent 会取消迟到的 gapless candidate 预加载", async ()
 	pendingCandidate.resolve({
 		url: "https://media.example/manual-second-late.mp3",
 		quality: "standard",
-		trial: false,
 	});
 	for (
 		let i = 0;

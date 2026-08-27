@@ -1727,14 +1727,7 @@ test("App shows the baseline trial banner when provider returns a trial-only URL
 			return {
 				url: "https://example.com/trial.mp3",
 				quality: "标准",
-				proxied: false,
-				provider: "netease",
-				trial: true,
-				playable: true,
-				loggedIn: false,
-				vipLevel: "none",
-				reason: "trial_only",
-				message: "当前未登录 · 仅播放试听片段",
+				previewRange: { startMs: 0, endMs: 60_000 },
 			};
 		},
 		audioProxyUrl(url: string) {
@@ -1762,15 +1755,29 @@ test("App shows the baseline trial banner when provider returns a trial-only URL
 	const root = createRoot(host);
 	flushSync(() => root.render(<App updateController={APP_UPDATE_CONTROLLER} SplashComponent={() => null} VisualComponent={() => <div id="visual-host" />} applicationRuntime={legacyRuntimeForTest(rootConfig, fakeClient)} />));
 
+	// 试听确认依赖时长测量：让 deck 的音频元素报出与区间一致的时长
+	let trialAudioEl: AppStubAudioElement | null = null;
+	for (let i = 0; i < 12 && !trialAudioEl; i += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		trialAudioEl = appStubAudioInstances.find((el) => el.src.includes("trial.mp3")) ?? null;
+	}
+	if (trialAudioEl) {
+		trialAudioEl.duration = 60;
+		trialAudioEl.dispatchEvent(new Event("durationchange"));
+		// 测量挂在 timeupdate 的首帧时长分支上，补发一次驱动
+		trialAudioEl.dispatchEvent(new Event("timeupdate"));
+	}
+
 	for (let i = 0; i < 12 && !host.querySelector("#trial-banner.show"); i += 1) {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 	}
 
 	const banner = host.querySelector("#trial-banner");
 	expect(banner?.classList.contains("show")).toBe(true);
-	expect(host.querySelector("#trial-text")?.textContent).toBe("当前未登录 · 仅播放试听片段");
+	expect(host.querySelector("#trial-text")?.textContent).toBe("需要 VIP · 当前歌曲试听中");
 	const loginButton = host.querySelector("#trial-login-btn") as HTMLButtonElement | null;
-	expect(loginButton?.style.display).not.toBe("none");
+	// 试听判定不再推断登录态：登录按钮隐藏，横幅只提示试听
+	expect(loginButton?.style.display).toBe("none");
 	loginButton?.click();
 	await new Promise((resolve) => setTimeout(resolve, 0));
 	expect(host.querySelector("#login-modal")).not.toBeNull();
@@ -2486,14 +2493,7 @@ test("App clears the trial banner when the audio element reports a playback erro
 			return {
 				url: "https://example.com/trial-error.mp3",
 				quality: "标准",
-				proxied: false,
-				provider: "netease",
-				trial: true,
-				playable: true,
-				loggedIn: false,
-				vipLevel: "none",
-				reason: "trial_only",
-				message: "当前未登录 · 仅播放试听片段",
+				previewRange: { startMs: 0, endMs: 60_000 },
 			};
 		},
 		audioProxyUrl(url: string) {
@@ -2520,6 +2520,20 @@ test("App clears the trial banner when the audio element reports a playback erro
 	document.body.appendChild(host);
 	const root = createRoot(host);
 	flushSync(() => root.render(<App updateController={APP_UPDATE_CONTROLLER} SplashComponent={() => null} VisualComponent={() => <div id="visual-host" />} applicationRuntime={legacyRuntimeForTest(rootConfig, fakeClient)} />));
+
+	// 试听确认依赖时长测量：等真实 deck 的音频元素挂上 src 后，
+	// 让它报出与 previewRange.endMs 一致的时长
+	let trialAudioEl: AppStubAudioElement | null = null;
+	for (let i = 0; i < 12 && !trialAudioEl; i += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		trialAudioEl = appStubAudioInstances.find((el) => el.src.includes("trial-error.mp3")) ?? null;
+	}
+	if (trialAudioEl) {
+		trialAudioEl.duration = 60;
+		trialAudioEl.dispatchEvent(new Event("durationchange"));
+		// 测量挂在 timeupdate 的首帧时长分支上，补发一次驱动
+		trialAudioEl.dispatchEvent(new Event("timeupdate"));
+	}
 
 	for (let i = 0; i < 12 && !host.querySelector("#trial-banner.show"); i += 1) {
 		await new Promise((resolve) => setTimeout(resolve, 0));

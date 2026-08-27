@@ -406,7 +406,6 @@ test("resolveSongUrl POSTs to the cross-source song-url endpoint", async () => {
 	}, async () => {
 		const client = new SidecarClient();
 		const result = await client.resolveSongUrl(SAMPLE_TRACK, "lossless");
-		expect(result.requestedQuality).toBe("lossless");
 		expect(receivedBody).toEqual({ track: SAMPLE_TRACK, quality: "lossless" });
 		if (!result.url) throw new Error("expected playable test url");
 		expect(client.audioProxyUrl(result.url)).toBe(result.url);

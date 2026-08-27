@@ -11,6 +11,10 @@ import { withStoredCustomCover } from "../../cover/custom-cover";
 import type { LyricPayload } from "@mineradio/shared";
 import { selectCurrentIndex } from "../../lyrics/select-current-index";
 import { usePlaybackStore } from "../../stores/playback-store";
+import {
+	buildTrialBanner,
+	evaluatePreviewResult,
+} from "../playback/preview-trial";
 
 export { LOCAL_AUDIO_ACCEPT };
 
@@ -221,6 +225,20 @@ export function usePlaybackUiController({
 			) {
 				lastRuntimeDurationRef.current = payload.durationMs;
 				current.setDurationMs(payload.durationMs);
+
+				// 试听判定挂在这条最可靠的时长到达路径上：
+				// 实测音频时长 vs song_url 返回的试听区间（±5s）
+				const storeState = usePlaybackStore.getState();
+				const outcome = evaluatePreviewResult({
+					previewRange: storeState.previewRange,
+					actualDurationMs: payload.durationMs,
+					playableState: storeState.currentTrack?.playableState,
+				});
+				storeState.setTrialBanner(
+					outcome
+						? buildTrialBanner(outcome, storeState.currentTrack?.provider ?? "netease")
+						: null,
+				);
 			}
 			current.recordListenProgress(payload.positionMs, payload.durationMs);
 			current.setLyricsIndex(

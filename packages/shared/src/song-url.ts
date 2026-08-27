@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ProviderVipIconSchema } from "./session";
 import { TrackSchema } from "./track";
 
 const PLAYBACK_QUALITY_VALUES = ["jymaster", "hires", "lossless", "exhigh", "standard"] as const;
@@ -81,33 +80,20 @@ export const PlaybackRestrictionSchema = z.object({
 export type PlaybackRestrictionCategory = z.infer<typeof PlaybackRestrictionCategorySchema>;
 export type PlaybackRestriction = z.infer<typeof PlaybackRestrictionSchema>;
 
+/** 试听区间：开始与终止时间（毫秒），非"开始+时长" */
+export const PreviewRangeSchema = z.object({
+	startMs: z.number().int().nonnegative(),
+	endMs: z.number().int().nonnegative(),
+});
+export type PreviewRange = z.infer<typeof PreviewRangeSchema>;
+
+/** 契约已瘦身：权限判断在 Track 返回时确定（playableState），
+ *  song_url 只回答地址或失败原因；试听由客户端以时长测量确认。 */
 export const SongUrlResultSchema = z.object({
-	url: z.string().nullable(),
-	provider: z.string().optional(),
-	trial: z.boolean().optional(),
-	playable: z.boolean().optional(),
-	level: z.string().optional(),
+	url: z.string(),
 	quality: z.string().optional(),
-	br: z.number().int().nonnegative().optional(),
-	requestedQuality: PlaybackQualityRequestSchema.nullable().optional(),
-	loggedIn: z.boolean().optional(),
-	vipType: z.number().optional(),
-	vipLevel: z.enum(["none", "vip", "svip"]).optional(),
-	isVip: z.boolean().optional(),
-	isSvip: z.boolean().optional(),
-	vipLabel: z.string().optional(),
-	vipIcon: ProviderVipIconSchema.optional(),
-	vipIconUrl: z.string().optional(),
-	vipTier: z.number().int().nonnegative().optional(),
-	vipLevelName: z.string().optional(),
-	playbackKeyReady: z.boolean().optional(),
-	restriction: PlaybackRestrictionSchema.optional(),
-	reason: PlaybackRestrictionCategorySchema.optional(),
-	message: z.string().optional(),
-	tried: z.array(z.string()).optional(),
-	filename: z.string().optional(),
-	qqCode: z.number().optional(),
-	rawMessage: z.string().optional(),
+	expiresAt: z.string().nullable().optional(),
+	previewRange: PreviewRangeSchema.nullable().optional(),
 });
 
 export type SongUrlResult = z.infer<typeof SongUrlResultSchema>;

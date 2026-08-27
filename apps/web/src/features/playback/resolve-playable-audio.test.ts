@@ -89,7 +89,6 @@ test("resolvePlayableAudio preserves the current unavailable URL message", async
 	const fixture = createFixture({
 		url: "",
 		quality: "standard",
-		message: "当前音源不可用",
 	});
 
 	let message = "";
@@ -102,6 +101,6 @@ test("resolvePlayableAudio preserves the current unavailable URL message", async
 	} catch (error) {
 		message = error instanceof Error ? error.message : String(error);
 	}
-	expect(message).toBe("当前音源不可用");
+	expect(message).toBe("播放地址不可用");
 	expect(fixture.calls).toEqual(["resolve:track-1:default"]);
 });

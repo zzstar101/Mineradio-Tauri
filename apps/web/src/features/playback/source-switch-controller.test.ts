@@ -29,9 +29,9 @@ test("匹配期间播放 intent 变化时旧音源结果不能修改队列", asy
 			searchAll: async () => [],
 		},
 		playback: {
-			async songUrl() { return { url: null }; },
+			async songUrl() { return { url: "" }; },
 			async resolveSongUrl(): Promise<SongUrlResult> {
-				return { url: "https://audio.example/qq", provider: "qq" };
+				return { url: "https://audio.example/qq" };
 			},
 			async trackQualities() {
 				return { provider: "qq", trackId: "qq", qualities: [] };
@@ -65,7 +65,7 @@ test("成功切换会保留位置并提交解析确认后的实际 provider", as
 			async searchAll() { return []; },
 		},
 		playback: {
-			async songUrl() { return { url: null }; },
+			async songUrl() { return { url: "" }; },
 			async resolveSongUrl() {
 				return {
 					url: "https://audio.example/qq",
@@ -110,7 +110,7 @@ test("新音源实际加载失败时会原子恢复原曲目和播放位置", as
 			async searchAll() { return []; },
 		},
 		playback: {
-			async songUrl() { return { url: null }; },
+			async songUrl() { return { url: "" }; },
 			async resolveSongUrl() {
 				return {
 					url: "https://audio.example/qq",
@@ -155,9 +155,9 @@ test("新音源开始播放后不会把后续普通媒体错误误判为切换�
 			async searchAll() { return []; },
 		},
 		playback: {
-			async songUrl() { return { url: null }; },
+			async songUrl() { return { url: "" }; },
 			async resolveSongUrl() {
-				return { url: "https://audio.example/qq", provider: "qq" };
+				return { url: "https://audio.example/qq" };
 			},
 			async trackQualities() {
 				return { provider: "qq", trackId: "qq", qualities: [] };

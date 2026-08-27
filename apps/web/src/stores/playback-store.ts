@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import type { PlayableState, ProviderId, Track } from "@mineradio/shared";
 
+export interface TrialBannerState {
+	text: string;
+	provider: ProviderId;
+	showLogin: boolean;
+}
+
 export type PlaybackMode = "single" | "loop" | "queue" | "shuffle";
 
 export const MAX_PLAYBACK_EXIT_CHECKPOINT_QUEUE = 240;
@@ -115,6 +121,10 @@ export interface PlaybackState {
 	queue: Track[];
 	/** 流式电台续播源：非空且当前曲为队尾时，ended 前自动续拉下一首 */
 	streamSource: { provider: ProviderId; id: string } | null;
+	/** song_url 返回的试听区间；播放中经时长测量确认是否真为试听 */
+	previewRange: { startMs: number; endMs: number } | null;
+	/** 试听横幅：由时长测量确认后设置 */
+	trialBanner: TrialBannerState | null;
 	checkpointRestore: PlaybackCheckpointRestoreAuthority | null;
 	setCurrentTrack: (track: Track | null) => void;
 	setPlaying: (playing: boolean) => void;
@@ -126,6 +136,9 @@ export interface PlaybackState {
 	setMode: (mode: PlaybackMode) => void;
 	setQueue: (tracks: Track[]) => void;
 	setStreamSource(source: { provider: ProviderId; id: string } | null): void;
+	/** 试听区间（来自 song_url），播放中由时长测量确认真试听 */
+	setPreviewRange(range: { startMs: number; endMs: number } | null): void;
+	setTrialBanner(banner: TrialBannerState | null): void;
 	enqueue: (track: Track) => void;
 	insertAt: (index: number, track: Track) => void;
 	insertNext: (track: Track) => void;
@@ -363,6 +376,8 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 	mode: "loop",
 	queue: [],
 	streamSource: null,
+	previewRange: null,
+	trialBanner: null,
 	checkpointRestore: null,
 	setStreamSource: (source) => set({ streamSource: source }),
 	setCurrentTrack: (track) =>
@@ -377,7 +392,9 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 	setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)), muted: volume <= 0 }),
 	toggleMute: () => set((s) => ({ muted: !s.muted })),
 	setMode: (mode) => set({ mode }),
-	setQueue: (tracks) => set({ queue: tracks, streamSource: null }),
+	setQueue: (tracks) => set({ queue: tracks, streamSource: null, previewRange: null }),
+	setPreviewRange: (range) => set({ previewRange: range }),
+	setTrialBanner: (banner) => set({ trialBanner: banner }),
 	enqueue: (track) => set((s) => ({ queue: [...s.queue, track] })),
 	insertAt: (index, track) =>
 		set((s) => {
@@ -497,6 +514,7 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 		set((s) => ({
 			queue: [],
 			streamSource: null,
+			previewRange: null,
 			...stopPlaybackPatch(),
 			playbackIntentId: nextPlaybackIntent(s),
 		})),
