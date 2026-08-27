@@ -138,9 +138,9 @@ test("读取仓库的四个版本来源", () => {
   }
 });
 
-test("替代发布的四个产品版本源固定为 1.0.0", () => {
-  expect(validateReleaseVersions("v1.0.0", readRepositoryVersions())).toEqual({
-    tag: "v1.0.0",
-    version: "1.0.0",
+test("2.1.0 发布的四个产品版本源保持一致", () => {
+  expect(validateReleaseVersions("v2.1.0", readRepositoryVersions())).toEqual({
+    tag: "v2.1.0",
+    version: "2.1.0",
   });
 });

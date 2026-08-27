@@ -1,7 +1,7 @@
 {
   "name": "mineradio-tauri",
   "productName": "MineRadio-Tauri",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "MineRadio-Tauri desktop music player.",
   "author": "MineRadio-Tauri contributors",
   "license": "SEE LICENSE IN LICENSE",

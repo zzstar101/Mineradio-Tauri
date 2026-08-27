@@ -1,6 +1,6 @@
 [package]
 name = "mineradio-tauri"
-version = "1.0.0"
+version = "2.1.0"
 description = "GPL-3.0-only Rust desktop runtime for MineRadio-Tauri; bundled web assets may carry separate license notices"
 authors = ["MineRadio-Tauri contributors"]
 edition = "2021"
