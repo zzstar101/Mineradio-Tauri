@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
 
 const repositoryRoot = resolve(import.meta.dir, "../..");
 
@@ -31,7 +30,7 @@ function repositoryPath(path: string): string {
 	return relative(repositoryRoot, path).replaceAll("\\", "/");
 }
 
-test("M9 keeps concrete Sidecar transport inside api and legacy adapters", () => {
+test("native API compatibility client stays behind application ports", () => {
 	const webRoot = resolve(repositoryRoot, "apps/web/src");
 	const allowedPrefixes = [
 		"apps/web/src/api/",
@@ -49,7 +48,7 @@ test("M9 keeps concrete Sidecar transport inside api and legacy adapters", () =>
 	expect(violations).toEqual([]);
 });
 
-test("M9 business and visual modules do not receive sidecar base addresses", () => {
+test("business and visual modules do not receive retired Sidecar addresses", () => {
 	const guardedRoots = [
 		"apps/web/src/app",
 		"apps/web/src/features",
@@ -69,7 +68,7 @@ test("M9 business and visual modules do not receive sidecar base addresses", () 
 	expect(violations).toEqual([]);
 });
 
-test("M9 visual modules treat media URIs as opaque values", () => {
+test("visual modules treat native media URIs as opaque values", () => {
 	const visualRoots = [
 		"apps/web/src/visual",
 		"packages/visual-engine/src",
@@ -85,7 +84,7 @@ test("M9 visual modules treat media URIs as opaque values", () => {
 	expect(violations).toEqual([]);
 });
 
-test("M9 media image source is consumed by production code", () => {
+test("native media image source is consumed by production code", () => {
 	const portPath = resolve(repositoryRoot, "apps/web/src/ports/media-url-port.ts");
 	const portSource = readFileSync(portPath, "utf8");
 	const consumerRoots = [
@@ -105,21 +104,17 @@ test("M9 media image source is consumed by production code", () => {
 	expect(consumers.length).toBeGreaterThan(0);
 });
 
-test("M9 keeps the Sidecar HTTP runtime retired after the rust-crate cutover", () => {
+test("Sidecar HTTP runtime stays retired after the Rust crate cutover", () => {
 	// Sidecar HTTP 服务已迁移进 mineradio_api crate：旧工件必须保持删除，
 	// 防止意外复活旧架构；tauri 打包的 externalBin 也必须保持为空。
 	const retiredPaths = [
-		"sidecars/api",
+		"sidecars/api/package.json",
+		"sidecars/api/src",
 		"apps/desktop/src-tauri/src/sidecar.rs",
 		"apps/desktop/scripts/build-sidecar-binary.mjs",
 	];
 	for (const target of retiredPaths) {
-		const probe = spawnSync(
-			"git",
-			["cat-file", "-e", `HEAD:${target}`],
-			{ cwd: repositoryRoot, encoding: "utf8" },
-		);
-		expect(probe.status).not.toBe(0);
+		expect(existsSync(resolve(repositoryRoot, target))).toBe(false);
 	}
 
 	const tauriConfig = JSON.parse(
@@ -129,4 +124,28 @@ test("M9 keeps the Sidecar HTTP runtime retired after the rust-crate cutover", (
 		),
 	) as { bundle?: { externalBin?: string[] } };
 	expect(tauriConfig.bundle?.externalBin ?? []).toEqual([]);
+});
+
+test("canonical provider path is Tauri invoke to api_bridge and MineRadio-api", () => {
+	const clientSource = readFileSync(
+		resolve(repositoryRoot, "apps/web/src/api/sidecar-client.ts"),
+		"utf8",
+	);
+	const bridgeSource = readFileSync(
+		resolve(repositoryRoot, "apps/desktop/src-tauri/src/api_bridge.rs"),
+		"utf8",
+	);
+	const desktopSource = readFileSync(
+		resolve(repositoryRoot, "apps/desktop/src-tauri/src/lib.rs"),
+		"utf8",
+	);
+
+	expect(clientSource).toContain('invokeTauriCommand("api_call"');
+	expect(clientSource).not.toMatch(/\bfetch\s*\(/);
+	expect(clientSource).not.toContain("127.0.0.1");
+	expect(clientSource).not.toContain("sidecarBaseUrl");
+	expect(bridgeSource).toMatch(/use mineradio_api::\s*\{/);
+	expect(bridgeSource).toContain("api: &Api");
+	expect(bridgeSource).toContain("pub async fn api_call");
+	expect(desktopSource).toContain("api_bridge::api_call");
 });

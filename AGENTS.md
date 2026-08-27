@@ -23,8 +23,8 @@ docs/                    Release, parity, and architecture documentation.
 ## Frontend Architecture
 
 - `src/ports/` defines stable application boundaries. Business modules depend on these typed interfaces, not concrete transports.
-- `src/adapters/` implements those ports. `adapters/sidecar` owns the legacy application runtime and `SidecarClient`; `adapters/tauri` owns desktop IPC-backed capabilities.
-- `src/api/sidecar-client.ts` is a concrete transport client and may only be referenced by `src/api/` and `src/adapters/sidecar/`.
+- `src/adapters/` implements those ports. `adapters/sidecar` retains compatibility names for application-port assembly; its `SidecarClient` now calls the native Tauri `api_call` command and does not start or contact a Sidecar process. `adapters/tauri` owns the remaining desktop IPC-backed capabilities.
+- `src/api/sidecar-client.ts` is the compatibility API client over Tauri invoke. It may only be referenced by `src/api/` and `src/adapters/sidecar/`; production code must not add HTTP, localhost, health polling, or process supervision to this path.
 - `src/app/` composes the shell and bootstraps `ApplicationPorts`. `ApplicationRuntimeBootstrap` connects runtime, loads capabilities, refreshes provider status, and refreshes the library.
 - `src/features/` contains feature controllers and surfaces such as accounts, search, playback, library, likes, home, settings, updater, and wallpaper engine.
 - `src/audio/` owns the playback audio runtime and `PlayerController`. `PlaybackAudioRuntime` is the only production owner of `MediaElementSource`, decks, gain, analyser, fade, output routing, and related timers.
@@ -44,6 +44,7 @@ docs/                    Release, parity, and architecture documentation.
 ## API Boundary Rules
 
 - Treat `api/` as the user-owned source of truth. The desktop `api_bridge.rs` is a mapping layer, not a place to add provider behavior.
+- The canonical provider path is Web application ports → compatibility client → Tauri `api_call` → Rust `api_bridge` → in-process `mineradio_api::Api`.
 - Do not add a new provider capability, endpoint, DTO, QR-login flow, or error contract without an explicit request and user-verified upstream behavior.
 - Do not guess provider endpoints, signatures, auth material, or response shapes. Ask for evidence or a user-tested sample.
 - Keep frontend feature code behind ports. Do not let components call Tauri APIs or concrete transport clients directly.

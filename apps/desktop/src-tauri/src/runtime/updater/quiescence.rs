@@ -82,6 +82,7 @@ struct WebQuiescenceCompletionV1 {
 pub(crate) enum PlaybackCheckpointProvider {
     Netease,
     Qq,
+    Kugou,
     Soda,
 }
 
@@ -90,9 +91,17 @@ impl PlaybackCheckpointProvider {
         match self {
             Self::Netease => "netease",
             Self::Qq => "qq",
+            Self::Kugou => "kugou",
             Self::Soda => "soda",
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct PlaybackCheckpointStreamSource {
+    pub(crate) provider: PlaybackCheckpointProvider,
+    pub(crate) id: String,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -173,6 +182,12 @@ pub(crate) struct PlaybackExitCheckpointV1 {
     pub(crate) mode: PlaybackCheckpointMode,
     pub(crate) source_kind: PlaybackCheckpointSourceKind,
     pub(crate) restart_restorable: bool,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_stream_source",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub(crate) stream_source: Option<PlaybackCheckpointStreamSource>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1695,6 +1710,12 @@ fn validate_checkpoint(checkpoint: &PlaybackExitCheckpointV1) -> Result<(), WebQ
     for track in &checkpoint.queue {
         validate_track(track)?;
     }
+    if let Some(stream_source) = checkpoint.stream_source.as_ref() {
+        validate_text(&stream_source.id, 512, false, "streamSource.id")?;
+        if checkpoint.current_track_index.is_none() {
+            return Err(checkpoint_invalid("空 currentTrack 不能携带 streamSource"));
+        }
+    }
     validate_bounded_number(checkpoint.position_ms, "positionMs")?;
     if let Some(duration) = checkpoint.duration_ms {
         validate_bounded_number(duration, "durationMs")?;
@@ -1984,6 +2005,15 @@ where
     Option::<f64>::deserialize(deserializer)
 }
 
+fn deserialize_optional_stream_source<'de, D>(
+    deserializer: D,
+) -> Result<Option<PlaybackCheckpointStreamSource>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    PlaybackCheckpointStreamSource::deserialize(deserializer).map(Some)
+}
+
 #[cfg(windows)]
 fn sync_parent_directory(_path: &Path) -> io::Result<()> {
     // Windows 的 replace 已对 source handle FlushFileBuffers；StableDirectory 仍固定目录链。
@@ -2071,6 +2101,7 @@ mod tests {
             mode: PlaybackCheckpointMode::Loop,
             source_kind: PlaybackCheckpointSourceKind::Remote,
             restart_restorable: true,
+            stream_source: None,
         }
     }
 
@@ -2121,6 +2152,33 @@ mod tests {
         let mut explicit_null = expected;
         explicit_null["queue"][0]["mediaMid"] = serde_json::Value::Null;
         assert!(serde_json::from_value::<PlaybackExitCheckpointV1>(explicit_null).is_err());
+    }
+
+    #[test]
+    fn stream_source_and_kugou_checkpoint_round_trip_strictly() {
+        let mut value = checkpoint(&"a".repeat(32));
+        value.queue[0].provider = PlaybackCheckpointProvider::Kugou;
+        value.current_track_ref = "kugou:song-1".into();
+        value.stream_source = Some(PlaybackCheckpointStreamSource {
+            provider: PlaybackCheckpointProvider::Kugou,
+            id: "radio-42".into(),
+        });
+
+        validate_checkpoint(&value).expect("Kugou 流式 checkpoint 应有效");
+        let encoded = serde_json::to_value(&value).unwrap();
+        assert_eq!(encoded["streamSource"]["provider"], "kugou");
+        let decoded: PlaybackExitCheckpointV1 = serde_json::from_value(encoded.clone()).unwrap();
+        assert_eq!(decoded, value);
+
+        let mut explicit_null = encoded;
+        explicit_null["streamSource"] = serde_json::Value::Null;
+        assert!(serde_json::from_value::<PlaybackExitCheckpointV1>(explicit_null).is_err());
+
+        value.stream_source.as_mut().unwrap().id.clear();
+        assert_eq!(
+            validate_checkpoint(&value).unwrap_err().code(),
+            "UPDATE_PLAYBACK_CHECKPOINT_INVALID"
+        );
     }
 
     #[test]

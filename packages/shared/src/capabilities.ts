@@ -1,7 +1,12 @@
 import { z } from "zod";
-import { ProviderStatusEntrySchema } from "./health";
+import { ProviderCapabilitySchema, ProviderIdSchema } from "./provider";
 
-export const ProviderStatusSchema = ProviderStatusEntrySchema;
+export const ProviderStatusSchema = z.object({
+  providerId: ProviderIdSchema,
+  available: z.boolean(),
+  capabilities: z.array(ProviderCapabilitySchema).default([]),
+  message: z.string().optional()
+});
 
 export type ProviderStatus = z.infer<typeof ProviderStatusSchema>;
 

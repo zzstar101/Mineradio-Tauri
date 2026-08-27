@@ -613,9 +613,259 @@ function resetPlaybackStore(): void {
 		muted: false,
 		mode: "loop",
 		queue: [],
+		streamSource: null,
+		previewRange: null,
+		trialBanner: null,
 		checkpointRestore: null,
 	});
 }
+
+test("restored stream tail grows the queue and plays the next track after ended", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	resetPlaybackStore();
+	const first = { ...TRACK, id: "stream-first", sourceId: "stream-first" };
+	const tail = { ...TRACK, id: "stream-tail", sourceId: "stream-tail" };
+	const nextTrack = { ...TRACK, id: "stream-next", sourceId: "stream-next" };
+	const sourceStore = usePlaybackStore.getState();
+	sourceStore.setMode("queue");
+	sourceStore.setQueue([first, tail]);
+	sourceStore.playAt(1);
+	sourceStore.setStreamSource({ provider: "netease", id: "stream-radio" });
+	const checkpoint = sourceStore.capturePlaybackExitCheckpoint({
+		operationId: "33333333333333333333333333333333",
+		receipt: "44444444444444444444444444444444",
+		sourceKind: "remote",
+	})!;
+
+	resetPlaybackStore();
+	expect(usePlaybackStore.getState().restorePlaybackExitCheckpoint({
+		operationId: checkpoint.operationId,
+		receipt: checkpoint.receipt,
+		mode: "restart-reconciliation",
+		checkpoint,
+	})).toBe("restored");
+
+	const streamCalls: string[] = [];
+	let uiController: ReturnType<typeof usePlaybackUiController> | null = null;
+	const noOp = () => undefined;
+	function Harness() {
+		uiController = usePlaybackUiController({
+			controllerRef: { current: null },
+			lyricsPayloadRef: { current: null },
+			playbackMode: "queue",
+			setPositionMs: noOp,
+			setDurationMs: noOp,
+			setLyricsIndex: noOp,
+			setMiniQueue: noOp,
+			insertQueueNext: noOp,
+			setPlaybackMode: noOp,
+			setQueue: noOp,
+			clearQueue: noOp,
+			recordListenProgress: noOp,
+			finalizeListenSession: noOp,
+			enterPlaybackSurface: noOp,
+			setHomeForcedOpen: noOp,
+			setHomeSuppressed: noOp,
+			clearCurrentBeatMap: noOp,
+			applyCustomCoverImage: async () => undefined,
+			showToast: noOp,
+			streamNext: async (provider, id) => {
+				streamCalls.push(`${provider}:${id}`);
+				return nextTrack;
+			},
+		});
+		return null;
+	}
+
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	flushSync(() => root.render(<Harness />));
+	flushSync(() => uiController?.handleRuntimeEnded());
+	for (
+		let index = 0;
+		index < 8 && usePlaybackStore.getState().currentTrack?.id !== "stream-next";
+		index += 1
+	) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+
+	expect(streamCalls).toEqual(["netease:stream-radio"]);
+	expect(usePlaybackStore.getState().queue.map((track) => track.id)).toEqual([
+		"stream-first",
+		"stream-tail",
+		"stream-next",
+	]);
+	expect(usePlaybackStore.getState().currentTrack?.id).toBe("stream-next");
+
+	root.unmount();
+	host.remove();
+	resetPlaybackStore();
+});
+
+test("restart resume rebuilds preview state from the resolved source and media duration", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	resetPlaybackStore();
+	const previewTrack: Track = {
+		...TRACK,
+		id: "preview-resume",
+		sourceId: "preview-resume",
+		playableState: "vip_required",
+	};
+	const sourceStore = usePlaybackStore.getState();
+	sourceStore.setQueue([previewTrack]);
+	sourceStore.playAt(0);
+	const checkpoint = sourceStore.capturePlaybackExitCheckpoint({
+		operationId: "55555555555555555555555555555555",
+		receipt: "66666666666666666666666666666666",
+		sourceKind: "remote",
+	})!;
+
+	resetPlaybackStore();
+	expect(usePlaybackStore.getState().restorePlaybackExitCheckpoint({
+		operationId: checkpoint.operationId,
+		receipt: checkpoint.receipt,
+		mode: "restart-reconciliation",
+		checkpoint,
+	})).toBe("restored");
+	expect(usePlaybackStore.getState().previewRange).toBeNull();
+
+	const loads: Array<{ url: string; context: object | null }> = [];
+	const controller = {
+		load(url: string, context?: object) {
+			loads.push({ url, context: context ?? null });
+		},
+		seek() {},
+		async play() {},
+		pause() {},
+		stop() {},
+	} as unknown as PlayerController;
+	const services = {
+		music: {
+			playback: {
+				async resolveSongUrl() {
+					return {
+						url: "https://media.example/preview-resume.mp3",
+						quality: "standard",
+						previewRange: { startMs: 0, endMs: 30_000 },
+					};
+				},
+			},
+			lyrics: {
+				async lyric() {
+					return {
+						provider: previewTrack.provider,
+						trackId: previewTrack.id,
+						lines: [],
+						hasTranslation: false,
+						isWordByWord: false,
+					};
+				},
+			},
+			discover: {},
+		},
+		mediaUrl: {
+			audioProxyUrl: (url: string) => url,
+			playableUrl: (url: string) => url,
+		},
+	} as unknown as AppServices;
+	const runtimeRef: { current: PlaybackSessionRuntimeResult | null } = { current: null };
+	const controllerRef = { current: controller };
+	const noOp = () => undefined;
+
+	function Harness() {
+		const currentTrack = usePlaybackStore((state) => state.currentTrack);
+		const playbackIntentId = usePlaybackStore((state) => state.playbackIntentId);
+		const positionMs = usePlaybackStore((state) => state.positionMs);
+		const checkpointRestore = usePlaybackStore((state) => state.checkpointRestore);
+		const setPlaying = usePlaybackStore((state) => state.setPlaying);
+		const setPositionMs = usePlaybackStore((state) => state.setPosition);
+		const setDurationMs = usePlaybackStore((state) => state.setDuration);
+		const consumeCheckpointAutoplay = usePlaybackStore(
+			(state) => state.consumePlaybackCheckpointAutoplay,
+		);
+		const ui = usePlaybackUiController({
+			controllerRef,
+			lyricsPayloadRef: { current: null },
+			playbackMode: "loop",
+			setPositionMs,
+			setDurationMs,
+			setLyricsIndex: noOp,
+			setMiniQueue: noOp,
+			insertQueueNext: noOp,
+			setPlaybackMode: noOp,
+			setQueue: noOp,
+			clearQueue: noOp,
+			recordListenProgress: noOp,
+			finalizeListenSession: noOp,
+			enterPlaybackSurface: noOp,
+			setHomeForcedOpen: noOp,
+			setHomeSuppressed: noOp,
+			clearCurrentBeatMap: noOp,
+			applyCustomCoverImage: async () => undefined,
+			showToast: noOp,
+		});
+		runtimeRef.current = usePlaybackSessionRuntime({
+			appServices: services,
+			controllerRef,
+			localAudioUrlsRef: ui.localAudioUrlsRef,
+			currentTrack,
+			playbackIntentId,
+			positionMs,
+			checkpointRestore,
+			consumeCheckpointAutoplay,
+			getPlaybackSnapshot: () => {
+				const snapshot = usePlaybackStore.getState();
+				return {
+					currentTrack: snapshot.currentTrack,
+					positionMs: snapshot.positionMs,
+					durationMs: snapshot.durationMs,
+					isPlaying: snapshot.isPlaying,
+				};
+			},
+			setPlaying,
+			setPositionMs,
+			togglePlayFallback: noOp,
+			setSearchError: noOp,
+			showToast: noOp,
+			setHomeForcedOpen: noOp,
+			setHomeSuppressed: noOp,
+			setLyricsPayload: noOp,
+			setLyricsLoading: noOp,
+			setLyricsError: noOp,
+			resetLyrics: noOp,
+			beatMapKeyForMap: () => "dj:test",
+			initialLyricsPayload: null,
+			initialPlaybackQuality: "standard",
+			persistPlaybackQuality: noOp,
+			onRuntimeTimeUpdate: ui.handleRuntimeTimeUpdate,
+		});
+		return null;
+	}
+
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	flushSync(() => root.render(<Harness />));
+	for (let index = 0; index < 8 && loads.length === 0; index += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+
+	expect(usePlaybackStore.getState().previewRange).toEqual({ startMs: 0, endMs: 30_000 });
+	const load = loads[0]!;
+	runtimeRef.current!.handleRuntimeOwnerChange(ownerChangePayload(load.context, load.url));
+	runtimeRef.current!.handleRuntimeTimeUpdate({
+		loadContext: load.context,
+		sourceUrl: load.url,
+		positionMs: 12_000,
+		durationMs: 30_400,
+	});
+	expect(usePlaybackStore.getState().trialBanner?.text).toContain("需要 VIP");
+
+	root.unmount();
+	host.remove();
+	resetPlaybackStore();
+});
 
 test("a newer playback intent for the same track rejects the stale URL result", async () => {
 	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");

@@ -40,6 +40,9 @@ function resetStore() {
 		muted: false,
 		mode: "loop",
 		queue: [],
+		streamSource: null,
+		previewRange: null,
+		trialBanner: null,
 		checkpointRestore: null,
 	});
 }
@@ -543,6 +546,37 @@ test("checkpoint captures a deep immutable bounded track DTO without persisted U
 	expect(Object.isFrozen(captured.artists)).toBe(true);
 });
 
+test("stream source and Kugou tracks survive checkpoint restart restore", () => {
+	const kugouTrack: Track = {
+		...makeTrack("kugou-tail"),
+		provider: "kugou",
+	};
+	const sourceStore = usePlaybackStore.getState();
+	sourceStore.setQueue([kugouTrack]);
+	sourceStore.playAt(0);
+	sourceStore.setStreamSource({ provider: "kugou", id: "radio-42" });
+	const checkpoint = sourceStore.capturePlaybackExitCheckpoint({
+		operationId: operationId(33),
+		receipt: RECEIPT_A,
+		sourceKind: "remote",
+	})!;
+
+	expect(checkpoint.queue[0]?.provider).toBe("kugou");
+	expect(checkpoint.streamSource).toEqual({ provider: "kugou", id: "radio-42" });
+	expect(Object.isFrozen(checkpoint.streamSource)).toBe(true);
+
+	resetStore();
+	expect(usePlaybackStore.getState().restorePlaybackExitCheckpoint({
+		operationId: checkpoint.operationId,
+		receipt: checkpoint.receipt,
+		mode: "restart-reconciliation",
+		checkpoint,
+	})).toBe("restored");
+	const restored = usePlaybackStore.getState();
+	expect(restored.currentTrack?.provider).toBe("kugou");
+	expect(restored.streamSource).toEqual({ provider: "kugou", id: "radio-42" });
+});
+
 test("update-exit checkpoint fails closed above the bounded queue limit", () => {
 	const queue = Array.from(
 		{ length: MAX_PLAYBACK_EXIT_CHECKPOINT_QUEUE + 1 },
@@ -691,6 +725,7 @@ test("Web restore accepts the shared Rust checkpoint fixture without persisted c
 	expect(restored.currentTrack?.id).toBe("song-1");
 	expect(restored.positionMs).toBe(12_345.5);
 	expect(restored.isPlaying).toBe(true);
+	expect(restored.streamSource).toBeNull();
 });
 
 test("checkpoint restore is idempotent and rejects conflicting or forged identity", () => {
@@ -788,6 +823,10 @@ test("strict checkpoint restore rejects malformed booleans, receipts, and track 
 		{ ...checkpoint, wasPlaying: "false" },
 		{ ...checkpoint, muted: "false" },
 		{ ...checkpoint, queue: [{ ...checkpoint.queue[0], artists: "artist" }] },
+		{ ...checkpoint, streamSource: null },
+		{ ...checkpoint, streamSource: { provider: "unknown", id: "radio" } },
+		{ ...checkpoint, streamSource: { provider: "netease", id: "" } },
+		{ ...checkpoint, streamSource: { provider: "netease", id: "x".repeat(513) } },
 	] as unknown as typeof checkpoint[]) {
 		expect(usePlaybackStore.getState().restorePlaybackExitCheckpoint({
 			operationId: checkpoint.operationId,

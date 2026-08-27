@@ -18,7 +18,7 @@ export async function resolvePlayableAudio(input: {
 	quality?: PlaybackQualityRequest;
 }): Promise<ResolvedPlayableAudio> {
 	const result = await input.playback.resolveSongUrl(input.track, input.quality);
-	// 失败原因已改由错误信封（SidecarClientError）携带，结果里不再有 message 字段
+	// 失败原因已改由 api_bridge 错误信封携带，结果里不再有 message 字段
 	if (!result.url) throw new Error("播放地址不可用");
 	return {
 		result: { ...result, url: result.url },

@@ -8,6 +8,7 @@ import {
 const readRepositoryFile = (relativePath: string) =>
 	readFileSync(new URL(`../../${relativePath}`, import.meta.url), "utf8");
 const upstreamSourceMapDocument = readRepositoryFile("docs/parity/upstream-source-map.md");
+const apiFreezeDocument = readRepositoryFile("docs/parity/api-freeze.md");
 
 const legacyCapabilityHeader = "| capability_id | domain | upstream_source | target_module | current_tauri | parity_level | owner_layer | api_dependency | state_migration | verification | feature_gate | blocked_by | performance_budget |";
 const expandedCapabilityHeader = "| capability_id | domain | upstream_source | target_module | current_tauri | parity_level | convergence_mode | owner_layer | api_dependency | state_migration | verification | feature_gate | blocked_by | performance_budget |";
@@ -100,6 +101,7 @@ const positiveFieldValidationCapabilities = new Set([
 	"wallpaper.engine",
 	"persistence.preferences",
 	"performance.m8-gate",
+	"provider.kugou",
 ]);
 const d0InventoryRows = d0InventoryCapabilities.map(([
 	capabilityId,
@@ -129,7 +131,6 @@ const d0InventoryRows = d0InventoryCapabilities.map(([
 			: "tests",
 }));
 const blockedApiCapabilities = [
-	["provider.kugou", "MineRadio-api"],
 	["provider.spotify", "MineRadio-api"],
 ] as const;
 const blockedApiRows = blockedApiCapabilities.map(([capabilityId, blockedBy]) =>
@@ -197,16 +198,7 @@ const validDocuments = {
 	].join("\n")),
 	upstreamSourceMap: upstreamSourceMapDocument,
 	appExtractionMap: "| symbol | kind | purity | current_side_effects | target_module | evidence | migration_order |\n| --- | --- | --- | --- | --- | --- | --- | --- |",
-	apiFreeze: [
-		"SidecarClient",
-		"Bun sidecar",
-		"RuntimeConfig.sidecarBaseUrl",
-		"get_sidecar_status",
-		"SidecarRecoveryNotice",
-		"apps/desktop/scripts/build-sidecar-binary.mjs",
-		"externalBin",
-		"ApiError",
-	].join("\n"),
+	apiFreeze: apiFreezeDocument,
 	sonicWorkshopProvenance: sonicWorkshopDecision,
 	sonicWorkshopModuleDesign,
 	reviewedDeltaStatus,
@@ -553,7 +545,7 @@ test("D3 guard requires the active Sonic Workshop independent implementation dec
 		error.includes("contradictory policy"))).toBe(false);
 });
 
-test("#59 guard requires an open reviewed-delta status document", () => {
+test("release guard requires the reviewed-delta convergence status document", () => {
 	expect(validateConvergenceBaseline({
 		...validDocuments,
 		reviewedDeltaStatus: undefined,
@@ -561,9 +553,12 @@ test("#59 guard requires an open reviewed-delta status document", () => {
 
 	for (const [active, replacement, expected] of [
 		["| reviewed_delta | open |", "| reviewed_delta | closed |", "open"],
+		["| overall_status | release-convergence |", "| overall_status | complete |", "release-convergence"],
+		["| overall_blocked_by | protected release environment |", "| overall_blocked_by | none |", "protected release environment"],
 		["| full_parity | false |", "| full_parity | true |", "false"],
-		["| release_evidence | absent |", "| release_evidence | present |", "absent"],
-		["| sidecar_api | legacy-frozen |", "| sidecar_api | migrated |", "legacy-frozen"],
+		["| release_evidence | pending |", "| release_evidence | present |", "pending"],
+		["| sidecar_api | retired-native |", "| sidecar_api | legacy-frozen |", "retired-native"],
+		["| canonical_provider_path | Tauri api_call → Rust api_bridge → MineRadio-api |", "| canonical_provider_path | Bun Sidecar HTTP |", "Tauri api_call → Rust api_bridge → MineRadio-api"],
 	] as const) {
 		const errors = validateConvergenceBaseline({
 			...validDocuments,
@@ -588,7 +583,7 @@ test("#59 guard requires an open reviewed-delta status document", () => {
 	}
 });
 
-test("#59 guard keeps D0-D3 truthful and cannot clear the #56 human gate", () => {
+test("release guard keeps D0-D3 truthful and cannot invent protected release evidence", () => {
 	const regressedD1 = reviewedDeltaStatus.replace(
 		"| D1 | complete | none | joint-gate-recorded |",
 		"| D1 | pending | #43 | implementation-present |",
@@ -601,19 +596,19 @@ test("#59 guard keeps D0-D3 truthful and cannot clear the #56 human gate", () =>
 		error.includes("D1 tuple must be complete / none / joint-gate-recorded"))).toBe(true);
 
 	const closedGate = reviewedDeltaStatus
-		.replace("| D2 | implementation-complete | #56 | external-gate-pending |",
+		.replace("| D2 | implementation-complete | protected release environment | external-gate-pending |",
 			"| D2 | complete | none | recorded |")
-		.replace("| overall_blocked_by | #56 |", "| overall_blocked_by | none |");
+		.replace("| overall_blocked_by | protected release environment |", "| overall_blocked_by | none |");
 	errors = validateConvergenceBaseline({
 		...validDocuments,
 		reviewedDeltaStatus: closedGate,
 	});
 	expect(errors.some((error) =>
 		error.includes("delta")
-		&& error.includes("D2 tuple must be implementation-complete / #56 / external-gate-pending"))).toBe(true);
+		&& error.includes("D2 tuple must be implementation-complete / protected release environment / external-gate-pending"))).toBe(true);
 	expect(errors.some((error) =>
 		error.includes("summary")
-		&& error.includes("overall_blocked_by tuple must be #56"))).toBe(true);
+		&& error.includes("overall_blocked_by tuple must be protected release environment"))).toBe(true);
 
 	for (const closureClaim of [
 		"#59 已经关闭，#56 不再构成阻塞，真实受保护发布证据已经存在。",
@@ -630,7 +625,7 @@ test("#59 guard keeps D0-D3 truthful and cannot clear the #56 human gate", () =>
 	}
 });
 
-test("#59 guard freezes all 13 unresolved capability tuples", () => {
+test("release guard freezes all 12 unresolved capability tuples", () => {
 	const missingStatusGap = reviewedDeltaStatus.replace(
 		"| visual.archive | missing | P1 | parity | none |\n",
 		"",
@@ -640,7 +635,7 @@ test("#59 guard freezes all 13 unresolved capability tuples", () => {
 		reviewedDeltaStatus: missingStatusGap,
 	});
 	expect(errors).toContain(
-		"reviewed-delta-status: expected exactly 13 unresolved capability rows; found 12",
+		"reviewed-delta-status: expected exactly 12 unresolved capability rows; found 11",
 	);
 	expect(errors).toContain(
 		"reviewed-delta-status: missing unresolved capability visual.archive",
@@ -655,10 +650,10 @@ test("#59 guard freezes all 13 unresolved capability tuples", () => {
 		capabilityMatrix: missingMatrixGap,
 	});
 	expect(errors).toContain(
-		"capability-matrix: expected exactly 13 unresolved capability rows; found 12",
+		"capability-matrix: expected exactly 12 unresolved capability rows; found 11",
 	);
 	expect(errors).toContain(
-		"capability-matrix: missing unresolved capability provider.kugou",
+		"capability-matrix: missing unresolved capability provider.spotify",
 	);
 });
 
@@ -689,7 +684,7 @@ test("Cuefield AutoMix remains a local playback gap instead of a MineRadio-api b
 		&& error.includes("none（无 MineRadio-api；只复用现有 playback/lyrics/beatmap Ports 与本地 feedback repository Port）"))).toBe(true);
 });
 
-test("#59 guard preserves the implemented Sonic tuple and all 17 positive Field Validation Pending rows", () => {
+test("release guard preserves implemented capabilities and all 20 positive Field Validation Pending rows", () => {
 	let errors = validateConvergenceBaseline({
 		...validDocuments,
 		reviewedDeltaStatus: reviewedDeltaStatus.replace(
@@ -708,7 +703,7 @@ test("#59 guard preserves the implemented Sonic tuple and all 17 positive Field 
 		),
 	});
 	expect(errors).toContain(
-		"reviewed-delta-status: expected exactly 19 positive Field Validation Pending capability rows; found 18",
+		"reviewed-delta-status: expected exactly 20 positive Field Validation Pending capability rows; found 19",
 	);
 	expect(errors).toContain(
 		"reviewed-delta-status: missing positive Field Validation Pending capability home.dashboard",
@@ -722,7 +717,7 @@ test("#59 guard preserves the implemented Sonic tuple and all 17 positive Field 
 		),
 	});
 	expect(errors).toContain(
-		"capability-matrix: expected exactly 19 positive Field Validation Pending capability rows; found 18",
+		"capability-matrix: expected exactly 20 positive Field Validation Pending capability rows; found 19",
 	);
 	expect(errors).toContain(
 		"capability-matrix: missing positive Field Validation Pending capability lyrics.stage-v2",
@@ -1078,9 +1073,9 @@ test("convergence guard reports non-canonical rows without outer pipes", () => {
 	})).toContain("capability-matrix: line 7 is malformed");
 });
 
-test("M0 baseline reports missing API freeze markers", () => {
+test("native baseline reports missing API freeze markers", () => {
 	expect(validateConvergenceBaseline({ ...validDocuments, apiFreeze: "SidecarClient" }))
-		.toContain("api-freeze: missing Bun sidecar");
+		.toContain('api-freeze: missing Tauri invoke("api_call")');
 });
 
 test("M0 baseline extracts and verifies App top-level symbols", () => {

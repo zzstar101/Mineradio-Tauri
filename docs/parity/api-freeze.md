@@ -1,69 +1,46 @@
-# M0/M1 API 行为冻结线
+# Native API 架构冻结线
 
-## 目的
-
-M0 与 M1 只改变前端依赖方向和代码所有权，不改变当前 Tauri 与 API 的运行行为。任何触及本文件所列边界的变更必须移出本轮实施，并在独立设计中评审。
-
-## 保持不变的生产路径
+## 当前生产路径
 
 ```text
-React
-  → SidecarClient
-  → RuntimeConfig.sidecarBaseUrl
-  → Bun sidecar HTTP API
-  → 当前 Provider adapters
+React / Application Ports
+  → SidecarClient（兼容命名，无 HTTP）
+  → Tauri invoke("api_call")
+  → Rust api_bridge
+  → in-process mineradio_api::Api
+  → Provider adapter
 ```
 
-本轮继续保留：
+`apps/web/src/api/sidecar-client.ts`、`apps/web/src/adapters/sidecar/**` 与 `createLegacyApplicationRuntime` 暂时保留旧名称，以避免 2.1.0 收敛阶段进行大范围 rename。名称不是生产 Sidecar 存在的证据。
 
-- `apps/web/src/api/sidecar-client.ts` 的 `SidecarClient`；
-- `sidecars/api/**` 的 Bun sidecar；
-- `RuntimeConfig.sidecarBaseUrl`；
-- Rust `sidecar.rs` supervisor、health probe、restart 与状态快照；
-- Tauri command `get_sidecar_status`；
-- `SidecarRecoveryNotice` 及其轮询、恢复提示和中文文案；
-- 登录窗口完成后的 Cookie 注入链路；
-- `apps/desktop/scripts/build-sidecar-binary.mjs`；
-- `build.rs` 中的 sidecar 构建步骤；
-- `tauri.conf.json` 中的 `externalBin`；
-- 当前 `@mineradio/shared` schema 与 `ApiError` 字段。
+## 当前必须保持的边界
 
-## HTTP 契约冻结
+- Web feature、component 与 visual 模块只能依赖 Application Ports，不得直接调用 Tauri 或具体兼容客户端。
+- 兼容客户端只允许调用受控的 `api_call` command，不得使用 `fetch`、localhost、动态端口或任意 network bypass。
+- `api_bridge.rs` 只负责 route、DTO 与 error envelope 映射；Provider 行为归用户所有的 `api/` 子模块。
+- TypeScript schema、Rust bridge 类型与 `MineRadio-api` 输入输出必须由自动化 contract tests 保持一致。
+- `mineradio-tauri://` 媒体 URI 对 Web 与 visual-engine 是 opaque value；调用方不得解析 host、route 或 query。
+- `tauri.conf.json` 的 `bundle.externalBin` 必须为空；仓库不得恢复 Sidecar binary build、supervisor、heartbeat 或 restart/recovery runtime。
+- CSP 与 desktop command manifest 继续 fail closed。
 
-下列内容不得在 M0/M1 中变化：
+## 已退役的旧冻结项
 
-- endpoint path 和 HTTP method；
-- query、请求体和默认 limit；
-- success/failure envelope；
-- Zod 校验和未知字段裁剪语义；
-- `code`、`message`、`provider`、`retryable`、`action`、`playbackKeyReady`、`restriction`、`reason`、`qqCode`、`rawMessage`、`tried`；
-- audio、image 与 Soda proxy URL；
-- ProviderId 集合 `netease | qq | soda`；
-- sidecar ready/recovering/stopped/error 的用户可见结果。
+以下 M0/M1 约束只描述历史架构，不再是当前产品 invariant：
 
-## 允许的准备工作
+- Bun Sidecar 进程与 `sidecars/api/**`；
+- `RuntimeConfig.sidecarBaseUrl` 与 localhost HTTP route；
+- Rust Sidecar supervisor、health probe、status snapshot 与 restart；
+- `get_sidecar_status`、`SidecarRecoveryNotice` 与轮询策略；
+- `build-sidecar-binary.mjs`、Sidecar `build.rs` 步骤与 `externalBin` 打包。
 
-- 定义不包含 transport 细节的 Port；
-- 用 legacy adapter 无损委托 `SidecarClient`；
-- 将媒体地址作为 opaque URI 传递；
-- 提取 React runtime/controller；
-- 增加 adapter conformance tests；
-- 为未来 `MineRadio-api` adapter 保留装配点。
-
-## 明确排除
-
-- 不增加 `MineRadio-api` Cargo dependency；
-- 不把业务 JSON API 切换到 Tauri IPC；
-- 不删除第二进程或 localhost HTTP；
-- 不增加酷狗、Spotify 或新的 capability；
-- 不改变 Cookie/session 持久化；
-- 不修改 sidecar 安全模型或新增 localhost 服务。
+历史设计与实施记录保留在 `docs/superpowers/**`，不得把其中的旧 freeze 描述当作当前架构要求。
 
 ## 审计命令
 
 ```powershell
-git diff -- sidecars/api apps/desktop/src-tauri/src/sidecar.rs apps/desktop/scripts/build-sidecar-binary.mjs apps/desktop/src-tauri/tauri.conf.json packages/shared
-bun test apps/web/src/api/sidecar-client.test.ts sidecars/api
+bun test scripts/architecture/m9-api-readiness-boundary.test.ts apps/web/src/api/sidecar-client.test.ts
+bun test packages/shared
+cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --locked api_bridge
 ```
 
-第一条在每个 M0/M1 小提交中应为空；第二条必须零失败。
+完整 `KEEP / REWRITE / RETIRE` 分类见 `docs/sidecar-retirement-2.1.md`。

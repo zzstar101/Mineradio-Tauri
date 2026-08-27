@@ -96,14 +96,14 @@ const LEGACY_ACTIVE_BASELINE_MARKERS = {
 	"upstream-source-map": "Electron baseline: `4abaa190de42c632365ae4244e041bad16443224`",
 };
 const API_FREEZE_MARKERS = [
-	"SidecarClient",
-	"Bun sidecar",
-	"RuntimeConfig.sidecarBaseUrl",
-	"get_sidecar_status",
-	"SidecarRecoveryNotice",
-	"apps/desktop/scripts/build-sidecar-binary.mjs",
-	"externalBin",
-	"ApiError",
+	"SidecarClient（兼容命名，无 HTTP）",
+	'Tauri invoke("api_call")',
+	"Rust api_bridge",
+	"in-process mineradio_api::Api",
+	"不得使用 `fetch`",
+	"`bundle.externalBin` 必须为空",
+	"TypeScript schema、Rust bridge 类型",
+	"docs/sidecar-retirement-2.1.md",
 ];
 const SONIC_WORKSHOP_DECISION_MARKERS = [
 	"# Sonic Workshop preset 8 来源与处置",
@@ -126,7 +126,7 @@ const CONVERGENCE_POLICY_SNAPSHOT_DIGESTS = new Map([
 	["upstream-source-map", "41c3ca99cdfb7cc38864938c52624a64ecb3bf92d873d06b1167b6145d51be8d"],
 	["sonic-workshop-provenance", "ec07b553add89d5549e6ca5c0a12d1607228d4d83a7c117f2efdf74cd3841c89"],
 	["sonic-workshop-module-design", "c0eff31bb364fa9f42247741ec914e5851ddd219b7da93ed496d07fb33da5c1e"],
-	["reviewed-delta-status", "b4db07a4fbaa67a2c0a1f19e0792f9809fad874347cbc2e537938e01c320f6f1"],
+	["reviewed-delta-status", "411cd0987ef3a52883489c7a4f70908da101986084d1bbbf13ea9a87ebb0a00c"],
 ]);
 const SONIC_WORKSHOP_DECISION_COLUMNS = [
 	"decision_id",
@@ -219,20 +219,21 @@ const REVIEWED_DELTA_COLUMNS = ["delta_id", "status", "blocked_by", "evidence_st
 const EXPECTED_REVIEWED_DELTAS = new Map([
 	["D0", ["complete", "none", "recorded"]],
 	["D1", ["complete", "none", "joint-gate-recorded"]],
-	["D2", ["implementation-complete", "#56", "external-gate-pending"]],
+	["D2", ["implementation-complete", "protected release environment", "external-gate-pending"]],
 	["D3", ["implementation-complete", "none", "recorded"]],
 ]);
 const REVIEWED_DELTA_SUMMARY_COLUMNS = ["status_key", "value"];
 const EXPECTED_REVIEWED_DELTA_SUMMARY = new Map([
 	["reviewed_delta", "open"],
-	["overall_status", "blocked"],
-	["overall_blocked_by", "#56"],
+	["overall_status", "release-convergence"],
+	["overall_blocked_by", "protected release environment"],
 	["full_parity", "false"],
-	["release_evidence", "absent"],
-	["sidecar_api", "legacy-frozen"],
+	["release_evidence", "pending"],
+	["sidecar_api", "retired-native"],
+	["canonical_provider_path", "Tauri api_call → Rust api_bridge → MineRadio-api"],
 ]);
 const REVIEWED_DELTA_REQUIRED_POLICY_LINES = [
-	"当前不得关闭 #59，也不得声称完整复现、完整对齐或 100% 覆盖 Mineradio 2.1.0。",
+	"当前不得声称完整复现、完整对齐或 100% 覆盖 Mineradio 2.1.0。",
 ];
 const CANONICAL_FIELD_VALIDATION_PENDING = "Field Validation Pending (non-blocking)";
 const FIELD_VALIDATION_RESERVED_CLEARANCE_LANGUAGE = /(?:已解除|已通过实机验证|resolved|cleared|Field Validated|Release Verified)/i;
@@ -254,7 +255,6 @@ const EXPECTED_UNRESOLVED_CAPABILITIES = new Map([
 	["hotkeys.editor", ["missing", "P1", "parity", "none"]],
 	["wallpaper.library", ["partial", "P1", "parity", "none"]],
 	["wallpaper.wgc", ["missing", "P1", "parity", "none"]],
-	["provider.kugou", ["blocked", "P2", "parity", "MineRadio-api"]],
 	["provider.spotify", ["blocked", "P2", "parity", "MineRadio-api"]],
 	["cuefield.automix", ["missing", "P2", "parity", "none"]],
 ]);
@@ -279,6 +279,7 @@ const EXPECTED_POSITIVE_FIELD_VALIDATIONS = new Set([
 	"wallpaper.engine",
 	"persistence.preferences",
 	"performance.m8-gate",
+	"provider.kugou",
 ]);
 
 function validatePolicySnapshot(documentName, source) {

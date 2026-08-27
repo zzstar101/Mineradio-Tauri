@@ -270,7 +270,7 @@ test("App provider mutation guards reject import-only tracks", () => {
 	expect(isCollectSupportedTrack(qqTrack)).toBe(true);
 });
 
-test("legacy application runtime default client factory stays stable and does not storm health requests", async () => {
+test("compatibility client startup uses native invoke without HTTP health polling", async () => {
 	await import("../../../../packages/visual-engine/src/runtime/happy-dom-preload");
 	const rootConfig: RuntimeConfig = {
 		mediaProxyBase: "mineradio-tauri://localhost",
@@ -284,55 +284,7 @@ test("legacy application runtime default client factory stays stable and does no
 	globalThis.fetch = (async (input: RequestInfo | URL) => {
 		const url = typeof input === "string" ? input : input.toString();
 		seen.push(url);
-		if (url.endsWith("/health")) {
-			return new Response(JSON.stringify({
-				ok: true,
-				appVersion: "0.0.0-test",
-				apiVersion: "0.1.0",
-				schemaVersion: "0.1.0",
-				providers: ["netease", "qq", "soda"],
-			}), { headers: { "content-type": "application/json" } });
-		}
-		if (url.endsWith("/providers/capabilities")) {
-			return new Response(JSON.stringify({
-				ok: true,
-				data: { version: "0.1.0", providers: [] },
-			}), { headers: { "content-type": "application/json" } });
-		}
-		if (url.includes("/providers/") && url.endsWith("/login-status")) {
-			const provider = url.match(/\/providers\/([^/]+)\//)?.[1] ?? "netease";
-			return new Response(JSON.stringify({
-				ok: true,
-				data: { provider, loggedIn: false },
-			}), { headers: { "content-type": "application/json" } });
-		}
-		if (url.includes("/providers/") && url.endsWith("/playlists")) {
-			return new Response(JSON.stringify({ ok: true, data: [] }), { headers: { "content-type": "application/json" } });
-		}
-		if (url.endsWith("/podcast/my")) {
-			return new Response(JSON.stringify({
-				ok: true,
-				data: { loggedIn: false, collections: [] },
-			}), { headers: { "content-type": "application/json" } });
-		}
-		if (url.endsWith("/discover/home")) {
-			return new Response(JSON.stringify({
-				ok: true,
-				data: {
-					loggedIn: false,
-					user: null,
-					dailySongs: [],
-					playlists: [],
-					podcasts: [],
-					mode: "starter",
-					updatedAt: 1,
-				},
-			}), { headers: { "content-type": "application/json" } });
-		}
-		return new Response(JSON.stringify({
-			ok: false,
-			error: { code: "TEST_UNUSED", message: "unused", retryable: false },
-		}), { status: 500, headers: { "content-type": "application/json" } });
+		throw new Error(`生产启动不应发起 HTTP 请求: ${url}`);
 	}) as typeof fetch;
 
 	const host = document.createElement("div");
@@ -343,11 +295,7 @@ test("legacy application runtime default client factory stays stable and does no
 		for (let i = 0; i < 8; i += 1) {
 			await new Promise((resolve) => setTimeout(resolve, 0));
 		}
-		const healthCalls = seen.filter((url) => url.endsWith("/health")).length;
-		const loginStatusCalls = seen.filter((url) => url.endsWith("/login-status")).length;
-		expect(healthCalls).toBeLessThanOrEqual(1);
-		expect(loginStatusCalls).toBeLessThanOrEqual(3);
-		expect(seen.length).toBeLessThanOrEqual(13);
+		expect(seen).toEqual([]);
 	} finally {
 		root.unmount();
 		host.remove();

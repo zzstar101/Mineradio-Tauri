@@ -26,8 +26,8 @@
 ## M9 runtime language
 
 - **Application Ports**：Web 应用运行所需的一组稳定 Interface，包含 Music、API Runtime、Media URI 与 Desktop Ports；业务 Module 只能通过这些 Interface 调用外部能力。
-- **Application Runtime Port**：启动 Application Ports 的单一 Seam。caller 只知道 `connect()` 的成功、不可用与失败语义，不知道 Sidecar、localhost、Tauri IPC 或未来 embedded Rust implementation。
-- **Legacy Sidecar Adapter**：当前生产 Adapter。它独占 `RuntimeConfig.sidecarBaseUrl`、`SidecarClient` 创建和 Bun Sidecar transport 组装，并向 Application Runtime Port 发布 Application Ports。
+- **Application Runtime Port**：启动 Application Ports 的单一 Seam。caller 只知道 `connect()` 的成功、不可用与失败语义，不知道 Tauri IPC、Rust bridge 或 Provider 实现。
+- **Native API Compatibility Adapter**：位于 `adapters/sidecar` 的兼容命名 Adapter。它创建仍名为 `SidecarClient` 的兼容客户端，通过 Tauri `api_call` 调用 Rust `api_bridge`，并向 Application Runtime Port 发布 Application Ports；它不拥有 HTTP、localhost、子进程、health probe 或 supervisor。
 - **Opaque media source**：由 Media URL Port 产生的媒体 URI 与可选 fallback URI。业务和 visual-engine 只负责传递或加载，不解析 host、route 或 query。
 
 ## Invariants
@@ -39,7 +39,8 @@
 - Album Gapless Candidate 使用保守同专辑规则；gapless 与 crossfade 共享同一个 Prepared Handoff。
 - 每个 Stall Lineage 最多一次 fresh URL recovery；play、ready、stall、Graph 与 audibility probe 都有 deterministic budget。
 - Output Route disabled path 不保留 mirror Audio、sync interval 或设备轮询；Virtual Output Bridge 不创建 capture stream。
-- M9 不引入或切换开发中的 `MineRadio-api`。
-- Bun Sidecar route、DTO、Provider、错误字段、媒体 URL 字节结果和 `bundle.externalBin` 保持冻结。
-- CSS 封面继续使用 direct URL；WebGL 封面优先使用 legacy image proxy，并保留 direct fallback。
-- `SidecarClient` 只能存在于 API implementation 和 legacy Sidecar Adapter 中。
+- Provider 的 canonical production path 固定为 Web Application Ports → Tauri `api_call` → Rust `api_bridge` → in-process `mineradio_api::Api`。
+- Bun Sidecar、localhost HTTP、heartbeat、supervisor、restart/recovery 与 Sidecar `externalBin` 已退出生产架构，不得重新引入。
+- CSS 封面继续使用 direct URL；WebGL 封面使用 Media URL Port 返回的 opaque native URI，并保留 direct fallback。
+- `SidecarClient` 作为兼容命名只能存在于 API implementation 和 `adapters/sidecar` 中；该名称不代表 Sidecar transport 仍然存在。
+- `api/` 是用户所有的 Provider 行为来源；任何真实 Provider 能力只能在字段验证后标为发布可用。

@@ -245,7 +245,7 @@ test("shouldResetLyricStageCameraView fires only when leaving Home preview into 
 	expect(shouldResetLyricStageCameraView({ wasHomeActive: true, homeActive: true, playbackActive: true })).toBe(false);
 });
 
-test("shouldRetryVisualCoverLoad retries failed cover loads after sidecar recovery without spamming successful textures", () => {
+test("shouldRetryVisualCoverLoad retries failed cover loads after source recovery without spamming successful textures", () => {
 	expect(shouldRetryVisualCoverLoad({
 		coverUrl: "",
 		hasCover: 0,

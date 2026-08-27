@@ -1,4 +1,6 @@
-# MineRadio 三版本性能开销对比
+# MineRadio 三版本性能开销对比（历史 Sidecar 基线）
+
+> 本文记录 2026-07-02 的旧 Bun Sidecar 架构测量，只用于历史对照。2.1.0 已切换到 in-process `MineRadio-api`；其中 Sidecar polling 指标不是当前 runtime 指标，不能作为 native 架构的 release baseline。
 
 生成时间: 2026-07-02T09:42:35.701Z
 
@@ -49,7 +51,7 @@
 - Depth 连续构建热路径新增大 scratch 分配从 6 次降到 0 次，大数组新增分配下降 100.0%。
 - 隐藏且 ready 的 sidecar 状态轮询频率从 2.50/min 降到 1.00/min，稳定后台轮询下降 60.0%。
 
-## 下一步优化方向
+## 历史建议（不属于 2.1.0 收敛范围）
 
 - 将我的歌单概览页做扁平化虚拟列表，处理多平台歌单很多时的 DOM 压力。
 - 继续收敛 cover depth 的临时 canvas 与 ImageData 分配，优先复用归一化 canvas，避免连续切歌时触发额外 GC。
@@ -61,4 +63,4 @@
 - 初始页面负载使用同一个 Electron 离屏窗口加载三版页面，适合比较前端页面负载，不等价于最终 Tauri/WebView2 发布包的完整桌面进程占用。
 - 热点渲染开销只对 Tauri 优化前后同组件同输入比较；Electron 原项目是单文件前端，无法和 React 组件做一一对应挂载量测。
 - CPU 样本是短窗口采样，绝对值会随机器后台负载波动，重点看同机同脚本的相对变化。
-
+- Sidecar polling 数据只描述已经退役的进程架构；当前 native baseline 由 `bun run perf:budget` 与 `bun scripts/perf/m10-runtime-benchmark.mjs --quick` 重新生成并记录在 2.1.0 Convergence Report。

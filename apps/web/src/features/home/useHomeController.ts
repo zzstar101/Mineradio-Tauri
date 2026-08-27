@@ -168,6 +168,9 @@ export function useHomeController({
 	const discoverRequestRef = useRef(0);
 	const recommendationRequestRef = useRef(0);
 	const weatherRequestRef = useRef(0);
+	const playlistRequestRef = useRef(0);
+	const playlistLoadMoreBusyRequestRef = useRef<number | null>(null);
+	const playlistLoadedCountRef = useRef(0);
 	const dependenciesRef = useRef({
 		discoverPort,
 		library,
@@ -413,6 +416,8 @@ export function useHomeController({
 				return;
 			}
 			const key = `${item.provider}:${item.id}`;
+			const requestId = ++playlistRequestRef.current;
+			playlistLoadMoreBusyRequestRef.current = null;
 			setPlaylistDetail({ key, playlist: item, tracks: [], loading: true });
 			playlistLoadedCountRef.current = 0;
 			setSuppressed(false);
@@ -427,6 +432,7 @@ export function useHomeController({
 					offset: 0,
 					limit: HOME_PLAYLIST_PAGE_SIZE,
 				});
+				if (playlistRequestRef.current !== requestId) return;
 				playlistLoadedCountRef.current = detail.tracks.length;
 				setPlaylistDetail((value) =>
 					value?.key === key
@@ -446,6 +452,7 @@ export function useHomeController({
 						: value,
 				);
 			} catch (error) {
+				if (playlistRequestRef.current !== requestId) return;
 				const message = error instanceof Error ? error.message : "歌单载入失败";
 				setPlaylistDetail((value) =>
 					value?.key === key
@@ -458,20 +465,24 @@ export function useHomeController({
 		[discover, hasLogin, hasProviderLogin, refreshDiscover],
 	);
 
-	const closePlaylistDetail = useCallback(() => setPlaylistDetail(null), []);
+	const closePlaylistDetail = useCallback(() => {
+		playlistRequestRef.current += 1;
+		playlistLoadMoreBusyRequestRef.current = null;
+		playlistLoadedCountRef.current = 0;
+		setPlaylistDetail(null);
+	}, []);
 
-	/** 歌单详情加载下一页：单飞串行（进行中直接忽略新的触发），
-	 *  合并时去重；无新增/请求失败都判尽并收起占位。
+	/** 歌单详情加载下一页：同一 playlist generation 内单飞串行，
+	 *  新歌单会立即废弃旧 generation 的响应与单飞锁。
 	 *  已载数以 ref 为权威：快速滚动下旧渲染的闭包可能持有过期 tracks 快照，
 	 *  用它算 offset 会发出重复页；提交时再校验一次 offset 是否仍与已载数一致，
 	 *  不一致说明响应已过期，丢弃且不判尽（保留占位等下一次触发）。 */
-	const playlistLoadMoreBusyRef = useRef(false);
-	const playlistLoadedCountRef = useRef(0);
 	const loadMorePlaylistTracks = useCallback(async () => {
 		const current = dependenciesRef.current;
 		const view = playlistDetail;
+		const requestId = playlistRequestRef.current;
 		if (
-			playlistLoadMoreBusyRef.current ||
+			playlistLoadMoreBusyRequestRef.current === requestId ||
 			!view ||
 			view.loading ||
 			view.loadingMore ||
@@ -483,7 +494,7 @@ export function useHomeController({
 		}
 		const offset = playlistLoadedCountRef.current;
 		const key = view.key;
-		playlistLoadMoreBusyRef.current = true;
+		playlistLoadMoreBusyRequestRef.current = requestId;
 		setPlaylistDetail((value) =>
 			value && value.key === key ? { ...value, loadingMore: true } : value,
 		);
@@ -493,6 +504,7 @@ export function useHomeController({
 				view.playlist.id,
 				{ offset, limit: HOME_PLAYLIST_PAGE_SIZE },
 			);
+			if (playlistRequestRef.current !== requestId) return;
 			setPlaylistDetail((value) => {
 				if (!value || (key != null && value.key !== key)) return value;
 				if (playlistLoadedCountRef.current !== offset) {
@@ -515,12 +527,15 @@ export function useHomeController({
 				};
 			});
 		} catch {
+			if (playlistRequestRef.current !== requestId) return;
 			// 静默收场：占位消失，用户可再次滚动重试
 			setPlaylistDetail((value) =>
 				value && value.key === key ? { ...value, loadingMore: false } : value,
 			);
 		} finally {
-			playlistLoadMoreBusyRef.current = false;
+			if (playlistLoadMoreBusyRequestRef.current === requestId) {
+				playlistLoadMoreBusyRequestRef.current = null;
+			}
 		}
 	}, [playlistDetail]);
 
@@ -583,6 +598,8 @@ export function useHomeController({
 				return;
 			}
 			const key = `${provider}:${id}`;
+			const requestId = ++playlistRequestRef.current;
+			playlistLoadMoreBusyRequestRef.current = null;
 			setPlaylistDetail({
 				key,
 				playlist: { provider, id, name: "", coverUrl: "", trackIds: [], subscribed: false },
@@ -602,6 +619,7 @@ export function useHomeController({
 					offset: 0,
 					limit: HOME_PLAYLIST_PAGE_SIZE,
 				});
+				if (playlistRequestRef.current !== requestId) return;
 				playlistLoadedCountRef.current = detail.tracks.length;
 				setPlaylistDetail((value) =>
 					value?.key === key
@@ -621,6 +639,7 @@ export function useHomeController({
 						: value,
 				);
 			} catch (error) {
+				if (playlistRequestRef.current !== requestId) return;
 				const message = error instanceof Error ? error.message : "歌单载入失败";
 				setPlaylistDetail((value) =>
 					value?.key === key

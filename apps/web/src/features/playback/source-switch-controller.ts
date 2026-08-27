@@ -96,7 +96,7 @@ export class SourceSwitchController {
 			) {
 				return { status: "stale" };
 			}
-			// 失败现在以错误信封抛出（SidecarClientError），由外层统一归因；
+			// 失败现在由 api_bridge 错误信封抛出（兼容错误类型仍沿用旧名），由外层统一归因；
 			// 成功结果里不再携带 playable/provider/message 等整合字段
 			if (!resolved.url) {
 				return {

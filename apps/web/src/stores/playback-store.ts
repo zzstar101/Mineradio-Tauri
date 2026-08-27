@@ -42,6 +42,11 @@ export interface PlaybackCheckpointTrackV1 {
 	readonly playableState: PlayableState;
 }
 
+export interface PlaybackCheckpointStreamSourceV1 {
+	readonly provider: ProviderId;
+	readonly id: string;
+}
+
 export interface PlaybackExitCheckpointV1 {
 	readonly schema: typeof PLAYBACK_EXIT_CHECKPOINT_SCHEMA;
 	readonly operationId: string;
@@ -58,6 +63,7 @@ export interface PlaybackExitCheckpointV1 {
 	readonly muted: boolean;
 	readonly sourceKind: PlaybackCheckpointSourceKind;
 	readonly restartRestorable: boolean;
+	readonly streamSource?: PlaybackCheckpointStreamSourceV1;
 }
 
 export interface PlaybackCheckpointRestoreAuthority {
@@ -224,7 +230,10 @@ function boundedCheckpointText(
 function validCheckpointTrackValue(value: unknown): value is PlaybackCheckpointTrackV1 {
 	if (!value || typeof value !== "object") return false;
 	const track = value as Partial<PlaybackCheckpointTrackV1>;
-	return (track.provider === "netease" || track.provider === "qq" || track.provider === "soda")
+	return (track.provider === "netease"
+			|| track.provider === "qq"
+			|| track.provider === "kugou"
+			|| track.provider === "soda")
 		&& boundedCheckpointText(track.id, MAX_CHECKPOINT_TRACK_ID, false)
 		&& boundedCheckpointText(track.sourceId, MAX_CHECKPOINT_TRACK_ID, false)
 		&& (track.mediaMid === undefined
@@ -253,6 +262,18 @@ function validCheckpointTrackValue(value: unknown): value is PlaybackCheckpointT
 			"trial_only",
 			"unavailable",
 		].includes(String(track.playableState));
+}
+
+function validCheckpointStreamSourceValue(
+	value: unknown,
+): value is PlaybackCheckpointStreamSourceV1 {
+	if (!value || typeof value !== "object") return false;
+	const source = value as Partial<PlaybackCheckpointStreamSourceV1>;
+	return (source.provider === "netease"
+			|| source.provider === "qq"
+			|| source.provider === "kugou"
+			|| source.provider === "soda")
+		&& boundedCheckpointText(source.id, MAX_CHECKPOINT_TRACK_ID, false);
 }
 
 function checkpointTrackFromTrack(track: Track): PlaybackCheckpointTrackV1 | null {
@@ -337,12 +358,15 @@ function validatedCheckpointCurrentTrack(
 		|| checkpoint.restartRestorable !== checkpointSourceIsRestartRestorable(
 			checkpoint.sourceKind,
 		)
+		|| (checkpoint.streamSource !== undefined
+			&& !validCheckpointStreamSourceValue(checkpoint.streamSource))
 		|| !boundedCheckpointText(checkpoint.currentTrackRef, 640)
 	) return undefined;
 
 	if (checkpoint.currentTrackIndex === null) {
 		return checkpoint.currentTrackRef === ""
 			&& checkpoint.sourceKind === "none"
+			&& checkpoint.streamSource === undefined
 			? null
 			: undefined;
 	}
@@ -630,6 +654,9 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 			muted: state.muted,
 			sourceKind,
 			restartRestorable: checkpointSourceIsRestartRestorable(sourceKind),
+			...(state.currentTrack && state.streamSource
+				? { streamSource: Object.freeze({ ...state.streamSource }) }
+				: {}),
 		} satisfies PlaybackExitCheckpointV1);
 		const encodedSize = checkpointEncodedSize(checkpoint);
 		return encodedSize !== null && encodedSize <= MAX_PLAYBACK_EXIT_CHECKPOINT_BYTES
@@ -669,8 +696,9 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 			return {
 				queue: restoredQueue,
 				currentTrack: restoredCurrentTrack,
-				// 恢复检查点属于整队列替换，流式续播源一并失效
-				streamSource: null,
+				streamSource: checkpoint.streamSource
+					? { ...checkpoint.streamSource }
+					: null,
 				playbackIntentId,
 				isPlaying: restoredCurrentTrack ? checkpoint.wasPlaying : false,
 				positionMs: restoredCurrentTrack ? checkpoint.positionMs : 0,

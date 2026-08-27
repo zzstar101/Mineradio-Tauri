@@ -1,38 +1,55 @@
 # Mineradio 2.1.0 reviewed delta 状态
 
-本文以 `XxHuberrr/Mineradio@v2.1.0` 为活动产品行为基线；历史 2.0.3 evidence 继续保留，但不再构成活动基线。本文不是完整能力对齐声明。`missing`、`partial`、`blocked` 与 Field Validation Pending 必须继续保留；只有真实外部门禁证据才能改变对应状态。
+本文以 `XxHuberrr/Mineradio@v2.1.0` 为活动产品行为基线，并把 capability 实现状态与 2.1.0 release disposition 分开。自动化实现完成不代表 Windows/WebView2、真实账号、真实网络或升级链路已经通过实机验证。
 
-## D0–D3 状态
+## D0-D3 状态
 
 | delta_id | status | blocked_by | evidence_state |
 | --- | --- | --- | --- |
 | D0 | complete | none | recorded |
 | D1 | complete | none | joint-gate-recorded |
-| D2 | implementation-complete | #56 | external-gate-pending |
+| D2 | implementation-complete | protected release environment | external-gate-pending |
 | D3 | implementation-complete | none | recorded |
 
-D1 已由生产 `StageLyricsLifecycle`、Shelf supplier、真实 WebGL render-list 与完整资源归零联合门禁收口。D2 的本地 Runtime、Draft N−1→N harness 与发布工作流实现不等于真实受保护发布；#56 所需的独立人工批准、首次真实升级和公开 discovery 证据不得由本地 fixture 替代。D3 已完成 Sonic Workshop 独立重实现，能力为 `implemented / P0 / parity / blocked_by=none`；Windows/WebView2 观感与 CPU/GPU/frame timing 继续是非阻塞待实测。
+D1 的 Stage Lyrics、Shelf 与 WebGL 资源门禁已收口。D2 的本地 updater runtime、Draft N-1→N harness 与工作流实现不能替代首次真实受保护发布。D3 的 Sonic Workshop 自动化完成，Windows/WebView2 观感与 GPU/frame timing 仍待实机验证。
 
-## 关闭状态
+## 架构状态
 
 | status_key | value |
 | --- | --- |
 | reviewed_delta | open |
-| overall_status | blocked |
-| overall_blocked_by | #56 |
+| overall_status | release-convergence |
+| overall_blocked_by | protected release environment |
 | full_parity | false |
-| release_evidence | absent |
-| sidecar_api | legacy-frozen |
+| release_evidence | pending |
+| sidecar_api | retired-native |
+| canonical_provider_path | Tauri api_call → Rust api_bridge → MineRadio-api |
 
-`overall_blocked_by=#56` 表示无法用仓库内自动化消除的最终外部门禁。
+`SidecarClient`、`adapters/sidecar` 与 `createLegacyApplicationRuntime` 是兼容名称，不代表 Bun process、HTTP、localhost、heartbeat、supervisor 或 `externalBin` 仍存在。详细分类见 `docs/sidecar-retirement-2.1.md`。
 
-当前不得关闭 #59，也不得声称完整复现、完整对齐或 100% 覆盖 Mineradio 2.1.0。
+## 2.1 Release Disposition
 
-## 未解决能力快照
+| capability | disposition | reason |
+| --- | --- | --- |
+| Native API architecture cutover | COMPLETE | production path 与 architecture guard 已切换 |
+| Provider order persistence | COMPLETE | Web/Tauri 共用 `accounts.providerOrder.v1`，Rust allowlist 与跨重启测试已覆盖 |
+| Local library implementation | COMPLETE | 持久索引、协议播放、cover 与 lazy lyrics 有自动化覆盖 |
+| Startup resume / preview / Stream Next | COMPLETE | checkpoint 与交叉流程有自动化覆盖 |
+| Playlist pagination | COMPLETE | `hasMore` 权威、offset、single-flight 与跨 playlist race 已覆盖 |
+| Kugou Provider / QR login | FIELD_VALIDATION_PENDING | 代码、schema 与 bridge 已接入；真实登录及登录后请求未经用户验证 |
+| Windows playback / WebView2 / local library | FIELD_VALIDATION_PENDING | 需要真实 Windows UI、媒体栈和用户目录 |
+| Packaged installer / N-1→N upgrade | FIELD_VALIDATION_PENDING | 需要签名包与受保护发布环境 |
+| Protected release evidence | EXTERNAL_BLOCKED | 本地仓库不能生成真实审批与公开 discovery 证据 |
+| Queue drag-sort | POST_2_1 | 不影响 2.1 核心播放正确性 |
+| Visual archive | POST_2_1 | 独立增强，不阻塞 RC |
+| Camera gesture | POST_2_1 | 可选输入能力，不阻塞 RC |
+| Cuefield AutoMix | POST_2_1 | 独立大功能，不属于收敛范围 |
+| Wallpaper library enhancements / WGC | POST_2_1 | 当前 fallback 与核心 wallpaper runtime 可用 |
+| Spotify Provider | EXTERNAL_BLOCKED | 当前 native API capability 未完成且无实测证据 |
 
-下表必须与活动 capability matrix 保持逐项一致，共 13 项。它们是代码、迁移或依赖缺口，不得改写成待实测。
+## Remaining Parity Snapshot
 
-M10 收敛后移出本表：`playback.startup-resume`（session checkpoint 持久化 + 首帧恢复，implemented）、`accounts.provider-order`（typed preference + 拖拽/键盘重排，implemented；Tauri 跨重启持久化待 db.rs allowlist 追加一行）、`local-import.expanded`（Rust 持久本地库 + 协议流式播放，implemented）。`library.drag-sort` 保留为 missing——upstream 2.1.0 未引入歌单拖动排序，非本阶段 delta。
+以下能力仍可保留在 capability matrix 中，但不得作为 2.1.0 RC 的隐含 blocker：
 
 | capability_id | current_tauri | parity_level | convergence_mode | blocked_by |
 | --- | --- | --- | --- | --- |
@@ -46,13 +63,12 @@ M10 收敛后移出本表：`playback.startup-resume`（session checkpoint 持�
 | hotkeys.editor | missing | P1 | parity | none |
 | wallpaper.library | partial | P1 | parity | none |
 | wallpaper.wgc | missing | P1 | parity | none |
-| provider.kugou | blocked | P2 | parity | MineRadio-api |
 | provider.spotify | blocked | P2 | parity | MineRadio-api |
 | cuefield.automix | missing | P2 | parity | none |
 
-## 已实现但仍待实机验证
+## Field Validation Pending
 
-以下 19 项的自动化实现状态是 `implemented`，但正向实机证据仍为非阻塞 Field Validation Pending。删除待实测标记不能提升其证据等级。M10 新增：`local-import.expanded`、`playback.startup-resume` 的 Windows 真机验证项（`accounts.provider-order` 持久化依赖 db.rs allowlist 追加，暂不列入）。
+以下项目不能由 fixture 或单元测试替代：本地曲库导入与跨重启水合、startup resume、Stream Next 与 relaunch、Provider 排序跨重启、Kugou QR/登录态/登录后请求、真实音频播放、WebView2 渲染、打包安装器、N-1→N 升级和启动性能。
 
 | capability_id | current_tauri | validation_status |
 | --- | --- | --- |
@@ -75,11 +91,8 @@ M10 收敛后移出本表：`playback.startup-resume`（session checkpoint 持�
 | wallpaper.engine | implemented | Field Validation Pending (non-blocking) |
 | persistence.preferences | implemented | Field Validation Pending (non-blocking) |
 | performance.m8-gate | implemented | Field Validation Pending (non-blocking) |
+| provider.kugou | implemented | Field Validation Pending (non-blocking) |
 
-## 冻结边界
+在真实环境证据完成前，不得声称 `Field Validated` 或 `Release Verified`。是否允许形成 RC 候选，应由收敛报告依据自动化 gate 和剩余风险单独判定；final release 仍必须完成上述实机验证。
 
-生产网络适配器仍是 `legacy-frozen` Bun Sidecar。`SidecarClient`、`RuntimeConfig.sidecarBaseUrl`、`get_sidecar_status`、`SidecarRecoveryNotice`、`apps/desktop/scripts/build-sidecar-binary.mjs`、`externalBin` 与 `ApiError` 继续属于活动边界；开发中的 Rust `MineRadio-api` 尚未嵌入。
-
-`cuefield.automix` 不属于 Provider/API blocker。上游 `/api/cuefield/transition` 和 `/api/cuefield/feedback` 只承载同机 beat-map planner 与本地 JSONL 反馈；未来由 Web playback Module 拥有规划、时间线和播放交接，desktop persistence Adapter 只实现本地 feedback repository 与历史迁移，并复用现有 playback、lyrics、beatmap Ports。只有 `provider.kugou` 与 `provider.spotify` 继续由 `MineRadio-api` 阻塞。
-
-Sonic Workshop 已独立实现于 `packages/visual-engine/src/sonic-workshop`。不得导入或再分发现有 vendor bundle；legacy `visual.fx` numeric preset `8` 继续迁移到 Sonic Topography `7`，新的 `visual.workshop.v1` preference schema 与 `sonic-workshop-v1` activation id 区分当前 Workshop preset 8。自动化实现完成不等于通过 Windows/WebView2 观感、真实 CPU/GPU/frame timing 或长时 soak，这些证据继续保持 `Field Validation Pending (non-blocking)`。
+当前不得声称完整复现、完整对齐或 100% 覆盖 Mineradio 2.1.0。
