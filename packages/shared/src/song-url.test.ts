@@ -23,8 +23,8 @@ test("SongUrlResultSchema accepts url without optional fields", () => {
 		url: "https://example.com/audio.flac",
 	});
 	expect(parsed.url).toBe("https://example.com/audio.flac");
-	expect(parsed.previewRange).toBeUndefined();
-	expect(parsed.expiresAt).toBeUndefined();
+	expect(parsed.previewRange).toEqual(undefined);
+	expect(parsed.expiresAt).toEqual(undefined);
 });
 
 test("SongUrlResultSchema rejects missing url", () => {
