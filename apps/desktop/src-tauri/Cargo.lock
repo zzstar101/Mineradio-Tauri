@@ -2845,7 +2845,7 @@ dependencies = [
  "base64 0.22.1",
  "dirs 5.0.1",
  "encoding_rs",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "lofty",
  "minisign-verify",
  "reqwest 0.13.4",
