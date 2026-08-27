@@ -18,12 +18,6 @@ pub use app::state::{
 
 static TLS_PROVIDER: OnceLock<()> = OnceLock::new();
 
-fn updater_public_key_configured_from_plugin_config(
-    plugins: &tauri::utils::config::PluginConfig,
-) -> bool {
-    updater_public_key_from_plugin_config(plugins).is_some()
-}
-
 fn updater_public_key_from_plugin_config(
     plugins: &tauri::utils::config::PluginConfig,
 ) -> Option<String> {
@@ -261,29 +255,31 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::updater_public_key_from_plugin_config;
 
     #[test]
     fn updater_public_key_config_is_read_from_tauri_plugin_config() {
         let empty = tauri::utils::config::PluginConfig(Default::default());
-        assert!(!updater_public_key_configured_from_plugin_config(&empty));
+        assert!(updater_public_key_from_plugin_config(&empty).is_none());
 
         let mut plugins = std::collections::HashMap::new();
         plugins.insert(
             "updater".to_string(),
             serde_json::json!({ "endpoints": ["https://example.test/latest.json"], "pubkey": "   " }),
         );
-        assert!(!updater_public_key_configured_from_plugin_config(
-            &tauri::utils::config::PluginConfig(plugins)
-        ));
+        assert!(
+            updater_public_key_from_plugin_config(&tauri::utils::config::PluginConfig(plugins))
+                .is_none()
+        );
 
         let mut plugins = std::collections::HashMap::new();
         plugins.insert(
             "updater".to_string(),
             serde_json::json!({ "endpoints": ["https://example.test/latest.json"], "pubkey": "base64-public-key" }),
         );
-        assert!(updater_public_key_configured_from_plugin_config(
-            &tauri::utils::config::PluginConfig(plugins)
-        ));
+        assert!(
+            updater_public_key_from_plugin_config(&tauri::utils::config::PluginConfig(plugins))
+                .is_some()
+        );
     }
 }
