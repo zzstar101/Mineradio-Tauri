@@ -1,0 +1,72 @@
+{
+  "SongUrlResult": {
+    "url": "https://example.com/audio.flac",
+    "quality": "lossless",
+    "expiresAt": "2026-08-26T12:00:00Z",
+    "previewRange": {
+      "startMs": 0,
+      "endMs": 30000
+    }
+  },
+  "Track": {
+    "id": "t-1",
+    "provider": "netease",
+    "sourceId": "t-1",
+    "title": "示例歌曲",
+    "artists": [
+      "示例歌手"
+    ],
+    "album": "示例专辑",
+    "coverUrl": "https://example.com/cover.jpg",
+    "qualityHints": [],
+    "playableState": "playable",
+    "durationMs": 180000
+  },
+  "PlaylistDetail": {
+    "provider": "qq",
+    "id": "pl-1",
+    "name": "示例歌单",
+    "coverUrl": "https://example.com/pl-cover.jpg",
+    "trackCount": 1,
+    "trackIds": [
+      "t-1"
+    ],
+    "collected": false,
+    "tracks": [
+      {
+        "id": "t-1",
+        "provider": "netease",
+        "sourceId": "t-1",
+        "title": "示例歌曲",
+        "artists": [
+          "示例歌手"
+        ],
+        "album": "示例专辑",
+        "coverUrl": "https://example.com/cover.jpg",
+        "qualityHints": [],
+        "playableState": "playable",
+        "durationMs": 180000
+      }
+    ],
+    "hasMore": true
+  },
+  "RecommendationPage": {
+    "provider": "netease",
+    "list": [
+      {
+        "title": "每日推荐",
+        "list": [
+          {
+            "id": "card-1",
+            "title": "示例歌名",
+            "subtitle": "示例歌手",
+            "coverUrl": "https://example.com/card.jpg",
+            "collected": false,
+            "kind": "track"
+          }
+        ],
+        "kind": "mixed"
+      }
+    ]
+  }
+}
