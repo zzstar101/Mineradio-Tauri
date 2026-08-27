@@ -21,7 +21,7 @@ tauri-plugin-single-instance = "=2.4.2"
 mineradio_api = { package = "MineRadio-api", path = "../../../api" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-getrandom = "0.3.4"
+getrandom = "0.4.3"
 sha2 = "0.10"
 base64 = "=0.22.1"
 minisign-verify = "=0.2.5"
