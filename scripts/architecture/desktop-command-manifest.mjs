@@ -171,8 +171,8 @@ export const FROZEN_DESKTOP_COMMAND_INTERFACES = Object.freeze({
 	desktop_lyrics_overlay_ready: "fn desktop_lyrics_overlay_ready(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String>",
 	login_netease_show_window: "fn login_netease_show_window(app: tauri::AppHandle) -> Result<(), String>",
 	login_qq_show_window: "fn login_qq_show_window(app: tauri::AppHandle) -> Result<(), String>",
-	login_netease_complete: "async fn login_netease_complete(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<LoginSessionImportResult, String>",
-	login_qq_complete: "async fn login_qq_complete(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<LoginSessionImportResult, String>",
+	login_netease_complete: "async fn login_netease_complete(app: tauri::AppHandle) -> Result<LoginSessionImportResult, String>",
+	login_qq_complete: "async fn login_qq_complete(app: tauri::AppHandle) -> Result<LoginSessionImportResult, String>",
 	login_netease_close_window: "fn login_netease_close_window(app: tauri::AppHandle) -> Result<(), String>",
 	login_qq_close_window: "fn login_qq_close_window(app: tauri::AppHandle) -> Result<(), String>",
 });
@@ -185,6 +185,7 @@ export const FROZEN_DESKTOP_SERIALIZATION_CONTRACTS = Object.freeze({
 			"app_data_dir: String",
 			"app_version: String",
 			"schema_version: String",
+			"media_proxy_base: String",
 			"updater_public_key_configured: bool",
 		],
 	},
@@ -381,12 +382,7 @@ export const FROZEN_DESKTOP_ERROR_STRINGS = Object.freeze([
 	"LOGIN_COOKIE_EMPTY",
 	"LOGIN_COOKIE_NOT_PLAYBACK_READY",
 	"LOGIN_COOKIE_NOT_READY",
-	"LOGIN_SIDECAR_BAD_RESPONSE",
-	"LOGIN_SIDECAR_BAD_URL",
-	"LOGIN_SIDECAR_READ_FAILED",
-	"LOGIN_SIDECAR_REJECTED_COOKIE",
-	"LOGIN_SIDECAR_UNAVAILABLE",
-	"LOGIN_SIDECAR_WRITE_FAILED",
+	"LOGIN_RUNTIME_IMPORT_FAILED: {error}",
 	"main window not found",
 ]);
 
