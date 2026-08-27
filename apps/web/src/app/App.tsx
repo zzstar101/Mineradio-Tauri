@@ -535,7 +535,7 @@ export function App({
     setMiniQueue,
     showToast,
     storage: homeListenRepository,
-    discoverHomeAvailable: false,
+    discoverHomeAvailable: applicationRuntime !== defaultApplicationRuntime,
   });
   homeControllerRef.current = homeController;
   const {
@@ -1749,7 +1749,9 @@ export function App({
         onResultNext: insertSearchResultNext,
         onResultLike: (track) => void toggleLikeTrack(track),
         onResultCollect: openCollectPicker,
-        onSharedPlaylistImport: undefined,
+        onSharedPlaylistImport: applicationRuntime === defaultApplicationRuntime
+          ? undefined
+          : importSharedPlaylistFromText,
         onArtistSearch: searchArtistFromResult,
         isResultLiked: isTrackLiked,
         isResultLikeBusy: isTrackLikeBusy,

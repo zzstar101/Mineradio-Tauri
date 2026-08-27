@@ -225,8 +225,12 @@ test("every Web native API route is handled by the Rust bridge or explicitly gat
 		resolve(repositoryRoot, "apps/web/src/app/App.tsx"),
 		"utf8",
 	);
-	expect(appSource).toContain("discoverHomeAvailable: false");
-	expect(appSource).toContain("onSharedPlaylistImport: undefined");
+	expect(appSource).toContain(
+		"discoverHomeAvailable: applicationRuntime !== defaultApplicationRuntime",
+	);
+	expect(appSource).toMatch(
+		/onSharedPlaylistImport:\s*applicationRuntime === defaultApplicationRuntime\s*\? undefined/u,
+	);
 });
 
 test("production native API transport never logs request or response payloads", () => {
