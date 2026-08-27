@@ -2104,13 +2104,6 @@ mod tests {
             Ok(Self::receipt(operation, NativeInstallStage::DesktopLyrics))
         }
 
-        fn gate_supervisor_and_stop_exact_sidecar(
-            &self,
-            operation: &UpdateInstallGateClaim,
-        ) -> Result<NativeOwnerReceipt, NativeOwnerPrepareFailure> {
-            Ok(Self::receipt(operation, NativeInstallStage::Sidecar))
-        }
-
         fn verify_prepared(
             &self,
             _operation: &UpdateInstallGateClaim,
@@ -2378,7 +2371,6 @@ mod tests {
                 "native.rollback",
                 "native.rollback",
                 "native.rollback",
-                "native.rollback",
                 "web.mark-rollback",
                 "web.confirm-native",
                 "web.rollback",
@@ -2454,7 +2446,6 @@ mod tests {
                 "exit.seal",
                 "marker.tombstone",
                 "exit.release",
-                "native.rollback",
                 "native.rollback",
                 "native.rollback",
                 "native.rollback",
@@ -2545,7 +2536,6 @@ mod tests {
                 "marker.tombstone",
                 "exit.release",
                 "exit.release",
-                "native.rollback",
                 "native.rollback",
                 "native.rollback",
                 "native.rollback",
@@ -2644,7 +2634,6 @@ mod tests {
                     "native.rollback",
                     "native.rollback",
                     "native.rollback",
-                    "native.rollback",
                     "web.mark-rollback",
                     "web.confirm-native",
                     "web.rollback",
@@ -2728,7 +2717,6 @@ mod tests {
                 [
                     "web.prepare",
                     "native.prepare",
-                    "native.rollback",
                     "native.rollback",
                     "native.rollback",
                     "native.rollback",
@@ -2822,7 +2810,6 @@ mod tests {
                     "marker.publish",
                     "web.seal",
                     "marker.tombstone",
-                    "native.rollback",
                     "native.rollback",
                     "native.rollback",
                     "native.rollback",

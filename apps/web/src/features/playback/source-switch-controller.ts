@@ -96,15 +96,15 @@ export class SourceSwitchController {
 			) {
 				return { status: "stale" };
 			}
-			if (!resolved.url || resolved.playable === false) {
+			// 失败现在以错误信封抛出（SidecarClientError），由外层统一归因；
+			// 成功结果里不再携带 playable/provider/message 等整合字段
+			if (!resolved.url) {
 				return {
 					status: "unavailable",
-					message: resolved.message || "目标音源暂不可播放",
+					message: "目标音源暂不可播放",
 				};
 			}
-			const resolvedProvider = PROVIDERS.has(resolved.provider as ProviderId)
-				? (resolved.provider as ProviderId)
-				: candidate.provider;
+			const resolvedProvider = candidate.provider;
 			if (resolvedProvider !== provider) {
 				return {
 					status: "unavailable",

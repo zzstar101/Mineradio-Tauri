@@ -42,7 +42,6 @@ export const DESKTOP_RUNTIME_CONTROL_DEFINITIONS = Object.freeze({
 		"托盘",
 		"主窗口",
 		"进程内存",
-		"Sidecar",
 		"桌面歌词",
 	]),
 	visualFacts: Object.freeze([
@@ -114,7 +113,6 @@ export function DesktopRuntimeControls(props: DesktopManagementRuntimeResult) {
 	const windowProbe = diagnosticProbeValue(nativeDiagnostics, "window");
 	const trayProbe = diagnosticProbeValue(nativeDiagnostics, "tray");
 	const lifecycleProbe = asRecord(trayProbe?.lifecycle);
-	const sidecarProbe = diagnosticProbeValue(nativeDiagnostics, "sidecar");
 	const nativeMemoryProbe = diagnosticProbeValue(nativeDiagnostics, "native");
 	const desktopLyricsProbe = diagnosticProbeValue(nativeDiagnostics, "desktopLyrics");
 	const workingSetBytes = recordNumber(nativeMemoryProbe, "workingSetBytes");
@@ -220,8 +218,7 @@ export function DesktopRuntimeControls(props: DesktopManagementRuntimeResult) {
 				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[0]}</span><strong>{recordString(lifecycleProbe, "phase") ?? "—"}</strong><small>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[1]} {recordString(trayProbe, "trayPhase") ?? "—"}</small></div>
 				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[2]}</span><strong>{windowProbe?.isVisible === true ? "可见" : windowProbe?.isMinimized === true ? "最小化" : "后台"}</strong><small>{windowProbe?.isFocused === true ? "已聚焦" : "未聚焦"}</small></div>
 				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[3]}</span><strong>{workingSetBytes === null ? "—" : formatDesktopBytes(workingSetBytes)}</strong><small>{privateBytes === null ? "private —" : `private ${formatDesktopBytes(privateBytes)}`}</small></div>
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[4]}</span><strong>{recordString(sidecarProbe, "phase") ?? "—"}</strong><small>{recordNumber(sidecarProbe, "pid") === null ? "PID —" : `PID ${recordNumber(sidecarProbe, "pid")}`}</small></div>
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[5]}</span><strong>{desktopLyricsProbe?.inputWorkerRunning === true ? "输入监听中" : "监听未运行"}</strong><small>{desktopLyricsProbe?.hasPayload === true ? "payload ready" : "等待 payload"}</small></div>
+				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[4]}</span><strong>{desktopLyricsProbe?.inputWorkerRunning === true ? "输入监听中" : "监听未运行"}</strong><small>{desktopLyricsProbe?.hasPayload === true ? "payload ready" : "等待 payload"}</small></div>
 			</div>
 
 			<div className="fx-section-label">{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.sections.visualDiagnostics}</div>

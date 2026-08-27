@@ -17,7 +17,7 @@ use crate::{
         window_adapter,
         window_contract::WindowStateSnapshot,
     },
-    sidecar, AppState,
+    AppState,
 };
 use serde::Serialize;
 use tauri::Manager;
@@ -105,7 +105,7 @@ fn main_window_snapshot(app: &tauri::AppHandle) -> Result<WindowStateSnapshot, S
 ///
 /// 任何单个 native probe 失败都仅降级自己的条目，不能让整个诊断面板不可用。
 pub fn snapshot(app: &tauri::AppHandle, state: &AppState) -> DiagnosticsSnapshot {
-    let captured_at_ms = sidecar::now_ms();
+    let captured_at_ms = crate::runtime::now_ms();
     // `latest_snapshot` 是上一次已发布结果；诊断读取不能隐式递归扫描磁盘。
     let cache_snapshot = state
         .cache
@@ -219,13 +219,6 @@ pub fn snapshot(app: &tauri::AppHandle, state: &AppState) -> DiagnosticsSnapshot
             captured_at_ms,
             hotkeys::hotkey_runtime_snapshot(),
         ),
-        DiagnosticProbe::capture(DiagnosticProbeKind::Sidecar, captured_at_ms, || {
-            state
-                .sidecar
-                .lock()
-                .map(|runtime| runtime.snapshot())
-                .map_err(|error| error.to_string())
-        }),
         DiagnosticProbe::value(
             DiagnosticProbeKind::ProcessMemory,
             captured_at_ms,
@@ -296,14 +289,14 @@ pub fn trim_application_working_set(
         .map_err(|error| error.to_string())?;
     let outcome = state.resources.trim_working_set_manual(
         activity,
-        sidecar::now_ms(),
+        crate::runtime::now_ms(),
         force.unwrap_or(false),
         &WindowsProcessMemoryAdapter,
     );
     if matches!(outcome, TrimOutcome::Failed { .. }) {
         state.diagnostics.record_runtime_error(
             DiagnosticProbeKind::ProcessMemory,
-            sidecar::now_ms(),
+            crate::runtime::now_ms(),
             format!("manual working-set trim failed: {outcome:?}"),
         );
     }

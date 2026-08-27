@@ -1,10 +1,6 @@
 import type { ComponentProps, ReactElement } from "react";
 import type { Track } from "@mineradio/shared";
 import { BottomControlsHost } from "../../components/shell/BottomControlsHost";
-import {
-  SidecarRecoveryNotice,
-  type SidecarRecoveryNoticeState,
-} from "../../components/shell/SidecarRecoveryNotice";
 import { PlaybackRuntimeHost } from "./PlaybackRuntimeHost";
 import { PlaybackAudioSettings } from "./PlaybackAudioSettings";
 import type { PlaybackAudioSettingsResult } from "./usePlaybackAudioSettings";
@@ -31,7 +27,6 @@ type TrialView = Pick<
 
 export interface PlaybackSurfaceProps {
   controlsProps: ComponentProps<typeof BottomControlsHost>;
-  recoveryState: SidecarRecoveryNoticeState | null;
   audioSettings?: PlaybackAudioSettingsResult;
 }
 
@@ -55,7 +50,6 @@ export type PlaybackControllerRef = ComponentProps<
 
 export function PlaybackSurface({
   controlsProps,
-  recoveryState,
   audioSettings,
 }: PlaybackSurfaceProps): ReactElement {
   const renderVolumePanelExtras = audioSettings
@@ -64,15 +58,10 @@ export function PlaybackSurface({
       )
     : controlsProps.renderVolumePanelExtras;
   return (
-    <>
-      <BottomControlsHost
-        {...controlsProps}
-        renderVolumePanelExtras={renderVolumePanelExtras}
-      />
-      {recoveryState ? (
-        <SidecarRecoveryNotice state={recoveryState} />
-      ) : null}
-    </>
+    <BottomControlsHost
+      {...controlsProps}
+      renderVolumePanelExtras={renderVolumePanelExtras}
+    />
   );
 }
 

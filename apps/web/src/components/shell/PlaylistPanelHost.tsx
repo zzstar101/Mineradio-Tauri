@@ -269,7 +269,7 @@ export function PlaylistPanelHost(props: PlaylistPanelHostProps): ReactElement {
 		return (
 			<div id="pl-pane">
 				<div className="queue-toolbar">
-					<div className="queue-chip">登录后显示网易云 / QQ 歌单</div>
+					<div className="queue-chip">登录后显示网易云 / QQ音乐 / 汽水音乐歌单</div>
 					<button className="fx-mini-btn ghost" type="button" onClick={props.onRefresh}>刷新</button>
 				</div>
 				<div id="pl-list">
@@ -375,7 +375,11 @@ export function PlaylistPanelHost(props: PlaylistPanelHostProps): ReactElement {
 					<div className="fx-sub">QUEUE · 鼠标移开自动隐藏</div>
 				</div>
 				<div className="queue-head-act">
-					<button id="playlist-pin-btn" className={props.pinned ? "fx-mini-btn ghost playlist-pin-btn active" : "fx-mini-btn ghost playlist-pin-btn"} type="button" onClick={props.onPinToggle} title={props.pinned ? "取消常开歌单" : "常开歌单"} aria-label={props.pinned ? "取消常开歌单" : "常开歌单"}>⌖</button>
+					<button id="playlist-pin-btn" className={props.pinned ? "fx-mini-btn ghost playlist-pin-btn active" : "fx-mini-btn ghost playlist-pin-btn"} type="button" onClick={props.onPinToggle} title={props.pinned ? "取消常开歌单" : "常开歌单"} aria-label={props.pinned ? "取消常开歌单" : "常开歌单"}>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style={{ display: "block", margin: "auto" }}>
+							<path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z" />
+						</svg>
+					</button>
 					<button className="fx-mini-btn ghost" type="button" onClick={props.onShuffle}>随机</button>
 				</div>
 			</div>

@@ -6,7 +6,6 @@
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
-    "build:sidecar": "bun run scripts/build-sidecar-binary.mjs",
     "build": "tauri build"
   },
   "devDependencies": {

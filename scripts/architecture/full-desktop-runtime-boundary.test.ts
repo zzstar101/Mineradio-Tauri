@@ -19,8 +19,9 @@ test("M6 creates the main window in Rust so recovery can run first", () => {
 	const libSource = readFileSync(`${rustRoot}/lib.rs`, "utf8");
 
 	expect(config.app?.windows ?? []).toEqual([]);
+	// sidecar HTTP 服务退役后 externalBin 保持为空
 	expect((config as { bundle?: { externalBin?: unknown } }).bundle?.externalBin)
-		.toEqual(["binaries/mineradio-sidecar-api"]);
+		.toEqual([]);
 	expect(existsSync(mainWindowPath)).toBe(true);
 	const mainWindowSource = readFileSync(mainWindowPath, "utf8");
 	expect(mainWindowSource).toContain("WebviewWindowBuilder::new(");
@@ -45,7 +46,7 @@ test("M6 recovers a stale full-desktop journal before creating the main window",
 	expect(createIndex).toBeGreaterThan(recoverIndex);
 });
 
-test("M6 shutdown stops the Explorer watcher and rolls back before sidecar cleanup", () => {
+test("M6 shutdown stops the Explorer watcher and rolls back before wallpaper scene dispose", () => {
 	const fullDesktopSource = readFileSync(`${rustRoot}/app/full_desktop_runtime.rs`, "utf8");
 	const desktopRuntimeSource = readFileSync(`${rustRoot}/app/desktop_runtime.rs`, "utf8");
 	const recoverFunction = fullDesktopSource.slice(
@@ -53,11 +54,12 @@ test("M6 shutdown stops the Explorer watcher and rolls back before sidecar clean
 	);
 	expect(recoverFunction.indexOf("stop_explorer_watcher_for_shutdown"))
 		.toBeLessThan(recoverFunction.indexOf("recover_for_shutdown"));
+	// sidecar 清理步骤已随 rust-crate 迁移移除；回滚必须先于壁纸场景销毁
 	const cleanupFunction = desktopRuntimeSource.slice(
 		desktopRuntimeSource.indexOf("pub fn cleanup_runtime_once"),
 	);
 	expect(cleanupFunction.indexOf("recover_before_exit"))
-		.toBeLessThan(cleanupFunction.indexOf("sidecar_runtime_mark_stopped"));
+		.toBeLessThan(cleanupFunction.indexOf("wallpaper_engine_runtime::dispose_before_exit"));
 });
 
 test("M6 keeps native recovery surfaces and queues Explorer mutation on the main thread", () => {

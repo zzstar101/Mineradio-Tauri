@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -30,24 +29,6 @@ function productionSourceFiles(directory: string): string[] {
 
 function repositoryPath(path: string): string {
 	return relative(repositoryRoot, path).replaceAll("\\", "/");
-}
-
-function normalizedTauriConfigDigest(source: string): string {
-	const normalizedNewlines = source.replaceAll("\r\n", "\n");
-	const versionPattern = /("version"\s*:\s*)"[^"]+"/g;
-	const matches = [...normalizedNewlines.matchAll(versionPattern)];
-	if (matches.length !== 1) {
-		throw new Error("tauri.conf.json 必须只包含一个顶层产品版本字段");
-	}
-	const config = JSON.parse(normalizedNewlines) as { version?: unknown };
-	if (typeof config.version !== "string") {
-		throw new Error("tauri.conf.json 产品版本必须是字符串");
-	}
-	const versionAgnostic = normalizedNewlines.replace(
-		versionPattern,
-		'$1"__PRODUCT_VERSION__"',
-	);
-	return createHash("sha256").update(versionAgnostic).digest("hex");
 }
 
 test("M9 keeps concrete Sidecar transport inside api and legacy adapters", () => {
@@ -124,50 +105,28 @@ test("M9 media image source is consumed by production code", () => {
 	expect(consumers.length).toBeGreaterThan(0);
 });
 
-test("M9 leaves the frozen Sidecar API, shared contracts and packaging unchanged", () => {
-	// 固定 D2 cutover 后的 Sidecar tree/blob 与 externalBin 组装对象；通用 Rust updater 依赖不属于 Sidecar API。
-	const frozenObjects = {
-		"sidecars/api": "1e1bebdabe0816830b103c2eb6d9268cb2b658cc",
-		"packages/shared": "f0579e8fb63fc1974faaf2a1226b9a50a2704959",
-		"apps/web/src/api/sidecar-client.ts": "64a60cfce7e8e6e622727ffb60d4a791285880be",
-		"apps/desktop/src-tauri/src/sidecar.rs": "6889c8f6d8b200c1af4f7b0f05792cbe9775ddeb",
-		"apps/desktop/scripts/build-sidecar-binary.mjs": "528bca986b626f52010beac6bd9f749d88a540f9",
-		"apps/desktop/src-tauri/build.rs": "b1707ceaf4500df1f9467946959f40d0c732110a",
-	} as const;
-	const frozenTargets = Object.keys(frozenObjects);
-	const committedObjects = Object.fromEntries(frozenTargets.map((target) => {
-		const result = spawnSync(
+test("M9 keeps the Sidecar HTTP runtime retired after the rust-crate cutover", () => {
+	// Sidecar HTTP 服务已迁移进 mineradio_api crate：旧工件必须保持删除，
+	// 防止意外复活旧架构；tauri 打包的 externalBin 也必须保持为空。
+	const retiredPaths = [
+		"sidecars/api",
+		"apps/desktop/src-tauri/src/sidecar.rs",
+		"apps/desktop/scripts/build-sidecar-binary.mjs",
+	];
+	for (const target of retiredPaths) {
+		const probe = spawnSync(
 			"git",
-			["rev-parse", `HEAD:${target}`],
+			["cat-file", "-e", `HEAD:${target}`],
 			{ cwd: repositoryRoot, encoding: "utf8" },
 		);
-		return [target, result.status === 0 ? result.stdout.trim() : result.stderr.trim()];
-	}));
-	const workingTreeResult = spawnSync(
-		"git",
-		["diff", "--name-only", "HEAD", "--", ...frozenTargets],
-		{ cwd: repositoryRoot, encoding: "utf8" },
-	);
-	const untrackedResult = spawnSync(
-		"git",
-		["ls-files", "--others", "--exclude-standard", "--", ...frozenTargets],
-		{ cwd: repositoryRoot, encoding: "utf8" },
-	);
+		expect(probe.status).not.toBe(0);
+	}
 
-	expect(committedObjects).toEqual(frozenObjects);
-	expect(workingTreeResult.status).toBe(0);
-	expect(workingTreeResult.stderr).toBe("");
-	expect(workingTreeResult.stdout.trim()).toBe("");
-	expect(untrackedResult.status).toBe(0);
-	expect(untrackedResult.stderr).toBe("");
-	expect(untrackedResult.stdout.trim()).toBe("");
-
-	// 产品版本由 release-version 门禁统一管理；除该字段外，Sidecar externalBin 与打包配置逐字冻结。
-	const tauriConfig = readFileSync(
-		resolve(repositoryRoot, "apps/desktop/src-tauri/tauri.conf.json"),
-		"utf8",
-	);
-	expect(normalizedTauriConfigDigest(tauriConfig)).toBe(
-		"e55d77e67a3443e89cac20bf8d3935515d7c4b97a58d48453c984ebf4b569f1c",
-	);
+	const tauriConfig = JSON.parse(
+		readFileSync(
+			resolve(repositoryRoot, "apps/desktop/src-tauri/tauri.conf.json"),
+			"utf8",
+		),
+	) as { bundle?: { externalBin?: string[] } };
+	expect(tauriConfig.bundle?.externalBin ?? []).toEqual([]);
 });

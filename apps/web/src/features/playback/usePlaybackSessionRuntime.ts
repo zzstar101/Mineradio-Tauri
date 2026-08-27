@@ -28,6 +28,7 @@ import type {
 	ConsumePlaybackCheckpointAutoplayRequest,
 	PlaybackCheckpointRestoreAuthority,
 } from "../../stores/playback-store";
+import { usePlaybackStore } from "../../stores/playback-store";
 import type { JsonValue } from "../../tauri/runtime";
 import {
 	PlaybackSessionCoordinator,
@@ -35,6 +36,11 @@ import {
 	type PlaybackReloadReason,
 } from "./playback-session-coordinator";
 import { resolvePlayableAudio } from "./resolve-playable-audio";
+import {
+	buildTrialBanner,
+	crossSourceFailureBannerText,
+	evaluatePreviewResult,
+} from "./preview-trial";
 import {
 	GaplessPlaybackController,
 	type GaplessPreparedHandle,
@@ -45,11 +51,8 @@ export interface CurrentBeatMapState {
 	map: JsonValue;
 }
 
-export interface TrialBannerState {
-	text: string;
-	provider: ProviderId;
-	showLogin: boolean;
-}
+export type { TrialBannerState } from "../../stores/playback-store";
+import type { TrialBannerState } from "../../stores/playback-store";
 
 export interface PlaybackSessionSnapshot {
 	currentTrack: Track | null;
@@ -130,6 +133,7 @@ export interface PlaybackSessionRuntimeResult {
 	playbackQuality: PlaybackQualityRequest;
 	trackQualityOptions: TrackQualityOption[];
 	trialBanner: TrialBannerState | null;
+	setTrialBanner(banner: TrialBannerState | null): void;
 	currentBeatMapState: CurrentBeatMapState | null;
 	originalLyricsPayloadRef: RefObject<LyricPayload | null>;
 	clearCurrentBeatMap(): void;
@@ -158,18 +162,6 @@ function buildTrackLyricFallback(track: Track): LyricPayload {
 		hasTranslation: false,
 		isWordByWord: false,
 	}, track);
-}
-
-function trialBannerText(result: SongUrlResult): string {
-	if (result.message?.trim()) return result.message.trim();
-	if (result.loggedIn && result.vipLevel === "svip") {
-		return "此歌曲需要单曲、专辑购买或更高权限";
-	}
-	if (result.loggedIn && result.vipLevel === "vip") {
-		return "此歌曲需要 SVIP 或购买 · 当前仅播放试听片段";
-	}
-	if (result.loggedIn) return "此歌曲需 VIP · 当前仅播放试听片段";
-	return "当前未登录 · 仅播放试听片段";
 }
 
 function toJsonValue(value: unknown): JsonValue | null {
@@ -298,7 +290,8 @@ export function usePlaybackSessionRuntime({
 		useState<PlaybackLoadHandle | null>(null);
 	const playbackQualityReloadAutoplayRef = useRef<boolean | null>(null);
 	const [trackQualityOptions, setTrackQualityOptions] = useState<TrackQualityOption[]>([]);
-	const [trialBanner, setTrialBanner] = useState<TrialBannerState | null>(null);
+	const trialBanner = usePlaybackStore((state) => state.trialBanner);
+	const setTrialBanner = usePlaybackStore((state) => state.setTrialBanner);
 	const [currentBeatMapState, setCurrentBeatMapState] =
 		useState<CurrentBeatMapState | null>(null);
 	const [gaplessRuntimeEpoch, setGaplessRuntimeEpoch] = useState(0);
@@ -389,8 +382,8 @@ export function usePlaybackSessionRuntime({
 					track: candidate,
 					quality: inputs.playbackQuality,
 				});
-				if (result.trial) {
-					throw new Error("trial 音频降级到普通 next");
+				if (result.previewRange) {
+					throw new Error("preview-range 音频降级到普通 next");
 				}
 				return { audioUrl, rawUrl: result.url };
 			},
@@ -526,11 +519,9 @@ export function usePlaybackSessionRuntime({
 				quality: playbackQuality,
 			});
 			if (!coordinator.isPlaybackCurrent(reload)) return false;
-			setTrialBanner(result.trial ? {
-				text: trialBannerText(result),
-				provider: track.provider,
-				showLogin: !result.loggedIn,
-			} : null);
+			// 权限整合已下放客户端：结果只带 previewRange；是否真为试听由时长测量确认
+			setTrialBanner(null);
+			usePlaybackStore.getState().setPreviewRange(result.previewRange ?? null);
 			if (!coordinator.markLoaded(reload, {
 				trackKey: key,
 				quality: playbackQuality,
@@ -538,8 +529,12 @@ export function usePlaybackSessionRuntime({
 				audioUrl,
 				rawUrl: result.url,
 				local: false,
-				trial: result.trial === true,
-			})) return false;
+				trial: Boolean(result.previewRange), // 疑似试听不参与 gapless
+			})) {
+				// 加载被拒：回滚试听区间，避免过期解析污染状态
+				usePlaybackStore.getState().setPreviewRange(null);
+				return false;
+			}
 			sourceAccepted = true;
 			controller.load(audioUrl, reload);
 			coordinator.completeReload(reload);
@@ -561,6 +556,16 @@ export function usePlaybackSessionRuntime({
 			setTrialBanner(null);
 			setPlaying(false);
 			setSearchError(message);
+			// 跨源后仍无音源：按 track 权限状态给出明确文案横幅
+			if (message.includes("试听片段")) {
+				setTrialBanner({ text: message, provider: track.provider, showLogin: false });
+			} else {
+				setTrialBanner({
+					text: crossSourceFailureBannerText(track.playableState),
+					provider: track.provider,
+					showLogin: false,
+				});
+			}
 			showToast(message);
 			runtimeLifecycleCallbacksRef.current.onPlaybackFailed?.(
 				track,
@@ -1140,6 +1145,11 @@ export function usePlaybackSessionRuntime({
 					setPlaying(false);
 					setSearchError(message);
 					showToast(message);
+					setTrialBanner({
+						text: crossSourceFailureBannerText(currentTrack?.playableState ?? "unavailable"),
+						provider: currentTrack?.provider ?? "netease",
+						showLogin: false,
+					});
 					runtimeLifecycleCallbacksRef.current.onPlaybackFailed?.(
 						currentTrack,
 						playbackIntentId,
@@ -1161,11 +1171,7 @@ export function usePlaybackSessionRuntime({
 					quality: playbackQuality,
 				});
 				if (!coordinator.isPlaybackCurrent(session)) return;
-				setTrialBanner(result.trial ? {
-					text: trialBannerText(result),
-					provider: currentTrack.provider,
-					showLogin: !result.loggedIn,
-				} : null);
+				setTrialBanner(null);
 				const source = {
 					trackKey: key,
 					quality: playbackQuality,
@@ -1173,12 +1179,17 @@ export function usePlaybackSessionRuntime({
 					audioUrl,
 					rawUrl: result.url,
 					local: false,
-					trial: result.trial === true,
+					trial: Boolean(result.previewRange), // 疑似试听不参与 gapless
 				};
+				usePlaybackStore.getState().setPreviewRange(result.previewRange ?? null);
 				const sourceAcceptedByCoordinator = shouldAutoplay
 					? coordinator.markLoaded(session, source)
 					: coordinator.markLoadedPaused(session, source, now());
-				if (!sourceAcceptedByCoordinator) return;
+				if (!sourceAcceptedByCoordinator) {
+					// 加载被拒：回滚试听区间
+					usePlaybackStore.getState().setPreviewRange(null);
+					return;
+				}
 				sourceAccepted = true;
 				consumeQualityReloadAutoplayIntent();
 				controller.load(audioUrl, session);
@@ -1264,6 +1275,7 @@ export function usePlaybackSessionRuntime({
 		playbackQuality,
 		trackQualityOptions,
 		trialBanner,
+		setTrialBanner,
 		currentBeatMapState,
 		originalLyricsPayloadRef,
 		clearCurrentBeatMap: () => setCurrentBeatMapState(null),

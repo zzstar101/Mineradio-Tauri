@@ -9,24 +9,23 @@
   "packageManager": "bun@1.4.0",
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "sidecars/*"
+    "packages/*"
   ],
   "scripts": {
     "start": "bun run tauri:dev",
     "dev": "bun run tauri:dev",
     "build": "bun run tauri:build",
-    "tauri:dev": "bun run --filter ./apps/desktop tauri dev",
-    "tauri:build": "bun run --filter ./apps/desktop tauri build",
+    "contracts": "bun test scripts/architecture/contract-parity.test.ts && cd api && MINERADIO_CONTRACT_GOLDENS=1 cargo test -p MineRadio-api --test contract_goldens",
+    "tauri:dev": "bun run contracts && bun run --filter ./apps/desktop tauri dev",
+    "tauri:build": "bun run contracts && bun run --filter ./apps/desktop tauri build",
     "web:build": "bun run --filter ./apps/web build",
-    "sidecar:dev": "bun run --filter ./sidecars/api dev",
     "perf:compare": "bun scripts/perf/compare-overhead.mjs",
     "perf:m2:playback": "bun test --parallel=1 scripts/perf/m2-playback-budget.test.ts",
     "perf:budget": "bun scripts/perf/m8-budget.mjs && bun run perf:m2:playback",
     "perf:m8:windows": "bun scripts/perf/m8-windows-release-evidence.mjs",
     "release:verify-version": "bun scripts/ci/verify-release-version.mjs",
     "release:create-manifest": "bun scripts/ci/create-updater-manifest.mjs",
-    "typecheck": "bun run --filter ./packages/shared typecheck && bun run --filter ./packages/visual-engine typecheck && bun run --filter ./sidecars/api typecheck && bun run --filter ./apps/web typecheck",
-    "test": "bun test --parallel=1 packages/shared packages/visual-engine sidecars/api apps/web scripts/ci scripts/architecture scripts/perf"
+    "typecheck": "bun run --filter ./packages/shared typecheck && bun run --filter ./packages/visual-engine typecheck && bun run --filter ./apps/web typecheck",
+    "test": "bun test --parallel=1 packages/shared packages/visual-engine apps/web scripts/ci scripts/architecture scripts/perf"
   }
 }

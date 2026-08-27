@@ -36,7 +36,7 @@ test("normalizeAccountProviderList drops unknown keys, dedupes preserve-first an
 		order: ["qq", "unknown-provider", "qq", "netease"],
 		visible: [],
 	});
-	expect(normalized.order).toEqual(["qq", "netease", "soda"]);
+	expect(normalized.order).toEqual(["qq", "netease", "kugou", "soda"]);
 	expect(normalized.visible).toEqual([]);
 });
 
@@ -45,11 +45,11 @@ test("normalizeAccountProviderList maps the qishui alias onto soda in both array
 		order: ["qishui", "netease", "qq"],
 		visible: ["qishui"],
 	});
-	expect(normalized.order).toEqual(["soda", "netease", "qq"]);
+	expect(normalized.order).toEqual(["soda", "netease", "qq", "kugou"]);
 	expect(normalized.visible).toEqual(["soda"]);
 });
 
-test("normalizeAccountProviderList keeps unavailable providers in order but never in visible", () => {
+test("normalizeAccountProviderList keeps blocked providers in order but excludes them from visible", () => {
 	const normalized = normalizeAccountProviderList({
 		order: ["kugou", "spotify", "netease", "qq", "soda"],
 		visible: ["kugou", "spotify", "qq"],
@@ -61,7 +61,7 @@ test("normalizeAccountProviderList keeps unavailable providers in order but neve
 		"qq",
 		"soda",
 	]);
-	expect(normalized.visible).toEqual(["qq"]);
+	expect(normalized.visible).toEqual(["kugou", "qq"]);
 });
 
 test("normalizeAccountProviderList caps the order array at PROVIDER_KEYS length", () => {
@@ -95,6 +95,7 @@ test("empty visible means nothing is hidden; validated visible drives hidden set
 	expect(orderedAvailableProviders(partial.order)).toEqual([
 		"netease",
 		"qq",
+		"kugou",
 		"soda",
 	]);
 });
@@ -160,7 +161,7 @@ test("canonical record round-trips through the typed preference key", () => {
 	const record = accountProviderOrderRecord(state);
 	expect(record).toEqual({
 		version: 1,
-		order: ["soda", "spotify", "qq", "netease"],
+		order: ["soda", "spotify", "qq", "netease", "kugou"],
 		visible: ["soda"],
 	});
 	expect(ACCOUNT_PROVIDER_ORDER_PREFERENCE.parse(record)).toEqual(record);

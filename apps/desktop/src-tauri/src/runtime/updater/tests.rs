@@ -3088,26 +3088,16 @@ fn shutdown_wins_after_the_downloader_returns_but_before_success_is_committed() 
             tauri::async_runtime::spawn(async move { task_runtime.run_pending_download().await });
         arrived.notified().await;
 
-        let shutdown_runtime = runtime.clone();
-        let shutdown = tauri::async_runtime::spawn(async move {
-            shutdown_runtime.shutdown_active_download().await
-        });
-        for _ in 0..100 {
-            if runtime
-                .snapshot()
-                .operation
-                .as_ref()
-                .is_some_and(|operation| !operation.cancellable)
-            {
-                break;
-            }
-            tokio::task::yield_now().await;
-        }
+        // Verifying 事件在进入 barrier 前已把 operation 置为不可取消，关停的
+        // begin 阶段因此不再产生可观察修订；若把 shutdown 交给调度器去跑，
+        // 它可能在 release 之后才执行而错过窗口。这里同步声明关停，保证下载
+        // 任务恢复时取消已经生效。await completion 半段由
+        // shutdown_waits_for_cleanup_and_rejects_success_after_cancellation 覆盖。
+        assert!(runtime.request_active_download_shutdown());
         assert!(!runtime.snapshot().operation.unwrap().cancellable);
         release.notify_one();
 
         assert!(task.await.unwrap());
-        assert!(shutdown.await.unwrap());
         assert_eq!(runtime.snapshot().phase, UpdatePhase::Available);
         assert!(runtime.snapshot().fault.is_none());
         assert!(!artifact_path.exists());

@@ -534,7 +534,7 @@ test("EmptyHomeHost keeps discover and weather failures local and routes indepen
 	host.remove();
 });
 
-test("Home playlist detail keeps a 600-track surface within the virtual DOM budget", () => {
+test("Home playlist detail renders a fully loaded 600-track surface without virtualization", () => {
 	const tracks = Array.from({ length: 600 }, (_, index) => ({
 		provider: "netease" as const,
 		id: `large-${index}`,
@@ -566,7 +566,9 @@ test("Home playlist detail keeps a 600-track surface within the virtual DOM budg
 		/>,
 	);
 
-	expect(html).toContain('data-virtualized="true"');
-	expect((html.match(/class="home-detail-track"/g) ?? []).length).toBeLessThan(30);
-	expect(html).not.toContain("曲目 599");
+	// 分页懒加载下行数有限，详情列表停用 padding 型虚拟化（与 flex gap 布局冲突，
+	// 曾导致越过阈值后列表塌缩成单个渲染窗口），改为全量渲染。
+	expect(html).not.toContain('data-virtualized="true"');
+	expect((html.match(/class="home-detail-track"/g) ?? []).length).toBe(600);
+	expect(html).toContain("曲目 599");
 });

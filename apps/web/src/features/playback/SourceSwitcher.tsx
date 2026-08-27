@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 const PROVIDER_LABELS: Record<ProviderId, string> = {
 	netease: "网易云",
 	qq: "QQ",
+	kugou: "酷狗",
 	soda: "汽水",
 };
 

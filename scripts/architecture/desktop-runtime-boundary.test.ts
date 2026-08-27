@@ -63,13 +63,15 @@ test("Rust lib only assembles desktop state and native window events", () => {
 	const cleanupStart = desktopRuntimeSource.indexOf("pub fn cleanup_runtime_once(");
 	const cleanupSource = desktopRuntimeSource.slice(cleanupStart);
 	const cleanupOrder = [
+		// sidecar supervisor/mark 步骤已随 rust-crate 迁移移除；
+		// 现行顺序：回滚 → 壁纸场景销毁 → 状态清理 → 热键/歌词/托盘
+		"recover_before_exit",
+		"dispose_before_exit",
 		"dispose_state_emit",
 		"application_runtime_running",
 		"clear_global_hotkeys",
 		"desktop_lyrics_stop_middle_click_poller_state",
 		"close_desktop_lyrics_window_for_shutdown",
-		"sidecar_supervisor_running",
-		"sidecar_runtime_mark_stopped",
 		"remove_main_tray",
 	].map((token) => cleanupSource.indexOf(token));
 	expect(cleanupOrder.every((index) => index >= 0)).toBe(true);

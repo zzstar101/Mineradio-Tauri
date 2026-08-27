@@ -102,17 +102,19 @@ test("a fresh controller hydrates the persisted order across a simulated restart
 
 	const harness = await renderControllerHarness(repository);
 	expect(harness.controllerRef.current?.ready).toBe(true);
-	// kugou/spotify 属于被 MineRadio-api 封锁的 provider，永不进入渲染视图。
+	// Kugou 已接入 native API；Spotify 仍被封锁，不进入渲染视图。
 	expect(harness.controllerRef.current?.orderedProviders()).toEqual([
 		"qq",
 		"netease",
 		"soda",
+		"kugou",
 	]);
 	expect(harness.controllerRef.current?.providerOrder).toEqual([
 		"qq",
 		"netease",
 		"spotify",
 		"soda",
+		"kugou",
 	]);
 
 	await harness.unmount();
@@ -128,6 +130,7 @@ test("defaults are used when nothing was persisted or the stored value is malfor
 	expect(emptyHarness.controllerRef.current?.providerOrder).toEqual([
 		"netease",
 		"qq",
+		"kugou",
 		"soda",
 	]);
 	expect(emptyHarness.controllerRef.current?.visibleProviders).toEqual([]);
@@ -144,6 +147,7 @@ test("defaults are used when nothing was persisted or the stored value is malfor
 		expect(malformedHarness.controllerRef.current?.providerOrder).toEqual([
 			"netease",
 			"qq",
+			"kugou",
 			"soda",
 		]);
 		await malformedHarness.unmount();
@@ -187,6 +191,7 @@ test("moves publish only after the canonical preference commit succeeds", async 
 	expect(harness.controllerRef.current?.providerOrder).toEqual([
 		"netease",
 		"qq",
+		"kugou",
 		"soda",
 	]);
 
@@ -198,13 +203,14 @@ test("moves publish only after the canonical preference commit succeeds", async 
 	expect(moveOutcome).toBe(true);
 	expect(harness.controllerRef.current?.providerOrder).toEqual([
 		"qq",
+		"kugou",
 		"netease",
 		"soda",
 	]);
 	const persisted = (await repository.get(
 		ACCOUNT_PROVIDER_ORDER_PREFERENCE,
 	)) as JsonObject;
-	expect(persisted.order).toEqual(["qq", "netease", "soda"]);
+	expect(persisted.order).toEqual(["qq", "kugou", "netease", "soda"]);
 	expect(persisted.version).toBe(1);
 
 	await harness.unmount();
@@ -240,6 +246,7 @@ test("repository failures keep the visible order unchanged and only warn", async
 			"soda",
 			"netease",
 			"qq",
+			"kugou",
 		]);
 		expect(
 			warnings.warnings.some((args) =>
@@ -265,7 +272,7 @@ test("visible is validated on read and drives the derived hidden list without a 
 	);
 
 	const harness = await renderControllerHarness(repository);
-	expect(harness.controllerRef.current?.visibleProviders).toEqual(["soda"]);
+	expect(harness.controllerRef.current?.visibleProviders).toEqual(["kugou", "soda"]);
 	expect(harness.controllerRef.current?.hiddenProviders).toEqual([
 		"netease",
 		"qq",
@@ -287,8 +294,8 @@ test("two controllers sharing one store stay in sync without a zustand store", a
 		await store.moveProviderBefore("qq", "netease");
 	});
 
-	// 默认顺序 [netease, qq, soda] → 把 qq 移到 netease 之前。
-	const expected = ["qq", "netease", "soda"];
+	// 默认顺序 [netease, qq, kugou, soda] → 把 qq 移到 netease 之前。
+	const expected = ["qq", "netease", "kugou", "soda"];
 	expect(store.getSnapshot().state.order).toEqual(expected);
 	expect(first.controllerRef.current?.providerOrder).toEqual(expected);
 	expect(second.controllerRef.current?.providerOrder).toEqual(expected);

@@ -17,7 +17,6 @@ use crate::{
 
 use super::{
     full_desktop_runtime::{self, ExplorerWatcherInstallReceipt},
-    sidecar_owner::{self, SidecarInstallReceipt},
     update_install_gate::UpdateInstallGateClaim,
     update_install_quiescence::{
         NativeInstallOwnerPort, NativeInstallQuiescence, NativeInstallStage, NativeOwnerError,
@@ -27,7 +26,6 @@ use super::{
 };
 
 const OWNER_WAIT_TIMEOUT: Duration = Duration::from_secs(2);
-const SIDECAR_HEALTH_TIMEOUT: Duration = Duration::from_secs(2);
 
 struct TransitionOwner {
     acquired: mpsc::Receiver<Result<(), String>>,
@@ -115,7 +113,6 @@ struct NativeOperationOwners {
     full_desktop: Option<FullDesktopOwner>,
     wallpaper: Option<WallpaperOwner>,
     desktop_lyrics: Option<DesktopLyricsOwner>,
-    sidecar: Option<SidecarInstallReceipt>,
 }
 
 impl NativeOperationOwners {
@@ -129,7 +126,7 @@ impl NativeOperationOwners {
 }
 
 /// 真实 AppState owner 的 dormant Adapter。它只由 future update installer 组装函数引用，
-/// 当前 command/bootstrap 不会触发 prepare；现有 API 与 sidecar HTTP 行为保持不变。
+/// 当前 command/bootstrap 不会触发 prepare；现有 API 行为保持不变。
 pub(crate) struct TauriNativeInstallOwners {
     app: tauri::AppHandle,
     owners: Mutex<NativeOperationOwners>,
@@ -341,33 +338,6 @@ impl TauriNativeInstallOwners {
         })();
         if result.is_err() {
             self.lock_owners()?.desktop_lyrics = Some(prior_state);
-        }
-        result
-    }
-
-    fn restore_sidecar(&self, claim: &UpdateInstallGateClaim) -> Result<(), NativeOwnerError> {
-        let prior = {
-            let mut owners = self.lock_owners()?;
-            owners.ensure_exact(claim)?;
-            owners.sidecar.take()
-        };
-        let Some(mut prior_state) = prior else {
-            return Ok(());
-        };
-        let state = self.app.state::<AppState>();
-        let result = (|| {
-            if !prior_state
-                .terminate_bounded(OWNER_WAIT_TIMEOUT)
-                .map_err(NativeOwnerError::new)?
-            {
-                return Err(NativeOwnerError::new("SIDECAR_UPDATE_CHILD_STOP_TIMEOUT"));
-            }
-            prior_state
-                .rollback(state.inner(), SIDECAR_HEALTH_TIMEOUT)
-                .map_err(NativeOwnerError::new)
-        })();
-        if result.is_err() {
-            self.lock_owners()?.sidecar = Some(prior_state);
         }
         result
     }
@@ -637,34 +607,6 @@ impl NativeInstallOwnerPort for TauriNativeInstallOwners {
         ))
     }
 
-    fn gate_supervisor_and_stop_exact_sidecar(
-        &self,
-        operation: &UpdateInstallGateClaim,
-    ) -> Result<NativeOwnerReceipt, NativeOwnerPrepareFailure> {
-        self.lock_owners()?.ensure_exact(operation)?;
-        let state = self.app.state::<AppState>();
-        let mut owner = sidecar_owner::take_for_update(state.inner(), operation)
-            .map_err(NativeOwnerError::new)?;
-        let stopped = owner.terminate_bounded(OWNER_WAIT_TIMEOUT);
-        self.lock_owners()?.sidecar = Some(owner);
-        let stopped = stopped.map_err(|error| {
-            Self::owned_prepare(operation, NativeInstallStage::Sidecar, "sidecar", error)
-        })?;
-        if !stopped {
-            return Err(Self::owned_prepare(
-                operation,
-                NativeInstallStage::Sidecar,
-                "sidecar",
-                "SIDECAR_UPDATE_CHILD_STOP_TIMEOUT",
-            ));
-        }
-        Ok(Self::receipt(
-            operation,
-            NativeInstallStage::Sidecar,
-            "sidecar",
-        ))
-    }
-
     fn verify_prepared(
         &self,
         operation: &UpdateInstallGateClaim,
@@ -672,7 +614,7 @@ impl NativeInstallOwnerPort for TauriNativeInstallOwners {
     ) -> Result<(), NativeOwnerError> {
         let owners = self.lock_owners()?;
         owners.ensure_exact(operation)?;
-        if receipts.len() != 5
+        if receipts.len() != 4
             || !owners
                 .transition
                 .as_ref()
@@ -686,7 +628,6 @@ impl NativeInstallOwnerPort for TauriNativeInstallOwners {
                 .as_ref()
                 .is_none_or(|owner| !owner.recipe_captured)
             || owners.desktop_lyrics.is_none()
-            || owners.sidecar.is_none()
         {
             return Err(NativeOwnerError::new(
                 "UPDATE_INSTALL_NATIVE_RECEIPTS_INCOMPLETE",
@@ -729,17 +670,6 @@ impl NativeInstallOwnerPort for TauriNativeInstallOwners {
             ));
         }
         drop(lyrics);
-        sidecar_owner::assert_exact_holder(state.inner(), operation)
-            .map_err(NativeOwnerError::new)?;
-        if state
-            .sidecar
-            .lock()
-            .map_err(|_| NativeOwnerError::new("SIDECAR_RUNTIME_UNAVAILABLE"))?
-            .child
-            .is_some()
-        {
-            return Err(NativeOwnerError::new("SIDECAR_UPDATE_STOP_UNCONFIRMED"));
-        }
         Ok(())
     }
 
@@ -750,7 +680,6 @@ impl NativeInstallOwnerPort for TauriNativeInstallOwners {
     ) -> Result<(), NativeOwnerError> {
         self.lock_owners()?.ensure_exact(operation)?;
         match receipt.stage() {
-            NativeInstallStage::Sidecar => self.restore_sidecar(operation),
             NativeInstallStage::DesktopLyrics => self.restore_desktop_lyrics(operation),
             NativeInstallStage::Wallpaper => self.restore_wallpaper(operation),
             NativeInstallStage::FullDesktop => self.restore_full_desktop(operation),
@@ -767,7 +696,6 @@ impl NativeInstallOwnerPort for TauriNativeInstallOwners {
             return Ok(());
         }
         self.lock_owners()?.ensure_exact(operation)?;
-        self.restore_sidecar(operation)?;
         self.restore_desktop_lyrics(operation)?;
         self.restore_wallpaper(operation)?;
         self.restore_full_desktop(operation)?;
@@ -778,7 +706,6 @@ impl NativeInstallOwnerPort for TauriNativeInstallOwners {
             || owners.full_desktop.is_some()
             || owners.wallpaper.is_some()
             || owners.desktop_lyrics.is_some()
-            || owners.sidecar.is_some()
         {
             return Err(NativeOwnerError::new(
                 "UPDATE_INSTALL_NATIVE_ROLLBACK_INCOMPLETE",

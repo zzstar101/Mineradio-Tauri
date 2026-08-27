@@ -1661,6 +1661,374 @@ body.empty-home-active .home-visual {
   text-overflow: ellipsis;
 }
 
+/* 推荐卡片基础类：netease-mixed 等卡片依赖此边框/背景 */
+.home-recommendation-card {
+  position: relative;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--home-accent) 9%, rgba(255, 255, 255, .075));
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .060), rgba(255, 255, 255, .025));
+  box-shadow: 0 16px 50px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .052);
+  overflow: hidden;
+}
+
+.home-recommendation-previews {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* 歌单/媒体行：grid 横排。列宽 = 容器的六等分（比例上限即 1/6），
+   夹在 [104px, 208px] 允许范围内；静止时约可见 6-10 张，
+   超出横向溢出滚动（保留滚动条）。间隔固定 12px，封面保持 1:1。 */
+.home-recommendation-tile-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(104px, calc((100% - 60px) / 6), 150px);
+  grid-auto-rows: auto;
+  align-items: start;
+  gap: 12px;
+  /* 底部留出与滚动条的间隔，避免卡片贴住滚动条 */
+  padding-bottom: 12px;
+  overflow-x: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 单曲行：grid 横排。列宽固定为容器的四等分（下限 150px），
+   与卡片数量无关——最左侧恰好显示 4 列填满容器，
+   超过 4 列时横向溢出滚动（保留滚动条）。左右间距固定 12px。 */
+.home-recommendation-track-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max(150px, calc((100% - 36px) / 4));
+  grid-auto-rows: min-content;
+  align-items: start;
+  gap: 12px;
+  /* 底部留出与滚动条的间隔，避免封面贴住滚动条；
+     顶部留出悬浮上移的余量（overflow-x:auto 会连纵向一起裁切） */
+  padding-top: 6px;
+  padding-bottom: 12px;
+  overflow-x: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 模块行横向滚动改由鼠标滚轮驱动，隐藏原生横向滚动条 */
+.home-recommendation-track-row,
+.home-recommendation-netease-mixed-row,
+.home-recommendation-tile-row {
+  scrollbar-width: none;
+}
+
+.home-recommendation-track-row::-webkit-scrollbar,
+.home-recommendation-netease-mixed-row::-webkit-scrollbar,
+.home-recommendation-tile-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* 单曲竖排列：每列 3 张纵向堆叠，上下距离固定 10px */
+.home-recommendation-track-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-recommendation-module-title {
+  color: rgba(255, 255, 255, .94);
+  font-size: 14px;
+}
+
+.home-recommendation-module-title::before {
+  background: rgba(255, 255, 255, .42);
+  box-shadow: none;
+}
+
+.home-recommendation-media {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-recommendation-cover-card {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--home-accent) 9%, rgba(255, 255, 255, .075));
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .060), rgba(255, 255, 255, .025));
+  box-shadow: 0 16px 50px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .052);
+  overflow: hidden;
+}
+
+/* 网易云 mix 行：grid 横排。卡片宽度 = 容器四等分与七等分取小
+   （比例上限等效"静止时至少可见约 7 张"，且不随窗口变化），
+   窄容器下限 96px；超过部分横向溢出滚动（保留滚动条）。
+   注意：上限不能用 clamp(x%, y, z%) 写法——WebView2 下 grid 轨道
+   尺寸的 clamp 百分比边界不可靠，会被整条丢弃。
+   间隔固定 15px，卡片保持 3:4 等比（先定宽、再按比例得高）。 */
+.home-recommendation-netease-mixed-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max(96px, min(calc((100% - 36px) / 4), calc((100% - 90px) / 7)));
+  grid-auto-rows: auto;
+  align-items: start;
+  gap: 15px;
+  /* 底部留出与滚动条的间隔，避免卡片贴住滚动条 */
+  padding-bottom: 12px;
+  overflow-x: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.home-recommendation-card-netease-mixed {
+  aspect-ratio: 3 / 4;
+  height: auto;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--home-accent) 9%, rgba(255, 255, 255, .075));
+  overflow: hidden;
+}
+
+.home-recommendation-media-cover {
+  width: 100%;
+  height: 100%;
+  background-color: #16161b;
+  background-size: cover;
+  background-position: center;
+}
+
+.home-recommendation-media-text {
+  flex: none;
+  min-width: 0;
+  padding: 10px 12px 12px;
+  background: transparent;
+}
+
+.home-recommendation-netease-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 10px;
+  z-index: 1;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+/* footer 绝对定位覆盖在封面底部：backdrop-filter 才能糊到封面画面，
+   挤开式布局会让它只能糊到卡片背后的页面（读起来像色块） */
+.home-recommendation-netease-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  /* 真·背景模糊：低不透明度深色仅作文字衬底，主视觉来自 backdrop blur */
+  background: rgba(10, 11, 16, .32);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  /* 自带与卡片一致的底部圆角：backdrop-filter 的模糊会逃出父级
+     overflow:hidden 的圆角裁切（Chromium 老问题），自圆角绕开它 */
+  border-radius: 0 0 13px 13px;
+}
+
+.home-recommendation-netease-title .home-recommendation-title,
+.home-recommendation-netease-footer .home-recommendation-subtitle {
+  color: #fff;
+}
+
+/* 强制两排高度：无论一行/空都撑满两行，文字从上排开始；
+   超出两行截断。footer 因此在所有卡片上高度齐平 */
+.home-recommendation-netease-footer .home-recommendation-subtitle {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  min-height: calc(2 * 1.2em);
+  line-height: 1.2;
+  white-space: normal;
+  overflow: hidden;
+}
+
+/* 单曲卡片：纯封面 + 文字，无边框背景包裹 */
+.home-recommendation-card-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  /* 悬浮上移的过渡基底 */
+  transition: transform .18s ease;
+}
+
+/* 可交互卡片统一手型光标 */
+[data-card-interactive] {
+  cursor: pointer;
+}
+
+/* 悬浮：整卡上移 + 封面浮现播放三角 */
+.home-recommendation-card-track:hover {
+  transform: translateY(-4px);
+}
+
+.home-recommendation-track-cover {
+  position: relative;
+  flex: 0 0 76px;
+  width: 76px;
+  height: 76px;
+  border-radius: 10px;
+  background-color: #16161b;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+/* 悬浮时的暗色遮罩，保证三角在任何封面上可见 */
+.home-recommendation-track-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 9, 13, .38);
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+
+/* 右向播放三角（SVG 圆角路径 + 描边加粗圆角），悬浮时浮现 */
+.home-recommendation-track-cover::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: 30px;
+  height: 30px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5.14v13.72c0 .8.87 1.29 1.55.87l10.79-6.86c.63-.4.63-1.34 0-1.74L9.55 4.27C8.87 3.85 8 4.34 8 5.14z' fill='%23ffffff' fill-opacity='.95' stroke='%23ffffff' stroke-opacity='.95' stroke-width='2.6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / contain;
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+
+.home-recommendation-card-track:hover .home-recommendation-track-cover::before,
+.home-recommendation-card-track:hover .home-recommendation-track-cover::after {
+  opacity: 1;
+}
+
+.home-recommendation-track-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-recommendation-title {
+  font-size: 15px;
+  font-weight: 720;
+  color: #fff;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-recommendation-subtitle {
+  font-size: 12px;
+  color: #fff;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 单曲卡片调大字号（仅 track 卡片，不影响 media / netease 卡片） */
+.home-recommendation-card-track .home-recommendation-title {
+  font-size: 14px;
+}
+
+.home-recommendation-card-track .home-recommendation-subtitle {
+  font-size: 12px;
+}
+
+/* 独立推荐页：复用 home-playlist-detail 玻璃面板，改为两行栅格 */
+.home-playlist-detail.home-recommendation-page {
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.home-recommendation-page-feed {
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 2px 4px 8px;
+}
+
+/* 推荐页纵向滚动条：与主页 .home-right-pane 滚动条一致
+   （8px 圆角、透明轨道、半透明白 thumb） */
+.home-recommendation-page-feed::-webkit-scrollbar {
+  width: 8px;
+}
+
+.home-recommendation-page-feed::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.home-recommendation-page-feed::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+}
+
+.home-detail-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-detail-refresh {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .11);
+  background: rgba(255, 255, 255, .060);
+  color: rgba(255, 255, 255, .80);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 720;
+  cursor: pointer;
+  transition: background .18s, border-color .18s, color .18s, transform .18s, box-shadow .18s;
+}
+
+.home-detail-refresh:hover {
+  background: color-mix(in srgb, var(--provider-color) 12%, rgba(255, 255, 255, .060));
+  border-color: color-mix(in srgb, var(--provider-color) 42%, rgba(255, 255, 255, .13));
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--provider-color) 10%, transparent);
+}
+
+/* 预览标题 button 化：重置 button 默认外观，保留 rail 标题样式 */
+button.home-recommendation-module-title {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.home-recommendation-module-title:hover {
+  opacity: .82;
+}
+
+/* 推荐页锚点分段高亮 */
+.home-recommendation-page-feed .home-rail-section[data-home-recommendation-anchor="true"] .home-recommendation-module-title {
+  color: #fff;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--home-accent) 55%, transparent);
+}
+
 #empty-home.home-detail-active {
   top: 96px;
   bottom: 70px;
@@ -2317,6 +2685,83 @@ body.empty-home-active .home-visual {
   color: rgba(255, 255, 255, .24);
   font-size: 10px;
   font-weight: 760;
+}
+
+/* 歌单详情分页：底部空占位行。载入下一页期间播放双层扫光
+   （整行连体带 + 封面内部高亮），静态时仅显示灰色块与灰条 */
+.home-detail-track-skeleton {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.home-detail-skeleton-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .085);
+}
+
+/* 占位行封面：与文字条同灰度的纯色块。
+   需要同时压掉基础规则的渐变 background-image、
+   无封面时的黑胶唱片（::before 改作扫光载体故仅覆盖其内容）、通用高光 ::after */
+.home-detail-track-skeleton .home-detail-track-cover {
+  background: rgba(255, 255, 255, .085);
+}
+
+.home-detail-track-skeleton .home-detail-track-cover::after {
+  content: none;
+}
+
+.home-detail-skeleton-title {
+  width: 62%;
+}
+
+.home-detail-skeleton-sub {
+  width: 38%;
+  margin-top: 6px;
+}
+
+.home-detail-skeleton-album {
+  width: 70%;
+}
+
+/* 文字条保持静态灰，不做扫光 */
+
+/* 整行连体扫光：一条灰白高亮带从左到右掠过封面+文字条（覆盖整行），仅加载期间 */
+.home-detail-list[data-loading-more="true"] .home-detail-track-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 18%,
+    rgba(255, 255, 255, .13) 50%,
+    transparent 82%
+  );
+  transform: translateX(-100%);
+  animation: home-detail-skeleton-sweep 1.4s linear infinite;
+}
+
+/* 封面内部扫光：方块自己再有一条更亮的高亮掠过，同样仅在加载期间。
+   需重置黑胶唱片 ::before 泄漏过来的 box-shadow / border-radius */
+.home-detail-list[data-loading-more="true"] .home-detail-track-skeleton .home-detail-track-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: none;
+  background: linear-gradient(
+    100deg,
+    transparent 18%,
+    rgba(255, 255, 255, .16) 50%,
+    transparent 82%
+  );
+  transform: translateX(-100%);
+  animation: home-detail-skeleton-sweep 1.4s linear infinite;
+}
+
+@keyframes home-detail-skeleton-sweep {
+  to { transform: translateX(100%); }
 }
 
 @media (max-height: 760px) {
@@ -4685,6 +5130,20 @@ html.control-glass-svg-ok #fx-panel {
   -webkit-backdrop-filter: none !important;
 }
 
+/* 歌单面板的全部迷你按钮与队列行内操作：字形强制白色，
+   避免继承到深色字在深底上不可见（⌖ 常开 / ♡ 喜欢 / ＋ 收藏 / 刷新 / 登录等） */
+#playlist-panel .fx-mini-btn,
+#playlist-pin-btn,
+.qi-act button {
+  color: rgba(255, 255, 255, .88) !important;
+}
+
+#playlist-panel .fx-mini-btn:hover,
+#playlist-pin-btn:hover,
+.qi-act button:hover {
+  color: #fff !important;
+}
+
 html.control-glass-svg-ok .icon-btn,
 html.control-glass-svg-ok .fx-mini-btn,
 html.control-glass-svg-ok .fx-toggle,
@@ -6552,63 +7011,6 @@ body.render-deep-sleep #login-guide-canvas {
   color: #fff;
 }
 
-#sidecar-recovery-notice {
-  position: fixed;
-  z-index: 180;
-  left: 24px;
-  bottom: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  max-width: min(420px, calc(100vw - 48px));
-  min-height: 38px;
-  padding: 9px 13px;
-  border-radius: 10px;
-  background: rgba(14, 16, 20, .88);
-  border: 1px solid rgba(255, 255, 255, .10);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, .30), inset 0 1px 0 rgba(255, 255, 255, .045);
-  color: rgba(255, 255, 255, .88);
-  font-size: 12px;
-  letter-spacing: .35px;
-  line-height: 1.25;
-  pointer-events: none;
-  backdrop-filter: blur(18px) saturate(1.18);
-  -webkit-backdrop-filter: blur(18px) saturate(1.18);
-}
-
-.sidecar-recovery-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(244, 210, 138, .86);
-  box-shadow: 0 0 14px rgba(244, 210, 138, .18);
-  flex: 0 0 auto;
-}
-
-.sidecar-recovery-notice.recovered .sidecar-recovery-dot {
-  background: rgba(0, 245, 212, .84);
-  box-shadow: 0 0 14px rgba(0, 245, 212, .18);
-}
-
-.sidecar-recovery-notice.error .sidecar-recovery-dot,
-.sidecar-recovery-notice.stopped .sidecar-recovery-dot {
-  background: rgba(255, 126, 126, .86);
-  box-shadow: 0 0 14px rgba(255, 126, 126, .16);
-}
-
-.sidecar-recovery-text {
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.sidecar-recovery-detail {
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(255, 255, 255, .54);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .modal-mask {
   position: fixed;
   inset: 0;
@@ -6906,13 +7308,67 @@ body.render-deep-sleep #login-guide-canvas {
 }
 
 .login-platform-tabs button.netease.active {
-  background: rgba(217, 91, 103, .16);
-  color: #ffd7dc;
+  background: rgba(230, 45, 45, .18);
+  color: #ffd9d9;
 }
 
 .login-platform-tabs button.qq.active {
-  background: rgba(191, 214, 107, .16);
-  color: #f3ffd1;
+  background: rgba(255, 196, 0, .18);
+  color: #fff2c0;
+}
+
+.login-platform-tabs button.kugou.active {
+  background: rgba(44, 163, 255, .18);
+  color: #cdeaff;
+}
+
+.login-platform-tabs button.soda.active {
+  background: rgba(0, 205, 140, .18);
+  color: #c2f7e3;
+}
+
+.login-method-tabs {
+  display: flex;
+  gap: 5px;
+  margin: -12px auto 18px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .06);
+  background: rgba(255, 255, 255, .02);
+  max-width: 74%;
+}
+
+.login-method-tabs button {
+  flex: 1;
+  min-width: 0;
+  height: 21px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, .42);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  cursor: pointer;
+  transition: background .22s, color .22s, box-shadow .22s;
+  white-space: nowrap;
+}
+
+.login-method-tabs button:hover {
+  color: rgba(255, 255, 255, .78);
+}
+
+.login-method-tabs button.active {
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 8px 20px rgba(0, 0, 0, .18);
+}
+
+.login-method-tabs button.qq.active,
+.login-method-tabs button.qq_music.active,
+.login-method-tabs button.wechat.active {
+  background: rgba(255, 196, 0, .16);
+  color: #fff2c0;
 }
 
 .login-add-account-panel {

@@ -71,7 +71,6 @@ for (const source of ["remote", "blob"] as const) {
 						return {
 							url: remoteUrl,
 							quality: "standard",
-							proxied: false,
 						};
 					},
 				},
@@ -207,7 +206,6 @@ test("playing checkpoint is consumed once and a later paused reload stays paused
 					return {
 						url: "https://media.example/restored-playing.mp3",
 						quality: "standard",
-						proxied: false,
 					};
 				},
 			},
@@ -379,8 +377,6 @@ for (const restoredPlayback of [
 						return {
 							url: `https://media.example/${track.id}.mp3`,
 							quality: "standard",
-							proxied: false,
-							trial: false,
 						};
 					},
 				},
@@ -626,28 +622,23 @@ test("a newer playback intent for the same track rejects the stale URL result", 
 	const firstUrl = deferred<{
 		url: string;
 		quality: string;
-		proxied: boolean;
-		trial: boolean;
-		loggedIn: boolean;
-		message: string;
 	}>();
 	const secondUrl = deferred<{
 		url: string;
 		quality: string;
-		proxied: boolean;
-		trial: boolean;
-		loggedIn: boolean;
-		message: string;
+		previewRange?: { startMs: number; endMs: number };
 	}>();
 	const loadedUrls: string[] = [];
 	let playCount = 0;
 	let resolveCount = 0;
+	let lastLoadContext: object | null = null;
 	const runtimeRef: { current: PlaybackSessionRuntimeResult | null } = {
 		current: null,
 	};
 	const controller = {
-		load(url: string) {
+		load(url: string, loadContext?: object) {
 			loadedUrls.push(url);
+			lastLoadContext = loadContext ?? null;
 		},
 		seek() {},
 		async play() {
@@ -726,10 +717,6 @@ test("a newer playback intent for the same track rejects the stale URL result", 
 	firstUrl.resolve({
 		url: "https://media.example/stale-intent.mp3",
 		quality: "standard",
-		proxied: false,
-		trial: true,
-		loggedIn: false,
-		message: "stale intent banner",
 	});
 	await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -740,10 +727,7 @@ test("a newer playback intent for the same track rejects the stale URL result", 
 	secondUrl.resolve({
 		url: "https://media.example/current-intent.mp3",
 		quality: "standard",
-		proxied: false,
-		trial: true,
-		loggedIn: false,
-		message: "current intent banner",
+		previewRange: { startMs: 0, endMs: 30000 },
 	});
 	for (let i = 0; i < 8 && playCount < 1; i += 1) {
 		await new Promise((resolve) => setTimeout(resolve, 0));
@@ -751,7 +735,6 @@ test("a newer playback intent for the same track rejects the stale URL result", 
 
 	expect(loadedUrls).toEqual(["https://media.example/current-intent.mp3"]);
 	expect(playCount).toBe(1);
-	expect(runtimeRef.current?.trialBanner?.text).toBe("current intent banner");
 
 	root.unmount();
 	host.remove();
@@ -784,7 +767,6 @@ test("a quality change claims a new load in the current playback intent", async 
 					return {
 						url: `https://media.example/quality-${quality}.mp3`,
 						quality,
-						proxied: false,
 					};
 				},
 			},
@@ -1089,7 +1071,6 @@ test("lifecycle handlers forward only the authoritative load and end it once", a
 					return {
 						url: `https://media.example/lifecycle-${resolveCount}.mp3`,
 						quality: "standard",
-						proxied: false,
 					};
 				},
 			},
@@ -1287,7 +1268,6 @@ test("single-mode ended starts exactly one replacement load and play", async () 
 					return {
 						url: `https://media.example/single-${resolveCount}.mp3`,
 						quality: "standard",
-						proxied: false,
 					};
 				},
 			},
@@ -1440,7 +1420,6 @@ test("the playback session publishes fallback lyrics before loading and resuming
 					return {
 						url: "https://media.example/session-1.mp3",
 						quality: "standard",
-						proxied: false,
 					};
 				},
 			},
@@ -1511,7 +1490,7 @@ test("the playback session publishes fallback lyrics before loading and resuming
 	expect(lyricPayloads[0]?.trackId).toBe("session-1");
 	expect(lyricPayloads[0]?.lines[0]?.text).toBe("Session Song - Session Artist");
 	expect(events).toEqual([
-		`load:http://127.0.0.1/audio-proxy?url=${encodeURIComponent("https://media.example/session-1.mp3")}`,
+		"load:https://media.example/session-1.mp3",
 		"seek:1234",
 		"play",
 		"home-forced:false",
@@ -1544,7 +1523,6 @@ test("a controller load failure marks the accepted source as terminally failed",
 					return {
 						url: "https://media.example/load-failure.mp3",
 						quality: "standard",
-						proxied: false,
 					};
 				},
 			},
@@ -1639,7 +1617,6 @@ test("a controller play rejection marks the accepted source as terminally failed
 					return {
 						url: "https://media.example/play-failure.mp3",
 						quality: "standard",
-						proxied: false,
 					};
 				},
 			},
@@ -1731,7 +1708,6 @@ test("a stale lyric response cannot replace the next track fallback", async () =
 					return {
 						url: `https://media.example/${track.id}.mp3`,
 						quality: "standard",
-						proxied: false,
 					};
 				},
 			},
@@ -1814,7 +1790,6 @@ test("old controller events stay silent while the next track URL is pending", as
 	const pendingSecondUrl = deferred<{
 		url: string;
 		quality: string;
-		proxied: boolean;
 	}>();
 	const secondTrack: Track = {
 		...TRACK,
@@ -1855,7 +1830,6 @@ test("old controller events stay silent while the next track URL is pending", as
 					return {
 						url: `https://media.example/${track.id}.mp3`,
 						quality: "standard",
-						proxied: false,
 					};
 				},
 			},
@@ -1977,7 +1951,6 @@ test("native events are accepted only after currentSrc matches the newly loaded 
 	const recoveryUrl = deferred<{
 		url: string;
 		quality: string;
-		proxied: boolean;
 	}>();
 	const secondTrack: Track = {
 		...TRACK,
@@ -2002,7 +1975,6 @@ test("native events are accepted only after currentSrc matches the newly loaded 
 					return {
 						url: `https://media.example/${track.id}.mp3`,
 						quality: "standard",
-						proxied: false,
 					};
 				},
 			},
@@ -2120,7 +2092,6 @@ test("native events are accepted only after currentSrc matches the newly loaded 
 	recoveryUrl.resolve({
 		url: "https://media.example/session-bound-recovery.mp3",
 		quality: "standard",
-		proxied: false,
 	});
 	await new Promise((resolve) => setTimeout(resolve, 0));
 	for (const off of unsubscribe) off();
@@ -2154,8 +2125,6 @@ test("media error 与 stalled 共用一次 fresh URL recovery 预算", async () 
 					return {
 						url: `https://media.example/recovery-${resolveCount}.mp3`,
 						quality: "standard",
-						proxied: false,
-						trial: false,
 					};
 				},
 			},
@@ -2281,10 +2250,7 @@ test("a trial media error clears the banner without resolving another source", a
 					return {
 						url: "https://media.example/trial.mp3",
 						quality: "standard",
-						proxied: false,
-						trial: true,
-						loggedIn: false,
-						message: "当前未登录 · 仅播放试听片段",
+						previewRange: { startMs: 0, endMs: 30_000 },
 					};
 				},
 			},
@@ -2344,11 +2310,17 @@ test("a trial media error clears the banner without resolving another source", a
 	document.body.appendChild(host);
 	const root = createRoot(host);
 	flushSync(() => root.render(<Harness />));
-	for (let i = 0; i < 8 && (loadCount < 1 || !runtimeRef.current?.trialBanner); i += 1) {
+	for (let i = 0; i < 8 && loadCount < 1; i += 1) {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 	}
 
-	expect(runtimeRef.current?.trialBanner?.text).toBe("当前未登录 · 仅播放试听片段");
+	// 预置一个横幅（模拟测量确认后的状态），验证媒体错误会清掉它
+	runtimeRef.current?.setTrialBanner({
+		text: "此歌曲为试听片段 · 完整版需要会员",
+		provider: "netease",
+		showLogin: false,
+	});
+
 	runtimeRef.current!.handleRuntimeError(errorEventPayload(
 		loadedContext,
 		"trial media failed",
@@ -2627,8 +2599,6 @@ test("gapless 预加载只准备下一 deck，queue 变化立即收回且不改�
 					return {
 						url: `https://media.example/${track.id}.mp3`,
 						quality: "standard",
-						proxied: false,
-						trial: false,
 					};
 				},
 			},
@@ -2816,8 +2786,6 @@ test("prepared handoff 采用已播放 deck 且不二次 songUrl、load 或 play
 					return {
 						url: `https://media.example/${track.id}.mp3`,
 						quality: "standard",
-						proxied: false,
-						trial: false,
 					};
 				},
 			},
@@ -2983,8 +2951,6 @@ test("新手动 intent 会取消迟到的 gapless candidate 预加载", async ()
 	const pendingCandidate = deferred<{
 		url: string;
 		quality: string;
-		proxied: boolean;
-		trial: boolean;
 	}>();
 	const loads: string[] = [];
 	let firstResolveCount = 0;
@@ -3020,8 +2986,6 @@ test("新手动 intent 会取消迟到的 gapless candidate 预加载", async ()
 					return {
 						url: `https://media.example/manual-first-${firstResolveCount}.mp3`,
 						quality: "standard",
-						proxied: false,
-						trial: false,
 					};
 				},
 			},
@@ -3108,8 +3072,6 @@ test("新手动 intent 会取消迟到的 gapless candidate 预加载", async ()
 	pendingCandidate.resolve({
 		url: "https://media.example/manual-second-late.mp3",
 		quality: "standard",
-		proxied: false,
-		trial: false,
 	});
 	for (
 		let i = 0;

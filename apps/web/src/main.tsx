@@ -56,7 +56,7 @@ async function createApplicationRoot(): Promise<React.ReactNode> {
 	try {
 		updateRuntime = await createTauriUpdateRuntimePort();
 	} catch (error) {
-		// 更新链故障不得阻止播放器、离线能力或 frozen Sidecar 启动。
+		// 更新链故障不得阻止播放器、离线能力或运行时启动。
 		console.warn("updater bootstrap failed; continuing with updates disabled", error);
 		updateRuntime = createDisabledUpdateRuntimePort();
 	}

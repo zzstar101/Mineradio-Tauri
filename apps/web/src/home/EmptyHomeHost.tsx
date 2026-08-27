@@ -1,12 +1,33 @@
 import { useState, type CSSProperties, type KeyboardEvent, type ReactElement } from "react";
-import type { DiscoverHomeResponse, PlaylistSummary, PodcastRadio, ProviderId, Track, WeatherRadioResponse } from "@mineradio/shared";
+import type {
+	DiscoverHomeResponse,
+	PlaylistSummary,
+	PodcastRadio,
+	ProviderId,
+	RecommendationCard as RecommendationCardData,
+	RecommendationPage,
+	Track,
+	WeatherRadioResponse,
+} from "@mineradio/shared";
 import { resolveVirtualListWindow } from "../components/shell/virtual-list";
 import { HomeDashboardHero } from "../features/home/HomeDashboardHero";
+import { buildHomeRecommendationPreviews } from "../features/home/home-recommendation-preview-policy";
+import { HOME_PROVIDER_LABELS } from "../features/home/home-provider-labels";
+import { RecommendationCard as RecommendationCardView } from "../features/recommendation/RecommendationCard";
+import { RecommendationPage as RecommendationPageScreen } from "../features/recommendation/RecommendationPage";
+import {
+	chunkIntoColumns,
+	type RecommendationDetail,
+} from "../features/recommendation/recommendation-page-policy";
 import {
 	buildHomeDashboardModel,
 	type HomeDashboardModel,
 } from "../features/home/home-dashboard-policy";
 import type { HomeHeroVideoRepository } from "../features/home/home-hero-video";
+import {
+	HOME_PLAYLIST_LOAD_MORE_THRESHOLD_PX,
+	HOME_PLAYLIST_SKELETON_COUNT,
+} from "../features/home/home-playlist-paging";
 import type {
 	HomeListenRecord,
 	HomeListenSummary,
@@ -19,13 +40,16 @@ export type {
 
 export interface EmptyHomeHostProps {
 	discover?: DiscoverHomeResponse | null;
+	recommendations?: RecommendationPage[] | null;
 	weatherRadio?: WeatherRadioResponse | null;
 	listenSummary?: HomeListenSummary | null;
 	dashboard?: HomeDashboardModel | null;
 	playlistDetail?: HomePlaylistDetailView | null;
+	recommendationDetail?: RecommendationDetail | null;
 	active?: boolean;
 	loading?: boolean;
 	discoverError?: string | null;
+	recommendationsError?: string | null;
 	weatherRadioError?: string | null;
 	isPlaying?: boolean;
 	positionMs?: number;
@@ -50,9 +74,16 @@ export interface EmptyHomeHostProps {
 	onPlayForYou?: (index: number) => void;
 	onPlayWeatherSong?: (index: number) => void;
 	onRetryDiscover?: () => void;
+	onRetryRecommendations?: () => void;
 	onRetryWeatherRadio?: () => void;
 	onClosePlaylistDetail?: () => void;
 	onPlayPlaylistDetail?: (index: number) => void;
+	onLoadMorePlaylistDetails?: () => void;
+	onOpenRecommendations?: (provider: ProviderId) => void;
+	onCloseRecommendations?: () => void;
+	onPlayRecommendationTrack?: (provider: ProviderId, card: RecommendationCardData) => void;
+	onOpenRecommendationPlaylist?: (provider: ProviderId, card: RecommendationCardData) => void;
+	onPlayRecommendationStream?: (provider: ProviderId, card: RecommendationCardData) => void;
 	onPlaylistDetailArtist?: (artist: string, track: Track) => void;
 	onNotice?: (message: string) => void;
 	heroVideoRepository?: HomeHeroVideoRepository;
@@ -64,6 +95,10 @@ export interface HomePlaylistDetailView {
 	tracks: Track[];
 	loading?: boolean;
 	error?: string;
+	/** 正在拉取下一页（分页懒加载）。 */
+	loadingMore?: boolean;
+	/** 没有更多页了。 */
+	exhausted?: boolean;
 }
 
 interface HomeWaveBar {
@@ -80,12 +115,6 @@ const HOME_WAVE_BAR_COUNT = 24;
 const HOME_RAIL_MAX_TILES = 32;
 const HOME_RAIL_PRIMARY_SONG_COUNT = 4;
 const HOME_PROVIDER_ORDER: ProviderId[] = ["netease", "qq", "soda"];
-
-const HOME_PROVIDER_LABELS: Record<ProviderId, string> = {
-	netease: "网易云音乐",
-	qq: "QQ音乐",
-	soda: "汽水音乐",
-};
 
 const STARTER_TILES = [
 	{ kind: "login", tone: "library", title: "登录同步歌单", sub: "网易云 / QQ 音乐", action: "Login" },
@@ -471,7 +500,10 @@ function HomePlaylistDetailPage({
 		rowHeight: HOME_DETAIL_ROW_HEIGHT,
 		viewportHeight: HOME_DETAIL_VIEWPORT_HEIGHT,
 		scrollTop,
-		threshold: 80,
+		// 本列表为 flex gap 布局、行高非固定，padding 型虚拟化在 80 行阈值
+		// 边界与深滚动下会严重错位（表现为列表塌缩成一个渲染窗口）。
+		// 分页后已载行数有限，直接全量渲染，停用虚拟化。
+		threshold: Number.MAX_SAFE_INTEGER,
 	});
 	const visibleTracks = tracks.slice(
 		virtualWindow.startIndex,
@@ -530,46 +562,84 @@ function HomePlaylistDetailPage({
 					className="home-detail-list"
 					aria-label="Playlist tracks"
 					data-virtualized={virtualWindow.virtualized ? "true" : undefined}
-					onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+					data-loading-more={detail.loadingMore ? "true" : undefined}
+					onScroll={(event) => {
+						const el = event.currentTarget;
+						setScrollTop(el.scrollTop);
+						if (
+							!detail.loading &&
+							!detail.loadingMore &&
+							!detail.exhausted &&
+							el.scrollHeight - el.scrollTop - el.clientHeight <
+								HOME_PLAYLIST_LOAD_MORE_THRESHOLD_PX
+						) {
+							props.onLoadMorePlaylistDetails?.();
+						}
+					}}
 					style={virtualStyle}
 				>
 					{detail.loading ? (
 						<div className="home-detail-empty">正在载入歌单</div>
 					) : tracks.length === 0 ? (
 						<div className="home-detail-empty">{detail.error || "歌单暂无可播放歌曲"}</div>
-					) : visibleTracks.map((track, localIndex) => {
-						const index = virtualWindow.startIndex + localIndex;
-						const artist = artistLine(track, "未知歌手");
-						return (
-							<div
-								className="home-detail-track"
-								data-home-detail-track={index}
-								key={homeDetailTrackKey(track, index)}
-								onClick={() => props.onPlayPlaylistDetail?.(index)}
-								onKeyDown={(event) => handleDetailTrackKeyDown(event, () => props.onPlayPlaylistDetail?.(index))}
-								role="button"
-								tabIndex={0}
-							>
-								<div className="home-detail-track-index">{String(index + 1).padStart(2, "0")}</div>
-								<div className="home-detail-track-main">
-									<div className={`home-detail-track-cover${track.coverUrl ? " has-cover" : ""}`} style={coverStyle(track.coverUrl)} />
-									<div className="home-detail-track-text">
-										<div className="home-detail-track-title">{track.title || "未命名歌曲"}</div>
-										<div className="home-detail-track-sub">
-											<button className="home-detail-artist" type="button" onClick={(event) => {
-												event.stopPropagation();
-												props.onPlaylistDetailArtist?.(artist, track);
-											}}>{artist}</button>
+					) : (
+						<>
+							{visibleTracks.map((track, localIndex) => {
+								const index = virtualWindow.startIndex + localIndex;
+								const artist = artistLine(track, "未知歌手");
+								return (
+									<div
+										className="home-detail-track"
+										data-home-detail-track={index}
+										key={homeDetailTrackKey(track, index)}
+										onClick={() => props.onPlayPlaylistDetail?.(index)}
+										onKeyDown={(event) => handleDetailTrackKeyDown(event, () => props.onPlayPlaylistDetail?.(index))}
+										role="button"
+										tabIndex={0}
+									>
+										<div className="home-detail-track-index">{String(index + 1).padStart(2, "0")}</div>
+										<div className="home-detail-track-main">
+											<div className={`home-detail-track-cover${track.coverUrl ? " has-cover" : ""}`} style={coverStyle(track.coverUrl)} />
+											<div className="home-detail-track-text">
+												<div className="home-detail-track-title">{track.title || "未命名歌曲"}</div>
+												<div className="home-detail-track-sub">
+													<button className="home-detail-artist" type="button" onClick={(event) => {
+														event.stopPropagation();
+														props.onPlaylistDetailArtist?.(artist, track);
+													}}>{artist}</button>
+												</div>
+											</div>
+										</div>
+										<div className="home-detail-track-album">{track.album || "-"}</div>
+										<div className="home-detail-track-side">
+											<span>{formatDurationMs(track.durationMs)}</span>
 										</div>
 									</div>
-								</div>
-								<div className="home-detail-track-album">{track.album || "-"}</div>
-								<div className="home-detail-track-side">
-									<span>{formatDurationMs(track.durationMs)}</span>
-								</div>
-							</div>
-						);
-					})}
+								);
+							})}
+							{!detail.exhausted
+								? Array.from({ length: HOME_PLAYLIST_SKELETON_COUNT }, (_, skeletonIndex) => (
+									<div
+										className="home-detail-track home-detail-track-skeleton"
+										aria-hidden="true"
+										key={`skeleton-${skeletonIndex}`}
+									>
+										<div className="home-detail-track-index">{String(tracks.length + skeletonIndex + 1).padStart(2, "0")}</div>
+										<div className="home-detail-track-main">
+											<div className="home-detail-track-cover" />
+											<div className="home-detail-track-text">
+												<div className="home-detail-skeleton-bar home-detail-skeleton-title" />
+												<div className="home-detail-skeleton-bar home-detail-skeleton-sub" />
+											</div>
+										</div>
+										<div className="home-detail-track-album">
+											<div className="home-detail-skeleton-bar home-detail-skeleton-album" />
+										</div>
+									</div>
+								))
+								: null}
+						</>
+					)}
 				</div>
 			</div>
 		</section>
@@ -577,8 +647,13 @@ function HomePlaylistDetailPage({
 }
 
 export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
+	// 歌单详情优先于推荐页：在推荐页里点歌单卡片时，
+	// recommendationDetail 仍然非空，若它先行判断会永远挡住详情页。
 	if (props.playlistDetail) {
 		return <HomePlaylistDetailPage props={props} detail={props.playlistDetail} />;
+	}
+	if (props.recommendationDetail) {
+		return <RecommendationPageScreen props={props} detail={props.recommendationDetail} />;
 	}
 
 	const discover = props.discover ?? null;
@@ -604,6 +679,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 		dashboard,
 	);
 	const railSections = buildHomeRailSections(tiles, loggedOut);
+	const recommendationPreviews = buildHomeRecommendationPreviews(props.recommendations ?? []);
 	const loading = props.loading === true;
 	const hasPublicRecommendations = loggedOut && (discover?.playlists.length ?? 0) > 0;
 	const libraryCover = firstPlaylist?.coverUrl || daily?.coverUrl;
@@ -623,6 +699,73 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 		else if (dashboard.continue.kind === "daily") props.onPlayDaily?.();
 		else props.onPlayRecent?.();
 	};
+	const recommendationPreviewNodes = recommendationPreviews.length ? (
+		<div className="home-recommendation-previews" aria-label="Provider recommendations">
+			{recommendationPreviews.map((preview) => (
+				<section
+					className="home-rail-section"
+					data-home-provider={preview.provider}
+					data-home-recommendation-preview={preview.provider}
+					key={`recommendation-${preview.provider}`}
+				>
+					<div className="home-rail-section-head">
+						<button
+							className="home-rail-section-title home-recommendation-module-title"
+							type="button"
+							onClick={() => props.onOpenRecommendations?.(preview.provider)}
+						>
+							{HOME_PROVIDER_LABELS[preview.provider]}
+							{preview.title.trim() ? ` · ${preview.title}` : null}
+						</button>
+					</div>
+					{preview.kind === "track" ? (
+						<div className="home-recommendation-track-row">
+							{chunkIntoColumns(preview.cards, 3).map((column, columnIndex) => (
+								<div
+									className="home-recommendation-track-column"
+									key={`${preview.provider}-column-${columnIndex}`}
+								>
+									{column.map((card, index) => (
+										<RecommendationCardView
+											key={`${preview.provider}-${card.id}-${index}`}
+											provider={preview.provider}
+											moduleKind={preview.kind}
+											card={card}
+											index={index}
+											onPlayTrack={props.onPlayRecommendationTrack}
+											onOpenPlaylist={props.onOpenRecommendationPlaylist}
+											onPlayStream={props.onPlayRecommendationStream}
+										/>
+									))}
+								</div>
+							))}
+						</div>
+					) : (
+						<div
+							className={
+								preview.kind === "mixed" && preview.provider === "netease"
+									? "home-recommendation-netease-mixed-row"
+									: "home-recommendation-tile-row"
+							}
+						>
+							{preview.cards.map((card, index) => (
+								<RecommendationCardView
+									key={`${preview.provider}-${card.id}-${index}`}
+									provider={preview.provider}
+									moduleKind={preview.kind}
+									card={card}
+									index={index}
+									onPlayTrack={props.onPlayRecommendationTrack}
+									onOpenPlaylist={props.onOpenRecommendationPlaylist}
+									onPlayStream={props.onPlayRecommendationStream}
+								/>
+							))}
+						</div>
+					)}
+				</section>
+			))}
+		</div>
+	) : null;
 
 	return (
 		<section id="empty-home" aria-label="Mineradio home">
@@ -637,12 +780,18 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 				</div>
 
 				<div className="home-right-pane">
-					{props.discoverError || props.weatherRadioError ? (
+					{props.discoverError || props.recommendationsError || props.weatherRadioError ? (
 						<div className="home-local-errors" aria-label="首页载入状态">
 							{props.discoverError ? (
 								<div className="home-local-error" role="status" data-home-error="discover">
 									<span>推荐内容载入失败：{props.discoverError}</span>
 									<button type="button" onClick={props.onRetryDiscover}>重试推荐</button>
+								</div>
+							) : null}
+							{props.recommendationsError ? (
+								<div className="home-local-error" role="status" data-home-error="recommendations">
+									<span>推荐预览载入失败：{props.recommendationsError}</span>
+									<button type="button" onClick={props.onRetryRecommendations}>重试推荐</button>
 								</div>
 							) : null}
 							{props.weatherRadioError ? (
@@ -653,6 +802,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 							) : null}
 						</div>
 					) : null}
+					{recommendationPreviewNodes}
 					<div className="home-insight-dock" aria-label="今日收听概览">
 						<div className="home-insight-item"><span>今日</span><strong>{Math.round(dashboard.insight.todayListenMs / 60_000)} 分钟</strong></div>
 						<div className="home-insight-item"><span>歌曲</span><strong>{dashboard.insight.todayUniqueSongs} 首</strong></div>

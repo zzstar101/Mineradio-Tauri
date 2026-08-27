@@ -517,7 +517,7 @@ mod tests {
         let expected_identity = artifact.identity().clone();
 
         for unsafe_argument in [
-            "--sidecar-runtime-probe-test-child",
+            "--runtime-probe-test-child",
             "/S",
             "--arbitrary=manifest-controlled",
         ] {

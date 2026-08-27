@@ -86,6 +86,11 @@ test("MusicServices keeps feature calls behind narrow ports", async () => {
 		discover: {
 			weatherRadio: unused,
 			discoverHome: unused,
+			recommendationPages: unused,
+			streamNext: async (provider, id) => {
+				calls.push(`stream-next:${provider}:${id}`);
+				return track;
+			},
 			podcastDetail: unused,
 			podcastMy: unused,
 			podcastMyItems: unused,
@@ -97,11 +102,13 @@ test("MusicServices keeps feature calls behind narrow ports", async () => {
 	await services.search.searchAll("测试", 18);
 	await services.lyrics.lyric(track);
 	await services.library.playlistDetail("netease", "playlist-1");
+	await services.discover.streamNext("qq", "22000");
 
 	expect(calls).toEqual([
 		"search:netease:测试:12",
 		"search-all:测试:18:all",
 		"lyric:track-1",
 		"playlist:netease:playlist-1",
+		"stream-next:qq:22000",
 	]);
 });

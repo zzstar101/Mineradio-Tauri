@@ -27,7 +27,6 @@ import {
 const sourceRoot = fileURLToPath(new URL("../../apps/desktop/src-tauri/src/", import.meta.url));
 const frozenContractSources = [
 	"app/state.rs",
-	"sidecar.rs",
 	"db.rs",
 	"runtime/updater/mod.rs",
 	"runtime/hotkeys.rs",

@@ -1,101 +1,64 @@
 import { expect, test } from "bun:test";
-import { PlaybackQualitySchema, SongUrlRequestSchema, SongUrlResultSchema, TrackQualityAvailabilitySchema } from "./song-url";
+import {
+	PlaybackQualitySchema,
+	SongUrlRequestSchema,
+	SongUrlResultSchema,
+	TrackQualityAvailabilitySchema,
+} from "./song-url";
 
-test("SongUrlResultSchema parses a valid url result", () => {
+test("SongUrlResultSchema parses the slimmed url result", () => {
 	const parsed = SongUrlResultSchema.parse({
 		url: "https://example.com/audio.mp3",
-		proxied: true,
-		level: "hires",
 		quality: "高清臻音",
-		br: 1999000,
-		requestedQuality: "hires",
-		provider: "netease",
-		trial: true,
-		playable: true,
-		loggedIn: false,
-		vipLevel: "none",
-		reason: "trial_only",
-		message: "当前未登录 · 仅播放试听片段",
-		restriction: {
-			provider: "netease",
-			category: "trial_only",
-			action: "upgrade",
-			message: "网易云仅返回试听片段，完整播放需要会员或购买",
-			code: 200,
-			fee: 8,
-		},
+		expiresAt: "2026-08-26T12:00:00Z",
+		previewRange: { startMs: 0, endMs: 30_000 },
 	});
 	expect(parsed.url).toBe("https://example.com/audio.mp3");
-	expect(parsed.proxied).toBe(true);
-	expect(parsed.level).toBe("hires");
 	expect(parsed.quality).toBe("高清臻音");
-	expect(parsed.br).toBe(1999000);
-	expect(parsed.requestedQuality).toBe("hires");
-	expect(parsed.trial).toBe(true);
-	expect(parsed.playable).toBe(true);
-	expect(parsed.restriction?.category).toBe("trial_only");
+	expect(parsed.previewRange?.endMs).toBe(30_000);
+});
+
+test("SongUrlResultSchema accepts url without optional fields", () => {
+	const parsed = SongUrlResultSchema.parse({
+		url: "https://example.com/audio.flac",
+	});
+	expect(parsed.url).toBe("https://example.com/audio.flac");
+	expect(parsed.previewRange).toEqual(undefined);
+	expect(parsed.expiresAt).toEqual(undefined);
 });
 
 test("SongUrlResultSchema rejects missing url", () => {
-	const result = SongUrlResultSchema.safeParse({ proxied: false });
+	const result = SongUrlResultSchema.safeParse({});
 	expect(result.success).toBe(false);
 });
 
-test("SongUrlResultSchema accepts baseline restriction-only playback metadata", () => {
-	const parsed = SongUrlResultSchema.parse({
-		url: null,
-		proxied: false,
-		provider: "qq",
-		playable: false,
-		playbackKeyReady: false,
-		reason: "login_required",
-		message: "QQ 音乐当前只拿到了网页登录状态，还缺少播放授权",
-		restriction: {
-			provider: "qq",
-			category: "login_required",
-			action: "login",
-			message: "QQ 音乐当前只拿到了网页登录状态，还缺少播放授权",
-			code: 104003,
-			rawMessage: "no vkey",
-			missingPlaybackKey: true,
-		},
-		qqCode: 104003,
-		rawMessage: "no vkey",
-		tried: ["无损 FLAC · F000abc.flac"],
-	});
-
-	expect(parsed.url).toBe(null);
-	expect(parsed.playable).toBe(false);
-	expect(parsed.restriction?.missingPlaybackKey).toBe(true);
+test("SongUrlResultSchema rejects wrong previewRange shape", () => {
+	expect(
+		SongUrlResultSchema.safeParse({
+			url: "https://example.com/a.mp3",
+			previewRange: { startMs: "0", endMs: 30_000 },
+		}).success,
+	).toBe(false);
+	expect(
+		SongUrlResultSchema.safeParse({
+			url: "https://example.com/a.mp3",
+			previewRange: { startMs: 0, duration: 30_000 },
+		}).success,
+	).toBe(false);
 });
 
-test("PlaybackRestrictionSchema strips unexpected provider fields at the API boundary", () => {
+test("SongUrlResultSchema strips unexpected provider fields at the API boundary", () => {
+	// 安全性：上游塞进来的多余字段（含敏感内容）必须在边界剥离
 	const parsed = SongUrlResultSchema.parse({
-		url: null,
-		proxied: false,
-		provider: "qq",
-		playable: false,
-		restriction: {
-			provider: "qq",
-			category: "login_required",
-			action: "login",
-			message: "需要登录后播放",
-			cookie: "qqmusic_key=secret",
-		},
+		url: "https://example.com/a.mp3",
+		cookie: "qqmusic_key=secret",
+		vipLevel: "svip",
+		message: "internal detail",
 	});
 
 	expect(JSON.stringify(parsed)).not.toContain("qqmusic_key");
-	expect(JSON.stringify(parsed)).not.toContain("cookie");
-});
-
-test("SongUrlResultSchema rejects missing proxied flag", () => {
-	const result = SongUrlResultSchema.safeParse({ url: "https://example.com/a.mp3" });
-	expect(result.success).toBe(false);
-});
-
-test("SongUrlResultSchema rejects wrong proxied type", () => {
-	const result = SongUrlResultSchema.safeParse({ url: "https://example.com/a.mp3", proxied: "yes" });
-	expect(result.success).toBe(false);
+	expect(JSON.stringify(parsed)).not.toContain("secret");
+	expect(JSON.stringify(parsed)).not.toContain("vipLevel");
 });
 
 test("PlaybackQualitySchema normalizes baseline aliases and rejects unknown quality", () => {

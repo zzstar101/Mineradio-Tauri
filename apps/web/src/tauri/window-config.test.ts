@@ -31,7 +31,8 @@ test("production CSP allows required desktop runtime sources", () => {
 	expect(csp).toContain("https://*.y.qq.com");
 	expect(csp).toContain("https://*.douyinpic.com");
 	expect(mediaDirective).toContain("http://mineradio-wallpaper.localhost");
-	expect(mediaDirective).toContain("http://127.0.0.1:*");
+	// sidecar 进程已移除：媒体经 mineradio-tauri: 自定义协议，不再允许裸 127.0.0.1 回环。
+	expect(mediaDirective).not.toContain("http://127.0.0.1:*");
 	expect(devCsp).toContain("http://*.y.qq.com");
 	expect(devCsp).toContain("https://*.y.qq.com");
 	expect(devCsp).toContain("https://*.douyinpic.com");

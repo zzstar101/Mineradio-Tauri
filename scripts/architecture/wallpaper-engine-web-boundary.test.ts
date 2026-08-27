@@ -57,5 +57,6 @@ test("M7 registered media origin is admitted only by image and media CSP directi
 		expect(mediaDirective).toContain("http://mineradio-wallpaper.localhost");
 		expect(connectDirective).not.toContain("mineradio-wallpaper.localhost");
 	}
-	expect(config.bundle.externalBin).toEqual(["binaries/mineradio-sidecar-api"]);
+	// sidecar HTTP 服务退役后 externalBin 保持为空
+	expect(config.bundle.externalBin).toEqual([]);
 });

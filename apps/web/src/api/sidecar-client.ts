@@ -3,8 +3,6 @@ import {
 	ApiSuccessSchema,
 	CapabilityMatrixSchema,
 	CapabilityMatrix,
-	HealthResponse,
-	HealthResponseSchema,
 	LyricPayloadSchema,
 	PlaylistDetailSchema,
 	PlaylistSummary,
@@ -28,6 +26,7 @@ import {
 	DiscoverHomeResponse,
 	DiscoverHomeResponseSchema,
 	ProviderId,
+	QrLoginKind,
 	ProviderLoginQrCheck,
 	ProviderLoginQrCheckSchema,
 	ProviderLoginQrImage,
@@ -40,6 +39,8 @@ import {
 	ProviderLoginStatusSchema,
 	ProviderLogoutAck,
 	ProviderLogoutAckSchema,
+	RecommendationPage,
+	RecommendationPageArraySchema,
 	SharedPlaylistImportRequest,
 	SharedPlaylistImportResult,
 	SharedPlaylistImportResultSchema,
@@ -49,6 +50,7 @@ import {
 	SongLikeCheckAckSchema,
 	TrackQualityAvailability,
 	TrackQualityAvailabilitySchema,
+	TrackSchema,
 	SongUrlResultSchema,
 	WeatherRadioResponse,
 	WeatherRadioResponseSchema,
@@ -60,6 +62,8 @@ import {
 	SongUrlResult,
 	type ZodTypeLike,
 } from "@mineradio/shared";
+import { invokeTauriCommand } from "../tauri/runtime";
+
 
 export interface SidecarClientErrorInit {
 	code: string;
@@ -105,30 +109,6 @@ export class SidecarClientError extends Error {
 
 const CapabilitySuccessEnvelopeSchema = ApiSuccessSchema(CapabilityMatrixSchema);
 
-type FetchImpl = typeof fetch;
-
-function defaultFetchImpl(): FetchImpl {
-	return globalThis.fetch.bind(globalThis) as FetchImpl;
-}
-
-function normalizeFetchError(err: unknown): never {
-	const rawMessage = err instanceof Error ? err.message : String(err);
-	throw new SidecarClientError({
-		code: "NETWORK",
-		message: "sidecar 连接失败，请稍后重试",
-		retryable: true,
-		rawMessage,
-	});
-}
-
-async function readJsonSafely(res: Response): Promise<unknown | null> {
-	try {
-		return await res.json() as unknown;
-	} catch {
-		return null;
-	}
-}
-
 function throwFailureEnvelope(json: unknown): never | void {
 	const failure = ApiFailureSchema.safeParse(json);
 	if (!failure.success) return;
@@ -148,47 +128,15 @@ function throwFailureEnvelope(json: unknown): never | void {
 }
 
 export class SidecarClient {
-	private readonly baseUrl: string;
-	private readonly fetchImpl: FetchImpl;
+	private readonly mediaProxyBase: string;
 
-	constructor(baseUrl: string, fetchImpl: FetchImpl = defaultFetchImpl()) {
-		this.baseUrl = baseUrl.replace(/\/$/, "");
-		this.fetchImpl = fetchImpl;
-	}
-
-	async health(): Promise<HealthResponse> {
-		const res = await this.fetchImpl(`${this.baseUrl}/health`).catch(normalizeFetchError);
-		const json = await readJsonSafely(res);
-		throwFailureEnvelope(json);
-		if (!res.ok) {
-			throw new SidecarClientError({
-				code: `HTTP_${res.status}`,
-				message: `health request failed with status ${res.status}`,
-				retryable: res.status >= 500 || res.status === 429,
-			});
-		}
-		const parsed = HealthResponseSchema.safeParse(json);
-		if (!parsed.success) {
-			throw new SidecarClientError({
-				code: "SCHEMA",
-				message: "health response failed schema validation",
-				retryable: false,
-			});
-		}
-		return parsed.data;
+	constructor(mediaProxyBase = "mineradio-tauri://localhost") {
+		this.mediaProxyBase = mediaProxyBase.replace(/\/$/, "");
 	}
 
 	async capabilities(): Promise<CapabilityMatrix> {
-		const res = await this.fetchImpl(`${this.baseUrl}/providers/capabilities`).catch(normalizeFetchError);
-		const json = await readJsonSafely(res);
+		const json = await this.invokeApiJson("GET", "/providers/capabilities");
 		throwFailureEnvelope(json);
-		if (!res.ok) {
-			throw new SidecarClientError({
-				code: `HTTP_${res.status}`,
-				message: `capabilities request failed with status ${res.status}`,
-				retryable: res.status >= 500 || res.status === 429,
-			});
-		}
 		const envelope = CapabilitySuccessEnvelopeSchema.safeParse(json);
 		if (!envelope.success) {
 			throw new SidecarClientError({
@@ -200,29 +148,27 @@ export class SidecarClient {
 		return envelope.data.data;
 	}
 
+	private async invokeApiJson(
+		method: "GET" | "POST" | "DELETE",
+		path: string,
+		body?: unknown,
+	): Promise<unknown | null> {
+		const tauriResult = await invokeTauriCommand("api_call", { method, path, body: body ?? null });
+		if (tauriResult !== null) {
+			console.log("[api]: ", path, body, tauriResult);
+			return tauriResult;
+		}
+		return tauriResult;
+	}
+
 	private async request<T>(
 		method: "GET" | "POST" | "DELETE",
 		path: string,
 		schema: ZodTypeLike,
 		body?: unknown,
 	): Promise<T> {
-		const init: RequestInit = method === "POST"
-			? {
-					method,
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify(body ?? {}),
-				}
-			: { method };
-		const res = await this.fetchImpl(`${this.baseUrl}${path}`, init).catch(normalizeFetchError);
-		const json = await readJsonSafely(res);
+		const json = await this.invokeApiJson(method, path, body);
 		throwFailureEnvelope(json);
-		if (!res.ok) {
-			throw new SidecarClientError({
-				code: `HTTP_${res.status}`,
-				message: `${method} ${path} failed with status ${res.status}`,
-				retryable: res.status >= 500 || res.status === 429,
-			});
-		}
 		const envelope = ApiSuccessSchema(schema).safeParse(json);
 		if (!envelope.success) {
 			throw new SidecarClientError({
@@ -279,6 +225,17 @@ export class SidecarClient {
 			"GET",
 			"/discover/home",
 			DiscoverHomeResponseSchema,
+		);
+	}
+
+	async recommendationPages(options: { refresh?: boolean } = {}): Promise<RecommendationPage[]> {
+		const query = new URLSearchParams({
+			refresh: String(options.refresh === true),
+		});
+		return this.request(
+			"GET",
+			`/recommendations/pages?${query.toString()}`,
+			RecommendationPageArraySchema,
 		);
 	}
 
@@ -376,23 +333,26 @@ export class SidecarClient {
 	}
 
 	audioProxyUrl(url: string): string {
-		const params = new URLSearchParams({ url });
-		return `${this.baseUrl}/audio-proxy?${params.toString()}`;
+		if (/^https?:\/\//i.test(url)) return url;
+		if (/^(mineradio-tauri:\/\/localhost|https?:\/\/mineradio-tauri\.localhost)(\/|$)/i.test(url)) return url;
+		return `${this.mediaProxyBase}/${url.replace(/^\/+/, "")}`;
 	}
 
 	proxiedUrl(url: string): string {
 		if (/^https?:\/\//i.test(url)) return url;
-		if (url.startsWith("/")) return `${this.baseUrl}${url}`;
-		return new URL(url, `${this.baseUrl}/`).toString();
+		if (/^(mineradio-tauri:\/\/localhost|https?:\/\/mineradio-tauri\.localhost)(\/|$)/i.test(url)) return url;
+		if (url.startsWith("/")) return `${this.mediaProxyBase}${url}`;
+		return `${this.mediaProxyBase}/${url.replace(/^\/+/, "")}`;
 	}
 
 	imageProxyUrl(url: string, cacheBust = false, now = Date.now()): string {
 		if (!url) return "";
 		if (/^data:image\//i.test(url) || /^blob:/i.test(url)) return url;
+		if (/^(mineradio-tauri:\/\/localhost|https?:\/\/mineradio-tauri\.localhost)(\/|$)/i.test(url)) return url;
 		if (!/^https?:\/\//i.test(url)) return "";
 		const params = new URLSearchParams({ url });
 		if (cacheBust) params.set("v", String(now));
-		return `${this.baseUrl}/image-proxy?${params.toString()}`;
+		return `${this.mediaProxyBase}/image-proxy?${params.toString()}`;
 	}
 
 	async lyric(track: Track): Promise<LyricPayload> {
@@ -404,10 +364,20 @@ export class SidecarClient {
 		);
 	}
 
-	async playlistDetail(provider: ProviderId, id: string): Promise<PlaylistDetail> {
+	async playlistDetail(
+		provider: ProviderId,
+		id: string,
+		page?: { offset: number; limit: number },
+	): Promise<PlaylistDetail> {
+		const params = new URLSearchParams();
+		if (page) {
+			params.set("offset", String(page.offset));
+			params.set("limit", String(page.limit));
+		}
+		const query = params.toString();
 		return this.request(
 			"GET",
-			`/providers/${provider}/playlists/${encodeURIComponent(id)}`,
+			`/providers/${provider}/playlists/${encodeURIComponent(id)}${query ? `?${query}` : ""}`,
 			PlaylistDetailSchema,
 		);
 	}
@@ -417,6 +387,16 @@ export class SidecarClient {
 			"GET",
 			`/providers/${provider}/playlists`,
 			PlaylistSummaryArraySchema,
+		);
+	}
+
+	/** 流式电台续拉：POST /providers/:id/stream-next，body { id }，返回一首新 Track */
+	async streamNext(provider: ProviderId, id: string): Promise<Track> {
+		return this.request(
+			"POST",
+			`/providers/${provider}/stream-next`,
+			TrackSchema,
+			{ id },
 		);
 	}
 
@@ -476,16 +456,19 @@ export class SidecarClient {
 		);
 	}
 
-	async createProviderLoginQrKey(provider: ProviderId): Promise<ProviderLoginQrKey> {
+	async createProviderLoginQrKey(provider: ProviderId, kind?: QrLoginKind): Promise<ProviderLoginQrKey> {
+		const params = kind ? new URLSearchParams({ kind }) : new URLSearchParams();
+		const suffix = params.toString() ? `?${params.toString()}` : "";
 		return this.request(
 			"GET",
-			`/providers/${provider}/login-qr-key`,
+			`/providers/${provider}/login-qr-key${suffix}`,
 			ProviderLoginQrKeySchema,
 		);
 	}
 
-	async createProviderLoginQrImage(provider: ProviderId, key: string): Promise<ProviderLoginQrImage> {
+	async createProviderLoginQrImage(provider: ProviderId, key: string, kind?: QrLoginKind): Promise<ProviderLoginQrImage> {
 		const params = new URLSearchParams({ key });
+		if (kind) params.set("kind", kind);
 		return this.request(
 			"GET",
 			`/providers/${provider}/login-qr-create?${params.toString()}`,
@@ -493,8 +476,9 @@ export class SidecarClient {
 		);
 	}
 
-	async checkProviderLoginQr(provider: ProviderId, key: string): Promise<ProviderLoginQrCheck> {
+	async checkProviderLoginQr(provider: ProviderId, key: string, kind?: QrLoginKind): Promise<ProviderLoginQrCheck> {
 		const params = new URLSearchParams({ key });
+		if (kind) params.set("kind", kind);
 		return this.request(
 			"GET",
 			`/providers/${provider}/login-qr-check?${params.toString()}`,
