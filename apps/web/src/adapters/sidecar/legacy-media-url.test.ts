@@ -3,7 +3,7 @@ import { SidecarClient } from "../../api/sidecar-client";
 import { createLegacyMediaUrl } from "./legacy-media-url";
 
 test("legacy media adapter returns byte-for-byte current SidecarClient URLs", () => {
-	const client = new SidecarClient("http://127.0.0.1:39999/");
+	const client = new SidecarClient();
 	const media = createLegacyMediaUrl(client);
 	const remoteAudio = "https://example.com/audio.mp3?token=测试";
 	const relativeAudio = "/providers/soda/audio-proxy?id=track-1";
@@ -26,7 +26,7 @@ test("legacy media adapter returns byte-for-byte current SidecarClient URLs", ()
 });
 
 test("legacy media adapter keeps inline images opaque and rejects unsupported sources", () => {
-	const client = new SidecarClient("http://127.0.0.1:39999/");
+	const client = new SidecarClient();
 	const media = createLegacyMediaUrl(client);
 
 	expect(media.imageSource("data:image/png;base64,abc")).toEqual({

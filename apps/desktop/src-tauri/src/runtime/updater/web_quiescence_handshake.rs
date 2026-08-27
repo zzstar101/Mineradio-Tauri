@@ -546,6 +546,7 @@ mod tests {
             mode: PlaybackCheckpointMode::Loop,
             source_kind: PlaybackCheckpointSourceKind::None,
             restart_restorable: true,
+            stream_source: None,
         }
     }
 

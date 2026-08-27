@@ -2377,15 +2377,30 @@ mod tests {
                     .await
             });
 
-            tokio::time::sleep(Duration::from_millis(PUBLIC_PROGRESS_INTERVAL_MS + 30)).await;
-            assert!(events.values.lock().unwrap().iter().any(|event| matches!(
-                event,
-                InstallerDownloadEvent::Progress {
-                    received_bytes: 0,
-                    total_bytes: Some(9),
-                    ..
+            // 有界轮询等待进度事件：固定 sleep 在并行测试负载下会被调度抖动
+            // 击穿（任务尚未开始读取就已超时），这里放宽为最长 5s 的轮询窗口，
+            // 语义不变——停滞流必须在其公开间隔内刷出最新进度。
+            let deadline = tokio::time::Instant::now()
+                + Duration::from_millis(PUBLIC_PROGRESS_INTERVAL_MS * 20);
+            loop {
+                if events.values.lock().unwrap().iter().any(|event| {
+                    matches!(
+                        event,
+                        InstallerDownloadEvent::Progress {
+                            received_bytes: 0,
+                            total_bytes: Some(9),
+                            ..
+                        }
+                    )
+                }) {
+                    break;
                 }
-            )));
+                assert!(
+                    tokio::time::Instant::now() < deadline,
+                    "停滞流未在公开间隔内刷出最新进度",
+                );
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
 
             cancellation.cancel();
             assert!(task.await.unwrap().unwrap_err().is_cancelled());

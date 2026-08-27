@@ -22,7 +22,7 @@ use crate::{
             FullDesktopError, FullDesktopMode, FullDesktopPhase, FullDesktopRuntimeState,
         },
     },
-    sidecar, AppState,
+    AppState,
 };
 
 pub fn stable_error(error: FullDesktopError) -> String {
@@ -60,7 +60,7 @@ fn record_failure(state: &AppState, operation: &str, error: impl std::fmt::Displ
     let error_code = stable_failure_code(&error.to_string());
     state.diagnostics.record_runtime_error(
         DiagnosticProbeKind::FullDesktop,
-        sidecar::now_ms(),
+        crate::runtime::now_ms(),
         format!("{operation} [{error_code}]"),
     );
 }
@@ -133,7 +133,7 @@ fn record_event(
         phase: phase_name(observation.state.phase).into(),
         reason: reason.into(),
         generation: observation.state.explorer_generation,
-        occurred_at_ms: sidecar::now_ms(),
+        occurred_at_ms: crate::runtime::now_ms(),
         duration_ms,
         error_code,
     });
@@ -679,7 +679,9 @@ pub fn start_explorer_watcher_after_main_window(app: &tauri::AppHandle) {
         return;
     }
     let stop = Arc::new(AtomicBool::new(false));
-    let policy = Arc::new(Mutex::new(ExplorerReconcilePolicy::new(sidecar::now_ms())));
+    let policy = Arc::new(Mutex::new(ExplorerReconcilePolicy::new(
+        crate::runtime::now_ms(),
+    )));
 
     let handle = app.clone();
     let worker_stop = Arc::clone(&stop);
@@ -829,7 +831,7 @@ fn explorer_watcher_loop(
                 )
             })
             .unwrap_or(false);
-        let now_ms = sidecar::now_ms();
+        let now_ms = crate::runtime::now_ms();
         let decision = policy
             .lock()
             .map(|mut policy| policy.poll(now_ms, active))
@@ -983,7 +985,7 @@ fn queue_main_thread_reconcile(
                 state.inner(),
                 &callback_policy,
                 generation,
-                sidecar::now_ms(),
+                crate::runtime::now_ms(),
                 outcome,
             );
         })
@@ -995,7 +997,7 @@ fn queue_main_thread_reconcile(
             state.inner(),
             policy,
             generation,
-            sidecar::now_ms(),
+            crate::runtime::now_ms(),
             ReconcileOutcome::Failure,
         );
         record_reconcile_events(

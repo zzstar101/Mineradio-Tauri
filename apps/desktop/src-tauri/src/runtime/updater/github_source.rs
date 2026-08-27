@@ -4,7 +4,7 @@ use std::{
     io,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, ToSocketAddrs},
     pin::Pin,
-    sync::{Arc, OnceLock},
+    sync::Arc,
     time::Duration,
 };
 
@@ -667,7 +667,7 @@ pub(super) fn build_hardened_github_client(
     total_timeout: Option<Duration>,
     read_timeout: Duration,
 ) -> Result<reqwest::Client, UpdateSourceError> {
-    install_tls_crypto_provider();
+    crate::install_tls_crypto_provider();
     let mut builder = reqwest::Client::builder()
         .https_only(true)
         .redirect(redirect::Policy::none())
@@ -686,13 +686,6 @@ pub(super) fn build_hardened_github_client(
         retryable: false,
         message: "GitHub Update Source 初始化失败".into(),
     })
-}
-
-fn install_tls_crypto_provider() {
-    static TLS_PROVIDER: OnceLock<()> = OnceLock::new();
-    TLS_PROVIDER.get_or_init(|| {
-        let _ = rustls::crypto::ring::default_provider().install_default();
-    });
 }
 
 #[derive(Clone, Copy)]

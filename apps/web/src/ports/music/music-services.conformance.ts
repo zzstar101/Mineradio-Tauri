@@ -40,6 +40,8 @@ export type MusicServiceOperation =
 	| "likes.checkSongLikes"
 	| "discover.weatherRadio"
 	| "discover.discoverHome"
+	| "discover.recommendationPages"
+	| "discover.streamNext"
 	| "discover.podcastDetail"
 	| "discover.podcastMy"
 	| "discover.podcastMyItems"
@@ -177,6 +179,12 @@ export const musicServicesConformanceScenarios: readonly ConformanceScenario[] =
 		invoke: (services) => services.library.playlistDetail("netease", "playlist-1"),
 	},
 	{
+		name: "streamNext preserves provider and stream card id order",
+		operation: "discover.streamNext",
+		expectedArgs: ["qq", "22000"],
+		invoke: (services) => services.discover.streamNext("qq", "22000"),
+	},
+	{
 		name: "importSharedPlaylist preserves the request object",
 		operation: "library.importSharedPlaylist",
 		expectedArgs: [{ text: "https://example.com/shared/playlist" }],
@@ -220,6 +228,12 @@ export const musicServicesConformanceScenarios: readonly ConformanceScenario[] =
 		operation: "discover.discoverHome",
 		expectedArgs: [],
 		invoke: (services) => services.discover.discoverHome(),
+	},
+	{
+		name: "recommendationPages preserves the refresh default",
+		operation: "discover.recommendationPages",
+		expectedArgs: [{}],
+		invoke: (services) => services.discover.recommendationPages(),
 	},
 	{
 		name: "podcastDetail preserves id",
@@ -300,13 +314,13 @@ export function runMusicServicesConformance(
 		});
 	}
 
-	test(`${adapterName}: conformance covers all 28 MusicServices methods`, () => {
+	test(`${adapterName}: conformance covers all 30 MusicServices methods`, () => {
 		const covered = musicServicesConformanceScenarios
 			.map((scenario) => scenario.operation)
 			.sort();
 		const exposed = musicServiceLeafOperations(createHarness({ result: {} }).services);
-		expect(covered.length).toBe(28);
-		expect(new Set(covered).size).toBe(28);
+		expect(covered.length).toBe(30);
+		expect(new Set(covered).size).toBe(30);
 		expect(covered).toEqual(exposed);
 	});
 }

@@ -1,4 +1,4 @@
-use crate::{db, sidecar, AppState};
+use crate::{db, AppState};
 
 /// 返回 SQLite 本地存储的诊断信息。
 ///
@@ -26,12 +26,4 @@ pub fn get_database_status(
 #[tauri::command]
 pub fn get_runtime_config(state: tauri::State<'_, AppState>) -> crate::RuntimeConfig {
     state.config.clone()
-}
-
-#[tauri::command]
-pub fn get_sidecar_status(
-    state: tauri::State<'_, AppState>,
-) -> Result<sidecar::SidecarRuntimeSnapshot, String> {
-    let runtime = state.sidecar.lock().map_err(|e| e.to_string())?;
-    Ok(runtime.snapshot())
 }

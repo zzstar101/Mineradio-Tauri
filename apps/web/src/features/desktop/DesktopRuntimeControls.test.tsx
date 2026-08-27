@@ -75,7 +75,6 @@ function runtimeResult(): DesktopManagementRuntimeResult {
 				probes: [
 					{ kind: "native", status: "healthy", capturedAtMs: 10, value: { pid: 7, workingSetBytes: 8192, privateBytes: 4096 }, message: null, error: null },
 					{ kind: "tray", status: "healthy", capturedAtMs: 10, value: { lifecycle: { phase: "running" }, trayPhase: "ready" }, message: null, error: null },
-					{ kind: "sidecar", status: "healthy", capturedAtMs: 10, value: { phase: "ready", pid: 8 }, message: null, error: null },
 				],
 				recentErrors: [],
 			},

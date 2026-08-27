@@ -36,6 +36,9 @@ function resetStore() {
 		muted: false,
 		mode: "loop",
 		queue: [],
+		streamSource: null,
+		previewRange: null,
+		trialBanner: null,
 		checkpointRestore: null,
 	});
 }

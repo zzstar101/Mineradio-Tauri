@@ -48,10 +48,9 @@ test("M7 shutdown and passive mode stop Wallpaper Engine after Full Desktop roll
 	const cleanup = desktop.slice(desktop.indexOf("pub fn cleanup_runtime_once"));
 	const fullDesktopIndex = cleanup.indexOf("recover_before_exit");
 	const wallpaperIndex = cleanup.indexOf("dispose_before_exit");
-	const sidecarIndex = cleanup.indexOf("sidecar_runtime_mark_stopped");
+	// sidecar 清理已随 rust-crate 迁移移除；壁纸销毁仍必须晚于 Full Desktop 回滚
 	expect(fullDesktopIndex).toBeGreaterThanOrEqual(0);
 	expect(wallpaperIndex).toBeGreaterThan(fullDesktopIndex);
-	expect(sidecarIndex).toBeGreaterThan(wallpaperIndex);
 	const setMode = fullDesktop.slice(fullDesktop.indexOf("pub fn set_mode_and_persist"));
 	expect(setMode).toContain("prepare_full_desktop_transition");
 });

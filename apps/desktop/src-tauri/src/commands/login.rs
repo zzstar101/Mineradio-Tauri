@@ -1,13 +1,9 @@
 use super::{dialogs::open_external, labels};
-use crate::AppState;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::io::{Read, Write};
-use std::net::TcpStream;
 use std::time::Duration;
 use tauri::{Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-const LOGIN_SESSION_HTTP_TIMEOUT_MS: u64 = 3200;
 const LOGIN_COOKIE_POLL_ATTEMPTS: usize = 36;
 const LOGIN_COOKIE_POLL_INTERVAL_MS: u64 = 1200;
 #[allow(dead_code)]
@@ -49,15 +45,6 @@ pub enum LoginProvider {
     Qq,
 }
 
-impl LoginProvider {
-    pub fn as_route_segment(self) -> &'static str {
-        match self {
-            LoginProvider::Netease => "netease",
-            LoginProvider::Qq => "qq",
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LoginWindowConfig {
     pub provider: LoginProvider,
@@ -76,27 +63,6 @@ pub struct LoginCookie {
     pub name: String,
     pub value: String,
     pub domain: String,
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct LoginSessionCookieRequest {
-    pub url: String,
-    pub host: String,
-    pub port: u16,
-    pub path: String,
-    pub body: String,
-}
-
-impl std::fmt::Debug for LoginSessionCookieRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LoginSessionCookieRequest")
-            .field("url", &self.url)
-            .field("host", &self.host)
-            .field("port", &self.port)
-            .field("path", &self.path)
-            .field("body", &"<redacted>")
-            .finish()
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -324,11 +290,20 @@ fn login_cookie_partial(provider: LoginProvider, cookie_text: &str) -> bool {
         && !qq_cookie_has_playback_login(cookie_text)
 }
 
-pub fn build_login_session_cookie_request(
-    sidecar_base_url: &str,
+fn provider_id(provider: LoginProvider) -> mineradio_api::ProviderId {
+    match provider {
+        LoginProvider::Netease => mineradio_api::ProviderId::Netease,
+        LoginProvider::Qq => mineradio_api::ProviderId::Qq,
+    }
+}
+
+/// 把登录窗口采集到的 Cookie 导入 in-process 的 `mineradio_api` 运行时。原实现经
+/// HTTP 直连 sidecar 的 `POST /providers/{p}/session-cookie`；sidecar 移除后改为直接
+/// 调用 `mineradio_api::set_runtime_provider_cookie`，与 `api_bridge` 的同一路由共享路径。
+async fn import_login_cookie_into_runtime(
     provider: LoginProvider,
     cookie_text: &str,
-) -> Result<LoginSessionCookieRequest, String> {
+) -> Result<LoginSessionImportResult, String> {
     let cookie = cookie_text.trim();
     if cookie.is_empty() {
         return Err("LOGIN_COOKIE_EMPTY".into());
@@ -336,96 +311,16 @@ pub fn build_login_session_cookie_request(
     if !login_cookie_has_required_session(provider, cookie) {
         return Err("LOGIN_COOKIE_NOT_READY".into());
     }
-    let base = sidecar_base_url.trim().trim_end_matches('/');
-    let Some(authority) = base.strip_prefix("http://") else {
-        return Err("LOGIN_SIDECAR_BAD_URL".into());
-    };
-    let mut host_port = authority.split('/').next().unwrap_or(authority).split(':');
-    let host = host_port.next().unwrap_or("").trim();
-    let port = host_port
-        .next()
-        .and_then(|value| value.parse::<u16>().ok())
-        .ok_or_else(|| "LOGIN_SIDECAR_BAD_URL".to_string())?;
-    if host != "127.0.0.1" && host != "localhost" {
-        return Err("LOGIN_SIDECAR_BAD_URL".into());
-    }
-    let path = format!("/providers/{}/session-cookie", provider.as_route_segment());
-    let url = format!("http://{}:{}{}", host, port, path);
-    let body = serde_json::json!({ "cookie": cookie }).to_string();
-    Ok(LoginSessionCookieRequest {
-        url,
-        host: host.to_string(),
-        port,
-        path,
-        body,
-    })
-}
-
-fn post_login_session_cookie_request(
-    request: &LoginSessionCookieRequest,
-) -> Result<LoginSessionImportResult, String> {
-    let mut stream = TcpStream::connect((request.host.as_str(), request.port))
-        .map_err(|_| "LOGIN_SIDECAR_UNAVAILABLE".to_string())?;
-    let timeout = Some(Duration::from_millis(LOGIN_SESSION_HTTP_TIMEOUT_MS));
-    let _ = stream.set_read_timeout(timeout);
-    let _ = stream.set_write_timeout(timeout);
-    let http = format!(
-        "POST {} HTTP/1.1\r\nHost: {}:{}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        request.path,
-        request.host,
-        request.port,
-        request.body.len(),
-        request.body
-    );
-    stream
-        .write_all(http.as_bytes())
-        .map_err(|_| "LOGIN_SIDECAR_WRITE_FAILED".to_string())?;
-    let mut response = String::new();
-    stream
-        .read_to_string(&mut response)
-        .map_err(|_| "LOGIN_SIDECAR_READ_FAILED".to_string())?;
-    let Some((head, body)) = response.split_once("\r\n\r\n") else {
-        return Err("LOGIN_SIDECAR_BAD_RESPONSE".into());
-    };
-    if !head.starts_with("HTTP/1.1 2") && !head.starts_with("HTTP/1.0 2") {
-        return Err("LOGIN_SIDECAR_REJECTED_COOKIE".into());
-    }
-    let parsed: serde_json::Value =
-        serde_json::from_str(body).map_err(|_| "LOGIN_SIDECAR_BAD_RESPONSE".to_string())?;
-    let data = parsed
-        .get("data")
-        .ok_or_else(|| "LOGIN_SIDECAR_BAD_RESPONSE".to_string())?;
-    let stored = data
-        .get("stored")
-        .and_then(|value| value.as_bool())
-        .unwrap_or(false);
-    let provider = match data
-        .get("provider")
-        .and_then(|value| value.as_str())
-        .unwrap_or_default()
-    {
-        "netease" => LoginProvider::Netease,
-        "qq" => LoginProvider::Qq,
-        _ => return Err("LOGIN_SIDECAR_BAD_RESPONSE".into()),
-    };
+    let partial = login_cookie_partial(provider, cookie);
+    mineradio_api::set_runtime_provider_cookie(provider_id(provider), cookie.to_owned())
+        .await
+        .map_err(|error| format!("LOGIN_RUNTIME_IMPORT_FAILED: {error}"))?;
     Ok(LoginSessionImportResult {
         provider,
-        stored,
+        stored: true,
         reused: false,
-        partial: false,
+        partial,
     })
-}
-
-fn inject_login_cookie_into_sidecar(
-    sidecar_base_url: &str,
-    provider: LoginProvider,
-    cookie_text: &str,
-) -> Result<LoginSessionImportResult, String> {
-    let partial = login_cookie_partial(provider, cookie_text);
-    let request = build_login_session_cookie_request(sidecar_base_url, provider, cookie_text)?;
-    let mut result = post_login_session_cookie_request(&request)?;
-    result.partial = partial;
-    Ok(result)
 }
 
 fn login_cookie_probe_urls(provider: LoginProvider) -> &'static [&'static str] {
@@ -490,7 +385,6 @@ async fn poll_login_cookie_header(
 
 async fn complete_provider_login_from_window(
     app: tauri::AppHandle,
-    state: tauri::State<'_, AppState>,
     provider: LoginProvider,
 ) -> Result<LoginSessionImportResult, String> {
     let win = ensure_login_window(&app, provider)?;
@@ -508,8 +402,7 @@ async fn complete_provider_login_from_window(
             false,
         )
     };
-    let mut result =
-        inject_login_cookie_into_sidecar(&state.config.sidecar_base_url, provider, &cookie)?;
+    let mut result = import_login_cookie_into_runtime(provider, &cookie).await?;
     result.reused = reused;
     let _ = win.close();
     Ok(result)
@@ -573,17 +466,13 @@ pub fn login_qq_show_window(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub async fn login_netease_complete(
     app: tauri::AppHandle,
-    state: tauri::State<'_, AppState>,
 ) -> Result<LoginSessionImportResult, String> {
-    complete_provider_login_from_window(app, state, LoginProvider::Netease).await
+    complete_provider_login_from_window(app, LoginProvider::Netease).await
 }
 
 #[tauri::command]
-pub async fn login_qq_complete(
-    app: tauri::AppHandle,
-    state: tauri::State<'_, AppState>,
-) -> Result<LoginSessionImportResult, String> {
-    complete_provider_login_from_window(app, state, LoginProvider::Qq).await
+pub async fn login_qq_complete(app: tauri::AppHandle) -> Result<LoginSessionImportResult, String> {
+    complete_provider_login_from_window(app, LoginProvider::Qq).await
 }
 
 #[tauri::command]
@@ -715,44 +604,19 @@ mod tests {
     }
 
     #[test]
-    fn login_session_cookie_request_posts_cookie_without_echoing_it() {
-        let request = build_login_session_cookie_request(
-            "http://127.0.0.1:42531/",
-            LoginProvider::Qq,
-            "uin=123; qm_keyst=secret",
-        )
-        .expect("request");
+    fn login_cookie_import_rejects_empty_or_logged_out_cookie() {
+        let empty = tauri::async_runtime::block_on(import_login_cookie_into_runtime(
+            LoginProvider::Netease,
+            "",
+        ))
+        .expect_err("empty");
+        assert_eq!(empty, "LOGIN_COOKIE_EMPTY");
 
-        assert_eq!(
-            request.url,
-            "http://127.0.0.1:42531/providers/qq/session-cookie"
-        );
-        assert_eq!(
-            request.body,
-            serde_json::json!({ "cookie": "uin=123; qm_keyst=secret" }).to_string()
-        );
-        assert!(!format!("{:?}", request).contains("qm_keyst=secret"));
-    }
-
-    #[test]
-    fn login_session_cookie_request_rejects_empty_or_logged_out_cookie() {
-        assert_eq!(
-            build_login_session_cookie_request(
-                "http://127.0.0.1:42531",
-                LoginProvider::Netease,
-                ""
-            )
-            .expect_err("empty"),
-            "LOGIN_COOKIE_EMPTY"
-        );
-        assert_eq!(
-            build_login_session_cookie_request(
-                "http://127.0.0.1:42531",
-                LoginProvider::Netease,
-                "__csrf=csrf"
-            )
-            .expect_err("logged out"),
-            "LOGIN_COOKIE_NOT_READY"
-        );
+        let logged_out = tauri::async_runtime::block_on(import_login_cookie_into_runtime(
+            LoginProvider::Netease,
+            "__csrf=csrf",
+        ))
+        .expect_err("logged out");
+        assert_eq!(logged_out, "LOGIN_COOKIE_NOT_READY");
     }
 }

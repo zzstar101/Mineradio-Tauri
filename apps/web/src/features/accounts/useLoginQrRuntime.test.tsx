@@ -298,3 +298,59 @@ test("interval ticks do not overlap an in-flight QR check and cleanup clears the
 	expect(cleared).toContain("soda-timer");
 	host.remove();
 });
+
+test("QQ sub-methods pass their kind through to AccountPort using the qq provider", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	const calls: string[] = [];
+	const accounts = {
+		async createLoginQrKey(provider: ProviderId, kind?: string) {
+			calls.push(`key:${provider}:${kind}`);
+			return { provider, key: "qm-key" };
+		},
+		async createLoginQrImage(provider: ProviderId, key: string, kind?: string) {
+			calls.push(`image:${provider}:${key}:${kind}`);
+			return { provider, key, img: "data:image/png;base64,qm" };
+		},
+		async checkLoginQr() {
+			return { provider: "qq", key: "qm-key", code: 801, loggedIn: false };
+		},
+	} as unknown as AccountPort;
+	const runtimeRef: { current: LoginQrRuntimeResult | null } = { current: null };
+
+	function Harness() {
+		runtimeRef.current = useLoginQrRuntime({
+			accounts,
+			modalOpen: true,
+			modalMode: "full",
+			provider: "qq_music",
+			onProviderStatus: () => undefined,
+			syncProviderLibrary: async () => undefined,
+			refreshLibraryAfterLoggedOut: () => undefined,
+			providerLabel: () => "QQ 音乐",
+			showToast: () => undefined,
+		});
+		return null;
+	}
+
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	flushSync(() => root.render(<Harness />));
+	for (let i = 0; i < 8 && !runtimeRef.current?.qrByProvider.qq_music; i += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+
+	expect(calls).toEqual(["key:qq:qq_music", "image:qq:qm-key:qq_music"]);
+	expect(runtimeRef.current?.qrByProvider.qq_music).toEqual({
+		key: "qm-key",
+		img: "data:image/png;base64,qm",
+		completed: false,
+	});
+	expect(runtimeRef.current?.statusByProvider.qq_music).toEqual({
+		text: "使用 QQ 音乐 App 扫码，然后在手机上确认登录",
+		tone: "idle",
+	});
+
+	root.unmount();
+	host.remove();
+});

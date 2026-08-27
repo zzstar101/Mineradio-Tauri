@@ -2,8 +2,8 @@ import { ACCOUNT_PROVIDER_ORDER_PREFERENCE, type JsonObject } from "../../prefer
 
 /**
  * 上游 Mineradio v2.1.0 的账号 Provider 全集。
- * kugou / spotify 由 MineRadio-api 侧封锁（blocked_by），永不参与渲染，
- * 但允许出现在持久化 order 中，便于后续解锁时保留用户既有排序。
+ * spotify 由 MineRadio-api 侧封锁（blocked_by），不参与渲染；Kugou 已由
+ * native API 提供登录与数据能力，因此纳入当前可用集合。
  */
 export const PROVIDER_KEYS = [
 	"netease",
@@ -16,7 +16,7 @@ export const PROVIDER_KEYS = [
 export type ProviderKey = (typeof PROVIDER_KEYS)[number];
 
 /** 当前可渲染的账号 Provider；与 LOGIN_QR_PROVIDERS 保持一致。 */
-export const AVAILABLE_PROVIDERS = ["netease", "qq", "soda"] as const;
+export const AVAILABLE_PROVIDERS = ["netease", "qq", "kugou", "soda"] as const;
 
 export type AvailableProviderKey = (typeof AVAILABLE_PROVIDERS)[number];
 
@@ -58,7 +58,7 @@ function normalizeProviderSequence(raw: unknown[]): ProviderKey[] {
 /**
  * 归一化持久化的 Provider 排序记录：
  * - 丢弃未知 key、按先出现顺序去重；
- * - 追加缺失的 AVAILABLE provider（保证三个可用平台永远在列表里）；
+ * - 追加缺失的 AVAILABLE provider（保证可用平台永远在列表里）；
  * - visible 只保留 AVAILABLE 子集；空 visible 表示没有任何平台被隐藏。
  */
 export function normalizeAccountProviderList(

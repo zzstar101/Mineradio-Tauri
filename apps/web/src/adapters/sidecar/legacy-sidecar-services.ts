@@ -20,16 +20,16 @@ export function createLegacySidecarServices(client: SidecarClient): MusicService
 		},
 		accounts: {
 			loginStatus: (provider) => client.loginStatus(provider),
-			createLoginQrKey: (provider) => client.createProviderLoginQrKey(provider),
-			createLoginQrImage: (provider, key) => client.createProviderLoginQrImage(provider, key),
-			checkLoginQr: (provider, key) => client.checkProviderLoginQr(provider, key),
+			createLoginQrKey: (provider, kind) => client.createProviderLoginQrKey(provider, kind),
+			createLoginQrImage: (provider, key, kind) => client.createProviderLoginQrImage(provider, key, kind),
+			checkLoginQr: (provider, key, kind) => client.checkProviderLoginQr(provider, key, kind),
 			setSessionCookie: (provider, cookie) => client.setProviderSessionCookie(provider, cookie),
 			clearSessionCookie: (provider) => client.clearProviderSessionCookie(provider),
 			logout: (provider) => client.logout(provider),
 		},
 		library: {
 			playlistList: (provider) => client.playlistList(provider),
-			playlistDetail: (provider, id) => client.playlistDetail(provider, id),
+			playlistDetail: (provider, id, page) => client.playlistDetail(provider, id, page),
 			importSharedPlaylist: (input) => client.importSharedPlaylist(input),
 			addSongToPlaylist: (provider, playlistId, trackId) => (
 				client.addSongToPlaylist(provider, playlistId, trackId)
@@ -42,6 +42,8 @@ export function createLegacySidecarServices(client: SidecarClient): MusicService
 		discover: {
 			weatherRadio: (params) => client.weatherRadio(params),
 			discoverHome: () => client.discoverHome(),
+			recommendationPages: (options) => client.recommendationPages(options),
+			streamNext: (provider, id) => client.streamNext(provider, id),
 			podcastDetail: (id) => client.podcastDetail(id),
 			podcastMy: () => client.podcastMy(),
 			podcastMyItems: (key, limit, offset) => client.podcastMyItems(key, limit, offset),

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type RefObject } from "react";
-import type { Track } from "@mineradio/shared";
+import type { ProviderId, Track } from "@mineradio/shared";
 import type { PlayerController, TimeUpdatePayload } from "../../audio/player-controller";
 import {
 	LOCAL_AUDIO_ACCEPT,
@@ -11,6 +11,10 @@ import { withStoredCustomCover } from "../../cover/custom-cover";
 import type { LyricPayload } from "@mineradio/shared";
 import { selectCurrentIndex } from "../../lyrics/select-current-index";
 import { usePlaybackStore } from "../../stores/playback-store";
+import {
+	buildTrialBanner,
+	evaluatePreviewResult,
+} from "../playback/preview-trial";
 
 export { LOCAL_AUDIO_ACCEPT };
 
@@ -25,6 +29,7 @@ export interface PlaybackUiControllerResult {
 	shufflePlaylistPanelQueue(): void;
 	clearPlaylistPanelQueue(): void;
 	seekPlayback(position: number): void;
+	handleManualNext(): void;
 	handleRuntimeTimeUpdate(payload: TimeUpdatePayload): void;
 	handleRuntimeDurationChange(payload: TimeUpdatePayload): void;
 	handleRuntimeEnded(): void;
@@ -50,6 +55,7 @@ export function usePlaybackUiController({
 	clearCurrentBeatMap,
 	applyCustomCoverImage,
 	showToast,
+	streamNext,
 }: {
 	controllerRef: RefObject<PlayerController | null>;
 	lyricsPayloadRef: RefObject<LyricPayload | null>;
@@ -70,10 +76,18 @@ export function usePlaybackUiController({
 	clearCurrentBeatMap(): void;
 	applyCustomCoverImage(file: Blob, track?: Track): Promise<void>;
 	showToast(message: string): void;
+	/** 缺省时视为不支持流式续播，ended 直接走普通队列前进 */
+	streamNext?(provider: ProviderId, id: string): Promise<Track>;
 }): PlaybackUiControllerResult {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const localAudioUrlsRef = useRef(new Map<string, string>());
 	const lastRuntimeDurationRef = useRef<number | null>(null);
+	const previewDecisionIdentityRef = useRef<{
+		playbackIntentId: number;
+		previewRange: { startMs: number; endMs: number } | null;
+	} | null>(null);
+	/** 流式电台续拉单飞闸门：ended 事件可能连发，进行中忽略重入 */
+	const streamFetchInFlightRef = useRef(false);
 	const dependenciesRef = useRef({
 		playbackMode,
 		setPositionMs,
@@ -92,6 +106,7 @@ export function usePlaybackUiController({
 		clearCurrentBeatMap,
 		applyCustomCoverImage,
 		showToast,
+		streamNext,
 	});
 	dependenciesRef.current = {
 		playbackMode,
@@ -111,6 +126,7 @@ export function usePlaybackUiController({
 		clearCurrentBeatMap,
 		applyCustomCoverImage,
 		showToast,
+		streamNext,
 	};
 
 	const openLocalFileImport = useCallback(() => {
@@ -211,12 +227,38 @@ export function usePlaybackUiController({
 		(payload: TimeUpdatePayload) => {
 			const current = dependenciesRef.current;
 			current.setPositionMs(payload.positionMs);
+			const storeState = usePlaybackStore.getState();
+			const previousPreviewIdentity = previewDecisionIdentityRef.current;
+			if (
+				!previousPreviewIdentity
+				|| previousPreviewIdentity.playbackIntentId !== storeState.playbackIntentId
+				|| previousPreviewIdentity.previewRange !== storeState.previewRange
+			) {
+				previewDecisionIdentityRef.current = {
+					playbackIntentId: storeState.playbackIntentId,
+					previewRange: storeState.previewRange,
+				};
+				lastRuntimeDurationRef.current = null;
+			}
 			if (
 				payload.durationMs !== null &&
 				payload.durationMs !== lastRuntimeDurationRef.current
 			) {
 				lastRuntimeDurationRef.current = payload.durationMs;
 				current.setDurationMs(payload.durationMs);
+
+				// 试听判定挂在这条最可靠的时长到达路径上：
+				// 实测音频时长 vs song_url 返回的试听区间（±5s）
+				const outcome = evaluatePreviewResult({
+					previewRange: storeState.previewRange,
+					actualDurationMs: payload.durationMs,
+					playableState: storeState.currentTrack?.playableState,
+				});
+				storeState.setTrialBanner(
+					outcome
+						? buildTrialBanner(outcome, storeState.currentTrack?.provider ?? "netease")
+						: null,
+				);
 			}
 			current.recordListenProgress(payload.positionMs, payload.durationMs);
 			current.setLyricsIndex(
@@ -236,7 +278,104 @@ export function usePlaybackUiController({
 		const current = dependenciesRef.current;
 		current.finalizeListenSession(true);
 		current.setPositionMs(0);
+
+		// 流式电台续播：当前曲已是队尾且 streamSource 激活 → 先续拉再前进。
+		// 到尽头/失败都吞掉本次事件并降级为普通队列行为，页面不越轨。
+		const state = usePlaybackStore.getState();
+		const source = state.streamSource;
+		const queueTail = state.queue[state.queue.length - 1] ?? null;
+		const atStreamTail =
+			source !== null &&
+			state.currentTrack !== null &&
+			queueTail !== null &&
+			`${state.currentTrack.provider}:${state.currentTrack.id}` ===
+				`${queueTail.provider}:${queueTail.id}`;
+		const { streamNext } = current;
+		if (
+			source &&
+			atStreamTail &&
+			typeof streamNext === "function"
+		) {
+			if (streamFetchInFlightRef.current) return; // 单飞：进行中忽略重入
+			streamFetchInFlightRef.current = true;
+			void (async () => {
+				try {
+					const track = await streamNext(source.provider, source.id);
+					const latest = usePlaybackStore.getState();
+					if (
+						!latest.streamSource ||
+						latest.streamSource.id !== source.id
+					) {
+						// 期间源已被切换/清空：静默丢弃，走普通前进
+						return;
+					}
+					latest.enqueue(track);
+					latest.ended();
+				} catch {
+					const latest = usePlaybackStore.getState();
+					latest.setStreamSource(null);
+					current.showToast("流式续播失败");
+					usePlaybackStore.getState().ended();
+				} finally {
+					streamFetchInFlightRef.current = false;
+				}
+			})();
+			return;
+		}
+
 		usePlaybackStore.getState().ended();
+	}, []);
+
+	/** 手动前进（切歌按钮/快捷键）：流式会话在队尾时必须续拉新歌，
+	 *  绝不按 loop 回卷到旧歌；拉取失败原地保留（不清源、不动页面），可重试。
+	 *  非流式会话或队列中段则走普通 next。 */
+	const handleManualNext = useCallback(() => {
+		const current = dependenciesRef.current;
+		const state = usePlaybackStore.getState();
+		const source = state.streamSource;
+		if (!source) {
+			state.next();
+			return;
+		}
+		const queueTail = state.queue[state.queue.length - 1] ?? null;
+		const currentIsTail =
+			state.currentTrack !== null &&
+			queueTail !== null &&
+			`${state.currentTrack.provider}:${state.currentTrack.id}` ===
+				`${queueTail.provider}:${queueTail.id}`;
+		if (!currentIsTail) {
+			usePlaybackStore.getState().next();
+			return;
+		}
+		const { streamNext } = current;
+		if (typeof streamNext !== "function") {
+			current.showToast("流式电台不可用");
+			return;
+		}
+		if (streamFetchInFlightRef.current) {
+			current.showToast("正在连接下一首…");
+			return;
+		}
+		streamFetchInFlightRef.current = true;
+		void (async () => {
+			try {
+				const track = await streamNext(source.provider, source.id);
+				const latest = usePlaybackStore.getState();
+				if (
+					!latest.streamSource ||
+					latest.streamSource.id !== source.id
+				) {
+					// 期间源已被切换/清空：静默丢弃
+					return;
+				}
+				latest.enqueue(track);
+				latest.next();
+			} catch {
+				current.showToast("流式电台暂时没有下一首，稍后再试");
+			} finally {
+				streamFetchInFlightRef.current = false;
+			}
+		})();
 	}, []);
 
 	useEffect(
@@ -258,6 +397,7 @@ export function usePlaybackUiController({
 		shufflePlaylistPanelQueue,
 		clearPlaylistPanelQueue,
 		seekPlayback,
+		handleManualNext,
 		handleRuntimeTimeUpdate,
 		handleRuntimeDurationChange,
 		handleRuntimeEnded,

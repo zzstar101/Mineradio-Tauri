@@ -2,108 +2,46 @@ import { expect, test } from "bun:test";
 import { SidecarClient, SidecarClientError } from "./sidecar-client";
 import type { Track } from "@mineradio/shared";
 
-const BASE = "http://127.0.0.1:65535";
+await import("../../../../packages/visual-engine/src/runtime/happy-dom-preload");
 
-function jsonResponse(body: unknown, status = 200): Response {
-	return new Response(JSON.stringify(body), {
-		status,
-		headers: { "content-type": "application/json" },
-	});
+const MEDIA_BASE = "mineradio-tauri://localhost";
+
+interface ApiInvokeArgs {
+	method: "GET" | "POST" | "DELETE";
+	path: string;
+	body: unknown;
 }
 
-function withFetch<T>(fake: typeof fetch, fn: () => Promise<T>): Promise<T> {
-	const original = globalThis.fetch;
-	globalThis.fetch = fake;
+type TauriApiHandler = (args: Record<string, unknown>) => Promise<unknown>;
+
+/** 覆盖 Tauri invoke 通道（`__TAURI_INTERNALS__.invoke`），断言走 `api_call` 命令。 */
+function withTauriApi<T>(handler: TauriApiHandler, fn: () => Promise<T>): Promise<T> {
+	const original = (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+	(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+		invoke: (cmd: string, args: Record<string, unknown>) => {
+			expect(cmd).toBe("api_call");
+			return handler(args);
+		},
+	};
 	return fn().finally(() => {
-		globalThis.fetch = original;
+		if (original === undefined) {
+			delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+		} else {
+			(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = original;
+		}
 	});
 }
 
-test("health parses a valid HealthResponse", async () => {
-	const original = globalThis.fetch;
-	globalThis.fetch = (async () =>
-		jsonResponse({
-			ok: true,
-			appVersion: "0.9.0",
-			apiVersion: "0.1.0",
-			schemaVersion: "0.1.0",
-			providers: [],
-		})) as typeof fetch;
-	try {
-		const client = new SidecarClient(BASE);
-		const h = await client.health();
-		expect(h.ok).toBe(true);
-		expect(h.apiVersion).toBe("0.1.0");
-		expect(h.providers).toEqual([]);
-	} finally {
-		globalThis.fetch = original;
-	}
-});
-
-test("default fetch keeps the Window/global binding required by WebView2", async () => {
-	const original = globalThis.fetch;
-	globalThis.fetch = (async function (this: typeof globalThis) {
-		expect(this).toBe(globalThis);
-		return jsonResponse({
-			ok: true,
-			appVersion: "0.9.0",
-			apiVersion: "0.1.0",
-			schemaVersion: "0.1.0",
-			providers: [],
-		});
-	}) as typeof fetch;
-	try {
-		const client = new SidecarClient(BASE);
-		const h = await client.health();
-		expect(h.ok).toBe(true);
-	} finally {
-		globalThis.fetch = original;
-	}
-});
-
-test("health 500 throws SidecarClientError", async () => {
-	const original = globalThis.fetch;
-	globalThis.fetch = (async () => new Response("", { status: 500 })) as typeof fetch;
-	try {
-		const client = new SidecarClient(BASE);
-		let caught: unknown = null;
-		try {
-			await client.health();
-		} catch (e) {
-			caught = e;
-		}
-		expect(caught instanceof SidecarClientError).toBe(true);
-		expect((caught as SidecarClientError).code).toBe("HTTP_500");
-		expect((caught as SidecarClientError).retryable).toBe(true);
-	} finally {
-		globalThis.fetch = original;
-	}
-});
-
-test("network fetch failure is normalized instead of leaking browser TypeError text", async () => {
-	const fake = (async () => {
-		throw new TypeError("Failed to fetch");
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
-		let caught: unknown = null;
-		try {
-			await client.search("netease", "x", 5);
-		} catch (e) {
-			caught = e;
-		}
-		expect(caught instanceof SidecarClientError).toBe(true);
-		expect((caught as SidecarClientError).code).toBe("NETWORK");
-		expect((caught as SidecarClientError).message).toBe("sidecar 连接失败，请稍后重试");
-		expect((caught as SidecarClientError).retryable).toBe(true);
-		expect((caught as SidecarClientError).rawMessage).toBe("Failed to fetch");
-	});
-});
+function apiArgs(args: Record<string, unknown>): ApiInvokeArgs {
+	return args as unknown as ApiInvokeArgs;
+}
 
 test("capabilities parses a valid success envelope", async () => {
-	const original = globalThis.fetch;
-	globalThis.fetch = (async () =>
-		jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toBe("/providers/capabilities");
+		return {
 			ok: true,
 			data: {
 				version: "0.1.0",
@@ -116,16 +54,14 @@ test("capabilities parses a valid success envelope", async () => {
 					},
 				],
 			},
-		})) as typeof fetch;
-	try {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const matrix = await client.capabilities();
 		expect(matrix.version).toBe("0.1.0");
 		expect(matrix.providers.length).toBe(1);
 		expect(matrix.providers[0].providerId).toBe("netease");
-	} finally {
-		globalThis.fetch = original;
-	}
+	});
 });
 
 const SAMPLE_TRACK: Track = {
@@ -141,19 +77,18 @@ const SAMPLE_TRACK: Track = {
 };
 
 test("search parses a success envelope of Track[]", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/search");
-		expect(url).toContain("keyword=hello");
-		expect(url).toContain("limit=30");
-		void init;
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/providers/netease/search");
+		expect(path).toContain("keyword=hello");
+		expect(path).toContain("limit=30");
+		return {
 			ok: true,
 			data: [SAMPLE_TRACK, { ...SAMPLE_TRACK, id: "t2", title: "Two" }],
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const tracks = await client.search("netease", "hello", 30);
 		expect(tracks.length).toBe(2);
 		expect(tracks[0].id).toBe("t1");
@@ -162,30 +97,29 @@ test("search parses a success envelope of Track[]", async () => {
 });
 
 test("searchAll uses the cross-source search endpoint", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/search");
-		expect(url).toContain("keyword=hello");
-		expect(url).toContain("limit=30");
-		expect(url).not.toContain("/providers/");
-		void init;
-		return jsonResponse({ ok: true, data: [SAMPLE_TRACK] });
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/search");
+		expect(path).toContain("keyword=hello");
+		expect(path).toContain("limit=30");
+		expect(path).not.toContain("/providers/");
+		return { ok: true, data: [SAMPLE_TRACK] };
+	}, async () => {
+		const client = new SidecarClient();
 		const tracks = await client.searchAll("hello", 30);
 		expect(tracks[0].id).toBe("t1");
 	});
 });
 
 test("weatherRadio calls sidecar weather radio endpoint with location params", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/weather/radio");
-		expect(url).toContain("city=%E4%B8%8A%E6%B5%B7");
-		expect(url).toContain("lat=31.23");
-		void init;
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/weather/radio");
+		expect(path).toContain("city=%E4%B8%8A%E6%B5%B7");
+		expect(path).toContain("lat=31.23");
+		return {
 			ok: true,
 			data: {
 				ok: true,
@@ -232,10 +166,9 @@ test("weatherRadio calls sidecar weather radio endpoint with location params", a
 					updatedAt: 1,
 				},
 			},
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const radio = await client.weatherRadio({ city: "上海", lat: 31.23, lon: 121.47 });
 		expect(radio.weather.mood.title).toBe("雨天电台");
 		expect(radio.radio.songs[0].id).toBe("t1");
@@ -243,11 +176,11 @@ test("weatherRadio calls sidecar weather radio endpoint with location params", a
 });
 
 test("discoverHome GETs the baseline Home discover endpoint", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/discover/home");
-		expect(init?.method).toBe("GET");
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/discover/home");
+		return {
 			ok: true,
 			data: {
 				loggedIn: true,
@@ -266,10 +199,9 @@ test("discoverHome GETs the baseline Home discover endpoint", async () => {
 				podcasts: [],
 				updatedAt: 1782656256000,
 			},
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const discover = await client.discoverHome();
 		expect(discover.mode).toBe("member");
 		expect(discover.dailySongs[0].id).toBe("t1");
@@ -277,14 +209,41 @@ test("discoverHome GETs the baseline Home discover endpoint", async () => {
 	});
 });
 
+test("recommendationPages GETs provider recommendation pages", async () => {
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toBe("/recommendations/pages?refresh=false");
+		return {
+			ok: true,
+			data: [{
+				provider: "netease",
+				list: [{
+					title: "每日推荐",
+					list: [{
+						id: "card-1",
+						kind: "track",
+					}],
+				}],
+			}],
+		};
+	}, async () => {
+		const client = new SidecarClient();
+		const pages = await client.recommendationPages();
+		expect(pages[0].provider).toBe("netease");
+		expect(pages[0].list[0].title).toBe("每日推荐");
+		expect(pages[0].list[0].list[0].id).toBe("card-1");
+	});
+});
+
 test("podcastSearch GETs baseline podcast search endpoint", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/podcast/search");
-		expect(url).toContain("keywords=%E6%95%85%E4%BA%8B");
-		expect(url).toContain("limit=18");
-		expect(init?.method).toBe("GET");
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/podcast/search");
+		expect(path).toContain("keywords=%E6%95%85%E4%BA%8B");
+		expect(path).toContain("limit=18");
+		return {
 			ok: true,
 			data: {
 				podcasts: [{
@@ -300,10 +259,9 @@ test("podcastSearch GETs baseline podcast search endpoint", async () => {
 				}],
 				total: 1,
 			},
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const result = await client.podcastSearch("故事", 18);
 		expect(result.podcasts[0].name).toBe("故事电台");
 		expect(result.total).toBe(1);
@@ -312,15 +270,15 @@ test("podcastSearch GETs baseline podcast search endpoint", async () => {
 
 test("podcast library methods call hot detail programs and my endpoints", async () => {
 	const seen: string[] = [];
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		seen.push(url.replace(BASE, ""));
-		expect(init?.method).toBe("GET");
-		if (url.includes("/podcast/hot")) {
-			return jsonResponse({ ok: true, data: { podcasts: [], more: false } });
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		seen.push(path);
+		expect(method).toBe("GET");
+		if (path.includes("/podcast/hot")) {
+			return { ok: true, data: { podcasts: [], more: false } };
 		}
-		if (url.includes("/podcast/detail")) {
-			return jsonResponse({
+		if (path.includes("/podcast/detail")) {
+			return {
 				ok: true,
 				data: {
 					podcast: {
@@ -335,16 +293,16 @@ test("podcast library methods call hot detail programs and my endpoints", async 
 						subCount: 0,
 					},
 				},
-			});
+			};
 		}
-		if (url.includes("/podcast/programs")) {
-			return jsonResponse({
+		if (path.includes("/podcast/programs")) {
+			return {
 				ok: true,
 				data: { radio: { id: "r1", rid: "r1", name: "电台" }, programs: [], more: false, total: 0 },
-			});
+			};
 		}
-		if (url.includes("/podcast/my/items")) {
-			return jsonResponse({
+		if (path.includes("/podcast/my/items")) {
+			return {
 				ok: true,
 				data: {
 					loggedIn: false,
@@ -356,16 +314,14 @@ test("podcast library methods call hot detail programs and my endpoints", async 
 					coverUrl: "",
 					items: [],
 				},
-			});
+			};
 		}
-		if (url.includes("/podcast/my")) {
-			return jsonResponse({ ok: true, data: { loggedIn: false, collections: [] } });
+		if (path.includes("/podcast/my")) {
+			return { ok: true, data: { loggedIn: false, collections: [] } };
 		}
-		throw new Error(`unexpected ${url}`);
-	}) as typeof fetch;
-
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		throw new Error(`unexpected ${path}`);
+	}, async () => {
+		const client = new SidecarClient();
 		expect((await client.podcastHot(12, 24)).more).toBe(false);
 		expect((await client.podcastDetail("r1")).podcast.name).toBe("电台");
 		expect((await client.podcastPrograms("r1", 30, 0)).total).toBe(0);
@@ -383,17 +339,16 @@ test("podcast library methods call hot detail programs and my endpoints", async 
 });
 
 test("podcastDjBeatmap GETs analyzer endpoint with encoded audio URL", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/podcast/dj-beatmap");
-		expect(url).toContain("url=https%3A%2F%2Fmedia.example%2Fdj.mp3");
-		expect(url).toContain("duration=120");
-		expect(url).toContain("intro=18");
-		expect(init?.method).toBe("GET");
-		return jsonResponse({ ok: true, data: { ok: true, map: { beats: [1, 2] } } });
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/podcast/dj-beatmap");
+		expect(path).toContain("url=https%3A%2F%2Fmedia.example%2Fdj.mp3");
+		expect(path).toContain("duration=120");
+		expect(path).toContain("intro=18");
+		return { ok: true, data: { ok: true, map: { beats: [1, 2] } } };
+	}, async () => {
+		const client = new SidecarClient();
 		const result = await client.podcastDjBeatmap("https://media.example/dj.mp3", 120, 18);
 		expect(result.ok).toBe(true);
 		expect(Array.isArray(result.map.beats)).toBe(true);
@@ -401,13 +356,11 @@ test("podcastDjBeatmap GETs analyzer endpoint with encoded audio URL", async () 
 });
 
 test("search throws SidecarClientError on ok:false", async () => {
-	const fake = (async () =>
-		jsonResponse({
-			ok: false,
-			error: { code: "PROVIDER_ERROR", message: "boom", retryable: false },
-		})) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+	await withTauriApi(async () => ({
+		ok: false,
+		error: { code: "PROVIDER_ERROR", message: "boom", retryable: false },
+	}), async () => {
+		const client = new SidecarClient();
 		let caught: unknown = null;
 		try {
 			await client.search("netease", "x", 5);
@@ -421,96 +374,90 @@ test("search throws SidecarClientError on ok:false", async () => {
 
 test("songUrl POSTs the Track body and parses the SongUrlResult envelope", async () => {
 	let receivedBody: unknown = null;
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/song-url");
-		expect(init?.method).toBe("POST");
-		receivedBody = JSON.parse(String(init?.body ?? "{}"));
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path, body } = apiArgs(args);
+		expect(method).toBe("POST");
+		expect(path).toContain("/providers/netease/song-url");
+		receivedBody = body;
+		return {
 			ok: true,
 			data: { url: "https://proxied/a.mp3", proxied: true },
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const result = await client.songUrl(SAMPLE_TRACK);
 		expect(result.url).toBe("https://proxied/a.mp3");
-		expect(result.proxied).toBe(true);
 		expect((receivedBody as { id: string }).id).toBe("t1");
 	});
 });
 
 test("resolveSongUrl POSTs to the cross-source song-url endpoint", async () => {
-  let receivedBody: unknown = null;
-  const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/song-url");
-		expect(url).not.toContain("/providers/");
-		expect(init?.method).toBe("POST");
-		receivedBody = JSON.parse(String(init?.body ?? "{}"));
-		return jsonResponse({
+	let receivedBody: unknown = null;
+	await withTauriApi(async (args) => {
+		const { method, path, body } = apiArgs(args);
+		expect(method).toBe("POST");
+		expect(path).toContain("/song-url");
+		expect(path).not.toContain("/providers/");
+		receivedBody = body;
+		return {
 			ok: true,
-			data: { url: "https://media.example/a.mp3", proxied: false, requestedQuality: "lossless" },
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+			data: { url: "https://media.example/a.mp3", requestedQuality: "lossless" },
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const result = await client.resolveSongUrl(SAMPLE_TRACK, "lossless");
-		expect(result.proxied).toBe(false);
-		expect(result.requestedQuality).toBe("lossless");
 		expect(receivedBody).toEqual({ track: SAMPLE_TRACK, quality: "lossless" });
 		if (!result.url) throw new Error("expected playable test url");
-		expect(client.audioProxyUrl(result.url)).toBe(`${BASE}/audio-proxy?url=https%3A%2F%2Fmedia.example%2Fa.mp3`);
-  });
+		expect(client.audioProxyUrl(result.url)).toBe(result.url);
+	});
 });
 
 test("trackQualities POSTs the Track body and parses native quality options", async () => {
-  let receivedBody: unknown = null;
-  const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === "string" ? input : input.toString();
-    expect(url).toContain("/providers/netease/qualities");
-    expect(init?.method).toBe("POST");
-    receivedBody = JSON.parse(String(init?.body ?? "{}"));
-    return jsonResponse({
-      ok: true,
-      data: {
-        provider: "netease",
-        trackId: "t1",
-        defaultQuality: "exhigh",
-        qualities: [{
-          provider: "netease",
-          id: "exhigh",
-          label: "极高",
-          short: "HQ",
-          requestQuality: "exhigh",
-          level: "exhigh",
-          br: 999000,
-          source: "resolved"
-        }]
-      },
-    });
-  }) as typeof fetch;
-  await withFetch(fake, async () => {
-    const client = new SidecarClient(BASE);
-    const result = await client.trackQualities(SAMPLE_TRACK);
-    expect(receivedBody).toEqual(SAMPLE_TRACK);
-    expect(result.defaultQuality).toBe("exhigh");
-    expect(result.qualities[0].requestQuality).toBe("exhigh");
-  });
+	let receivedBody: unknown = null;
+	await withTauriApi(async (args) => {
+		const { method, path, body } = apiArgs(args);
+		expect(method).toBe("POST");
+		expect(path).toContain("/providers/netease/qualities");
+		receivedBody = body;
+		return {
+			ok: true,
+			data: {
+				provider: "netease",
+				trackId: "t1",
+				defaultQuality: "exhigh",
+				qualities: [{
+					provider: "netease",
+					id: "exhigh",
+					label: "极高",
+					short: "HQ",
+					requestQuality: "exhigh",
+					level: "exhigh",
+					br: 999000,
+					source: "resolved",
+				}],
+			},
+		};
+	}, async () => {
+		const client = new SidecarClient();
+		const result = await client.trackQualities(SAMPLE_TRACK);
+		expect(receivedBody).toEqual(SAMPLE_TRACK);
+		expect(result.defaultQuality).toBe("exhigh");
+		expect(result.qualities[0].requestQuality).toBe("exhigh");
+	});
 });
 
-test("proxiedUrl resolves sidecar relative proxied paths against the sidecar base URL", () => {
-	const client = new SidecarClient(BASE);
+test("proxiedUrl resolves relative proxied paths against the media protocol base", () => {
+	const client = new SidecarClient();
 	expect(client.proxiedUrl("/providers/soda/audio-proxy?url=https%3A%2F%2Fmedia.example%2Fsoda.m4a&playAuth=abc")).toBe(
-		`${BASE}/providers/soda/audio-proxy?url=https%3A%2F%2Fmedia.example%2Fsoda.m4a&playAuth=abc`,
+		`${MEDIA_BASE}/providers/soda/audio-proxy?url=https%3A%2F%2Fmedia.example%2Fsoda.m4a&playAuth=abc`,
 	);
 	expect(client.proxiedUrl("https://cdn.example.com/already.mp3")).toBe("https://cdn.example.com/already.mp3");
 });
 
 test("imageProxyUrl mirrors baseline cover proxy URL construction for remote covers only", () => {
-  const client = new SidecarClient(BASE);
-  expect(client.imageProxyUrl("https://img.example/a.jpg")).toBe(`${BASE}/image-proxy?url=https%3A%2F%2Fimg.example%2Fa.jpg`);
-	expect(client.imageProxyUrl("http://img.example/a.jpg")).toBe(`${BASE}/image-proxy?url=http%3A%2F%2Fimg.example%2Fa.jpg`);
+	const client = new SidecarClient();
+	expect(client.imageProxyUrl("https://img.example/a.jpg")).toBe(`${MEDIA_BASE}/image-proxy?url=https%3A%2F%2Fimg.example%2Fa.jpg`);
+	expect(client.imageProxyUrl("http://img.example/a.jpg")).toBe(`${MEDIA_BASE}/image-proxy?url=http%3A%2F%2Fimg.example%2Fa.jpg`);
 	expect(client.imageProxyUrl("data:image/png;base64,abc")).toBe("data:image/png;base64,abc");
 	expect(client.imageProxyUrl("blob:http://local/abc")).toBe("blob:http://local/abc");
 	expect(client.imageProxyUrl("file:///tmp/a.jpg")).toBe("");
@@ -518,18 +465,18 @@ test("imageProxyUrl mirrors baseline cover proxy URL construction for remote cov
 });
 
 test("imageProxyUrl supports baseline cache-bust parameter", () => {
-	const client = new SidecarClient(BASE);
-	expect(client.imageProxyUrl("https://img.example/a.jpg", true, 12345)).toBe(`${BASE}/image-proxy?url=https%3A%2F%2Fimg.example%2Fa.jpg&v=12345`);
+	const client = new SidecarClient();
+	expect(client.imageProxyUrl("https://img.example/a.jpg", true, 12345)).toBe(`${MEDIA_BASE}/image-proxy?url=https%3A%2F%2Fimg.example%2Fa.jpg&v=12345`);
 });
 
 test("lyric POSTs the Track body and parses the LyricPayload envelope", async () => {
 	let called = false;
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/lyric");
-		expect(init?.method).toBe("POST");
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("POST");
+		expect(path).toContain("/providers/netease/lyric");
 		called = true;
-		return jsonResponse({
+		return {
 			ok: true,
 			data: {
 				provider: "netease",
@@ -538,10 +485,9 @@ test("lyric POSTs the Track body and parses the LyricPayload envelope", async ()
 				hasTranslation: false,
 				isWordByWord: false,
 			},
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const lyric = await client.lyric(SAMPLE_TRACK);
 		expect(lyric.trackId).toBe("t1");
 		expect(lyric.lines.length).toBe(1);
@@ -551,10 +497,11 @@ test("lyric POSTs the Track body and parses the LyricPayload envelope", async ()
 });
 
 test("playlistDetail GETs the playlist by id", async () => {
-	const fake = (async (input: RequestInfo | URL) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/playlists/p10");
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/providers/netease/playlists/p10");
+		return {
 			ok: true,
 			data: {
 				provider: "netease",
@@ -564,10 +511,9 @@ test("playlistDetail GETs the playlist by id", async () => {
 				trackIds: ["t1", "t2"],
 				tracks: [SAMPLE_TRACK],
 			},
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const detail = await client.playlistDetail("netease", "p10");
 		expect(detail.name).toBe("Hot");
 		expect(detail.tracks.length).toBe(1);
@@ -576,11 +522,11 @@ test("playlistDetail GETs the playlist by id", async () => {
 });
 
 test("playlistList GETs provider playlists and parses playlist summaries", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/qq/playlists");
-		expect(init?.method).toBe("GET");
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/providers/qq/playlists");
+		return {
 			ok: true,
 			data: [
 				{
@@ -592,10 +538,9 @@ test("playlistList GETs provider playlists and parses playlist summaries", async
 					trackIds: [],
 				},
 			],
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const playlists = await client.playlistList("qq");
 		expect(playlists.length).toBe(1);
 		expect(playlists[0].provider).toBe("qq");
@@ -606,12 +551,12 @@ test("playlistList GETs provider playlists and parses playlist summaries", async
 
 test("importSharedPlaylist POSTs share text and parses import result", async () => {
 	let receivedBody: unknown = null;
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/shared-playlist/import");
-		expect(init?.method).toBe("POST");
-		receivedBody = JSON.parse(String(init?.body ?? "{}"));
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path, body } = apiArgs(args);
+		expect(method).toBe("POST");
+		expect(path).toContain("/shared-playlist/import");
+		receivedBody = body;
+		return {
 			ok: true,
 			data: {
 				provider: "qq",
@@ -631,10 +576,9 @@ test("importSharedPlaylist POSTs share text and parses import result", async () 
 				partial: false,
 				partialReason: "",
 			},
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const result = await client.importSharedPlaylist({ text: "https://i2.y.qq.com/n3/other/pages/details/playlist.html?id=7167576049" });
 		expect(receivedBody).toEqual({ text: "https://i2.y.qq.com/n3/other/pages/details/playlist.html?id=7167576049" });
 		expect(result.playlist.id).toBe("7167576049");
@@ -644,18 +588,17 @@ test("importSharedPlaylist POSTs share text and parses import result", async () 
 
 test("likeSong POSTs provider like mutation and parses ack", async () => {
 	let receivedBody: unknown = null;
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/like");
-		expect(init?.method).toBe("POST");
-		receivedBody = JSON.parse(String(init?.body ?? "{}"));
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path, body } = apiArgs(args);
+		expect(method).toBe("POST");
+		expect(path).toContain("/providers/netease/like");
+		receivedBody = body;
+		return {
 			ok: true,
 			data: { provider: "netease", id: "100", liked: true, code: 200 },
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const ack = await client.likeSong("netease", "100", true);
 		expect(receivedBody).toEqual({ id: "100", liked: true });
 		expect(ack).toEqual({ provider: "netease", id: "100", liked: true, code: 200 });
@@ -663,17 +606,16 @@ test("likeSong POSTs provider like mutation and parses ack", async () => {
 });
 
 test("checkSongLikes GETs comma-separated ids and parses liked map", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/like-check?ids=100%2C200");
-		expect(init?.method).toBe("GET");
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/providers/netease/like-check?ids=100%2C200");
+		return {
 			ok: true,
 			data: { provider: "netease", ids: ["100", "200"], liked: { "100": true, "200": false } },
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const ack = await client.checkSongLikes("netease", ["100", "200"]);
 		expect(ack.liked["100"]).toBe(true);
 		expect(ack.liked["200"]).toBe(false);
@@ -682,18 +624,17 @@ test("checkSongLikes GETs comma-separated ids and parses liked map", async () =>
 
 test("addSongToPlaylist POSTs playlist add mutation and parses ack", async () => {
 	let receivedBody: unknown = null;
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/playlists/add-song");
-		expect(init?.method).toBe("POST");
-		receivedBody = JSON.parse(String(init?.body ?? "{}"));
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path, body } = apiArgs(args);
+		expect(method).toBe("POST");
+		expect(path).toContain("/providers/netease/playlists/add-song");
+		receivedBody = body;
+		return {
 			ok: true,
 			data: { provider: "netease", playlistId: "p1", trackId: "100", success: true, code: 200 },
-		});
-	}) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const ack = await client.addSongToPlaylist("netease", "p1", "100");
 		expect(receivedBody).toEqual({ playlistId: "p1", trackId: "100" });
 		expect(ack.success).toBe(true);
@@ -703,19 +644,17 @@ test("addSongToPlaylist POSTs playlist add mutation and parses ack", async () =>
 test("setProviderSessionCookie POSTs cookie and accepts ack without retaining cookie", async () => {
 	let receivedBody: unknown = null;
 	const secret = "MUSIC_U=web-secret";
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/session-cookie");
-		expect(init?.method).toBe("POST");
-		receivedBody = JSON.parse(String(init?.body ?? "{}"));
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path, body } = apiArgs(args);
+		expect(method).toBe("POST");
+		expect(path).toContain("/providers/netease/session-cookie");
+		receivedBody = body;
+		return {
 			ok: true,
 			data: { provider: "netease", stored: true },
-		});
-	}) as typeof fetch;
-
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const ack = await client.setProviderSessionCookie("netease", secret);
 		expect(ack).toEqual({ provider: "netease", stored: true });
 		expect(receivedBody).toEqual({ cookie: secret });
@@ -724,18 +663,16 @@ test("setProviderSessionCookie POSTs cookie and accepts ack without retaining co
 });
 
 test("clearProviderSessionCookie DELETEs cookie and accepts clear ack", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/qq/session-cookie");
-		expect(init?.method).toBe("DELETE");
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("DELETE");
+		expect(path).toContain("/providers/qq/session-cookie");
+		return {
 			ok: true,
 			data: { provider: "qq", stored: false },
-		});
-	}) as typeof fetch;
-
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const ack = await client.clearProviderSessionCookie("qq");
 		expect(ack).toEqual({ provider: "qq", stored: false });
 	});
@@ -743,32 +680,30 @@ test("clearProviderSessionCookie DELETEs cookie and accepts clear ack", async ()
 
 test("Netease QR login helpers parse key image and check responses", async () => {
 	const seen: string[] = [];
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		seen.push(url);
-		expect(init?.method).toBe("GET");
-		if (url.includes("/providers/netease/login-qr-key")) {
-			return jsonResponse({ ok: true, data: { provider: "netease", key: "qr-key-1" } });
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		seen.push(path);
+		expect(method).toBe("GET");
+		if (path.includes("/providers/netease/login-qr-key")) {
+			return { ok: true, data: { provider: "netease", key: "qr-key-1" } };
 		}
-		if (url.includes("/providers/netease/login-qr-create")) {
-			expect(url).toContain("key=qr-key-1");
-			return jsonResponse({
+		if (path.includes("/providers/netease/login-qr-create")) {
+			expect(path).toContain("key=qr-key-1");
+			return {
 				ok: true,
 				data: { provider: "netease", key: "qr-key-1", img: "data:image/png;base64,abc" },
-			});
+			};
 		}
-		if (url.includes("/providers/netease/login-qr-check")) {
-			expect(url).toContain("key=qr-key-1");
-			return jsonResponse({
+		if (path.includes("/providers/netease/login-qr-check")) {
+			expect(path).toContain("key=qr-key-1");
+			return {
 				ok: true,
 				data: { provider: "netease", key: "qr-key-1", code: 801, loggedIn: false },
-			});
+			};
 		}
-		throw new Error(`unexpected url ${url}`);
-	}) as typeof fetch;
-
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		throw new Error(`unexpected path ${path}`);
+	}, async () => {
+		const client = new SidecarClient();
 		expect(await client.createProviderLoginQrKey("netease")).toEqual({
 			provider: "netease",
 			key: "qr-key-1",
@@ -790,32 +725,30 @@ test("Netease QR login helpers parse key image and check responses", async () =>
 
 test("QQ QR login helpers call QQ provider routes and parse responses", async () => {
 	const seen: string[] = [];
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		seen.push(url);
-		expect(init?.method).toBe("GET");
-		if (url.includes("/providers/qq/login-qr-key")) {
-			return jsonResponse({ ok: true, data: { provider: "qq", key: "qr_sig_1|1987342677" } });
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		seen.push(path);
+		expect(method).toBe("GET");
+		if (path.includes("/providers/qq/login-qr-key")) {
+			return { ok: true, data: { provider: "qq", key: "qr_sig_1|1987342677" } };
 		}
-		if (url.includes("/providers/qq/login-qr-create")) {
-			expect(url).toContain("key=qr_sig_1%7C1987342677");
-			return jsonResponse({
+		if (path.includes("/providers/qq/login-qr-create")) {
+			expect(path).toContain("key=qr_sig_1%7C1987342677");
+			return {
 				ok: true,
 				data: { provider: "qq", key: "qr_sig_1|1987342677", img: "data:image/png;base64,qq" },
-			});
+			};
 		}
-		if (url.includes("/providers/qq/login-qr-check")) {
-			expect(url).toContain("key=qr_sig_1%7C1987342677");
-			return jsonResponse({
+		if (path.includes("/providers/qq/login-qr-check")) {
+			expect(path).toContain("key=qr_sig_1%7C1987342677");
+			return {
 				ok: true,
 				data: { provider: "qq", key: "qr_sig_1|1987342677", code: 67, loggedIn: false, scanned: true },
-			});
+			};
 		}
-		throw new Error(`unexpected url ${url}`);
-	}) as typeof fetch;
-
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		throw new Error(`unexpected path ${path}`);
+	}, async () => {
+		const client = new SidecarClient();
 		expect(await client.createProviderLoginQrKey("qq")).toEqual({
 			provider: "qq",
 			key: "qr_sig_1|1987342677",
@@ -836,12 +769,57 @@ test("QQ QR login helpers call QQ provider routes and parse responses", async ()
 	expect(seen.length).toBe(3);
 });
 
+test("QR login kind query param is appended for QQ sub-methods", async () => {
+	const seen: string[] = [];
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		seen.push(path);
+		expect(method).toBe("GET");
+		if (path.includes("/providers/qq/login-qr-key")) {
+			expect(path).toContain("kind=qq_music");
+			return { ok: true, data: { provider: "qq", key: "qm-key" } };
+		}
+		if (path.includes("/providers/qq/login-qr-create")) {
+			expect(path).toContain("key=qm-key");
+			expect(path).toContain("kind=qq_music");
+			return {
+				ok: true,
+				data: { provider: "qq", key: "qm-key", img: "data:image/png;base64,qm" },
+			};
+		}
+		if (path.includes("/providers/qq/login-qr-check")) {
+			expect(path).toContain("key=qm-key");
+			expect(path).toContain("kind=qq_music");
+			return { ok: true, data: { provider: "qq", key: "qm-key", code: 801, loggedIn: false } };
+		}
+		throw new Error(`unexpected path ${path}`);
+	}, async () => {
+		const client = new SidecarClient();
+		expect(await client.createProviderLoginQrKey("qq", "qq_music")).toEqual({
+			provider: "qq",
+			key: "qm-key",
+		});
+		expect(await client.createProviderLoginQrImage("qq", "qm-key", "qq_music")).toEqual({
+			provider: "qq",
+			key: "qm-key",
+			img: "data:image/png;base64,qm",
+		});
+		expect(await client.checkProviderLoginQr("qq", "qm-key", "qq_music")).toEqual({
+			provider: "qq",
+			key: "qm-key",
+			code: 801,
+			loggedIn: false,
+		});
+	});
+	expect(seen.length).toBe(3);
+});
+
 test("loginStatus parses a cookie-free provider profile summary", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/login-status");
-		expect(init?.method).toBe("GET");
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/providers/netease/login-status");
+		return {
 			ok: true,
 			data: {
 				provider: "netease",
@@ -849,11 +827,9 @@ test("loginStatus parses a cookie-free provider profile summary", async () => {
 				nickname: "tester",
 				userId: "42",
 			},
-		});
-	}) as typeof fetch;
-
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const status = await client.loginStatus("netease");
 		expect(status.loggedIn).toBe(true);
 		expect(status.nickname).toBe("tester");
@@ -863,10 +839,11 @@ test("loginStatus parses a cookie-free provider profile summary", async () => {
 });
 
 test("loginStatus parses Netease VIP profile metadata", async () => {
-	const fake = (async (input: RequestInfo | URL) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/login-status");
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("GET");
+		expect(path).toContain("/providers/netease/login-status");
+		return {
 			ok: true,
 			data: {
 				provider: "netease",
@@ -883,11 +860,9 @@ test("loginStatus parses Netease VIP profile metadata", async () => {
 				vipTier: 6,
 				vipLevelName: "陆",
 			},
-		});
-	}) as typeof fetch;
-
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const status = await client.loginStatus("netease");
 		expect(status.vipType).toBe(11);
 		expect(status.vipLevel).toBe("svip");
@@ -904,66 +879,47 @@ test("loginStatus parses Netease VIP profile metadata", async () => {
 });
 
 test("logout posts to provider logout and parses ack", async () => {
-	const fake = (async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input.toString();
-		expect(url).toContain("/providers/netease/logout");
-		expect(init?.method).toBe("POST");
-		return jsonResponse({
+	await withTauriApi(async (args) => {
+		const { method, path } = apiArgs(args);
+		expect(method).toBe("POST");
+		expect(path).toContain("/providers/netease/logout");
+		return {
 			ok: true,
 			data: { provider: "netease", loggedOut: true },
-		});
-	}) as typeof fetch;
-
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		};
+	}, async () => {
+		const client = new SidecarClient();
 		const ack = await client.logout("netease");
 		expect(ack).toEqual({ provider: "netease", loggedOut: true });
 	});
 });
 
-test("songUrl 500 throws SidecarClientError", async () => {
-	const fake = (async () => new Response("", { status: 500 })) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
-		let caught: unknown = null;
-		try {
-			await client.songUrl(SAMPLE_TRACK);
-		} catch (e) {
-			caught = e;
-		}
-		expect(caught instanceof SidecarClientError).toBe(true);
-		expect((caught as SidecarClientError).code).toBe("HTTP_500");
-	});
-});
-
-test("request preserves provider failure envelope on non-2xx response", async () => {
-	const fake = (async () =>
-		jsonResponse({
-			ok: false,
-			error: {
-				code: "LOGIN_REQUIRED",
-				message: "需要登录后播放",
+test("request preserves provider failure envelope on ok:false responses", async () => {
+	await withTauriApi(async () => ({
+		ok: false,
+		error: {
+			code: "LOGIN_REQUIRED",
+			message: "需要登录后播放",
+			provider: "qq",
+			retryable: true,
+			action: "login",
+			playbackKeyReady: false,
+			reason: "login_required",
+			qqCode: 104003,
+			rawMessage: "no vkey",
+			tried: ["无损 FLAC · F000abc.flac"],
+			restriction: {
 				provider: "qq",
-				retryable: true,
+				category: "login_required",
 				action: "login",
-				playbackKeyReady: false,
-				reason: "login_required",
-				qqCode: 104003,
+				message: "需要登录后播放",
+				code: 104003,
 				rawMessage: "no vkey",
-				tried: ["无损 FLAC · F000abc.flac"],
-				restriction: {
-					provider: "qq",
-					category: "login_required",
-					action: "login",
-					message: "需要登录后播放",
-					code: 104003,
-					rawMessage: "no vkey",
-					missingPlaybackKey: true,
-				},
+				missingPlaybackKey: true,
 			},
-		}, 401)) as typeof fetch;
-	await withFetch(fake, async () => {
-		const client = new SidecarClient(BASE);
+		},
+	}), async () => {
+		const client = new SidecarClient();
 		let caught: unknown = null;
 		try {
 			await client.resolveSongUrl({ ...SAMPLE_TRACK, provider: "qq" });

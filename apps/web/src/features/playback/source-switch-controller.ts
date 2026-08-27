@@ -96,15 +96,15 @@ export class SourceSwitchController {
 			) {
 				return { status: "stale" };
 			}
-			if (!resolved.url || resolved.playable === false) {
+			// 失败现在由 api_bridge 错误信封抛出（兼容错误类型仍沿用旧名），由外层统一归因；
+			// 成功结果里不再携带 playable/provider/message 等整合字段
+			if (!resolved.url) {
 				return {
 					status: "unavailable",
-					message: resolved.message || "目标音源暂不可播放",
+					message: "目标音源暂不可播放",
 				};
 			}
-			const resolvedProvider = PROVIDERS.has(resolved.provider as ProviderId)
-				? (resolved.provider as ProviderId)
-				: candidate.provider;
+			const resolvedProvider = candidate.provider;
 			if (resolvedProvider !== provider) {
 				return {
 					status: "unavailable",

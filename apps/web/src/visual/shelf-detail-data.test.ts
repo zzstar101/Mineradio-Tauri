@@ -719,7 +719,7 @@ test("createShelfDetailContentLoader writes deterministic token-guarded errors w
 	expect(errors).toEqual([{ token: 3, label: "歌单信息不完整" }]);
 });
 
-test("createShelfDetailContentLoader rejects unknown provider ids before sidecar fetch", async () => {
+test("createShelfDetailContentLoader rejects unknown provider ids before native API fetch", async () => {
 	const errors: unknown[] = [];
 	const loader = createShelfDetailContentLoader({
 		library: {

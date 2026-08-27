@@ -648,13 +648,6 @@ mod tests {
             Ok(Self::receipt(operation, NativeInstallStage::DesktopLyrics))
         }
 
-        fn gate_supervisor_and_stop_exact_sidecar(
-            &self,
-            operation: &UpdateInstallGateClaim,
-        ) -> Result<NativeOwnerReceipt, NativeOwnerPrepareFailure> {
-            Ok(Self::receipt(operation, NativeInstallStage::Sidecar))
-        }
-
         fn verify_prepared(
             &self,
             _operation: &UpdateInstallGateClaim,
@@ -882,7 +875,6 @@ mod tests {
         assert_eq!(
             native_calls.lock().expect("native calls").as_slice(),
             [
-                "rollback-Sidecar",
                 "rollback-DesktopLyrics",
                 "rollback-Wallpaper",
                 "rollback-FullDesktop",
@@ -936,7 +928,7 @@ mod tests {
         let lease = prepared_native_lease_with_failure(
             &gate,
             Arc::clone(&native_calls),
-            Some(NativeInstallStage::Sidecar),
+            Some(NativeInstallStage::DesktopLyrics),
             None,
         );
         let operation = lease.operation().clone();
@@ -961,7 +953,7 @@ mod tests {
         );
         assert_eq!(
             native_calls.lock().expect("native calls").as_slice(),
-            ["rollback-Sidecar"]
+            ["rollback-DesktopLyrics"]
         );
         assert!(gate.enter_mutation().is_err());
 
@@ -976,8 +968,7 @@ mod tests {
         assert_eq!(
             native_calls.lock().expect("native calls").as_slice(),
             [
-                "rollback-Sidecar",
-                "rollback-Sidecar",
+                "rollback-DesktopLyrics",
                 "rollback-DesktopLyrics",
                 "rollback-Wallpaper",
                 "rollback-FullDesktop",

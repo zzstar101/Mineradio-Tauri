@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import type { PlayableState, Track } from "@mineradio/shared";
+import type { PlayableState, ProviderId, Track } from "@mineradio/shared";
+
+export interface TrialBannerState {
+	text: string;
+	provider: ProviderId;
+	showLogin: boolean;
+}
 
 export type PlaybackMode = "single" | "loop" | "queue" | "shuffle";
 
@@ -36,6 +42,11 @@ export interface PlaybackCheckpointTrackV1 {
 	readonly playableState: PlayableState;
 }
 
+export interface PlaybackCheckpointStreamSourceV1 {
+	readonly provider: ProviderId;
+	readonly id: string;
+}
+
 export interface PlaybackExitCheckpointV1 {
 	readonly schema: typeof PLAYBACK_EXIT_CHECKPOINT_SCHEMA;
 	readonly operationId: string;
@@ -52,6 +63,7 @@ export interface PlaybackExitCheckpointV1 {
 	readonly muted: boolean;
 	readonly sourceKind: PlaybackCheckpointSourceKind;
 	readonly restartRestorable: boolean;
+	readonly streamSource?: PlaybackCheckpointStreamSourceV1;
 }
 
 export interface PlaybackCheckpointRestoreAuthority {
@@ -113,6 +125,12 @@ export interface PlaybackState {
 	muted: boolean;
 	mode: PlaybackMode;
 	queue: Track[];
+	/** 流式电台续播源：非空且当前曲为队尾时，ended 前自动续拉下一首 */
+	streamSource: { provider: ProviderId; id: string } | null;
+	/** song_url 返回的试听区间；播放中经时长测量确认是否真为试听 */
+	previewRange: { startMs: number; endMs: number } | null;
+	/** 试听横幅：由时长测量确认后设置 */
+	trialBanner: TrialBannerState | null;
 	checkpointRestore: PlaybackCheckpointRestoreAuthority | null;
 	setCurrentTrack: (track: Track | null) => void;
 	setPlaying: (playing: boolean) => void;
@@ -123,6 +141,10 @@ export interface PlaybackState {
 	toggleMute: () => void;
 	setMode: (mode: PlaybackMode) => void;
 	setQueue: (tracks: Track[]) => void;
+	setStreamSource(source: { provider: ProviderId; id: string } | null): void;
+	/** 试听区间（来自 song_url），播放中由时长测量确认真试听 */
+	setPreviewRange(range: { startMs: number; endMs: number } | null): void;
+	setTrialBanner(banner: TrialBannerState | null): void;
 	enqueue: (track: Track) => void;
 	insertAt: (index: number, track: Track) => void;
 	insertNext: (track: Track) => void;
@@ -160,6 +182,8 @@ function playbackPatchForTrack(track: Track | null) {
 		isPlaying: track ? true : false,
 		positionMs: 0,
 		durationMs: track?.durationMs ?? null,
+		previewRange: null,
+		trialBanner: null,
 	};
 }
 
@@ -169,6 +193,8 @@ function stopPlaybackPatch() {
 		isPlaying: false,
 		positionMs: 0,
 		durationMs: null,
+		previewRange: null,
+		trialBanner: null,
 	};
 }
 
@@ -208,7 +234,10 @@ function boundedCheckpointText(
 function validCheckpointTrackValue(value: unknown): value is PlaybackCheckpointTrackV1 {
 	if (!value || typeof value !== "object") return false;
 	const track = value as Partial<PlaybackCheckpointTrackV1>;
-	return (track.provider === "netease" || track.provider === "qq" || track.provider === "soda")
+	return (track.provider === "netease"
+			|| track.provider === "qq"
+			|| track.provider === "kugou"
+			|| track.provider === "soda")
 		&& boundedCheckpointText(track.id, MAX_CHECKPOINT_TRACK_ID, false)
 		&& boundedCheckpointText(track.sourceId, MAX_CHECKPOINT_TRACK_ID, false)
 		&& (track.mediaMid === undefined
@@ -237,6 +266,18 @@ function validCheckpointTrackValue(value: unknown): value is PlaybackCheckpointT
 			"trial_only",
 			"unavailable",
 		].includes(String(track.playableState));
+}
+
+function validCheckpointStreamSourceValue(
+	value: unknown,
+): value is PlaybackCheckpointStreamSourceV1 {
+	if (!value || typeof value !== "object") return false;
+	const source = value as Partial<PlaybackCheckpointStreamSourceV1>;
+	return (source.provider === "netease"
+			|| source.provider === "qq"
+			|| source.provider === "kugou"
+			|| source.provider === "soda")
+		&& boundedCheckpointText(source.id, MAX_CHECKPOINT_TRACK_ID, false);
 }
 
 function checkpointTrackFromTrack(track: Track): PlaybackCheckpointTrackV1 | null {
@@ -321,12 +362,15 @@ function validatedCheckpointCurrentTrack(
 		|| checkpoint.restartRestorable !== checkpointSourceIsRestartRestorable(
 			checkpoint.sourceKind,
 		)
+		|| (checkpoint.streamSource !== undefined
+			&& !validCheckpointStreamSourceValue(checkpoint.streamSource))
 		|| !boundedCheckpointText(checkpoint.currentTrackRef, 640)
 	) return undefined;
 
 	if (checkpoint.currentTrackIndex === null) {
 		return checkpoint.currentTrackRef === ""
 			&& checkpoint.sourceKind === "none"
+			&& checkpoint.streamSource === undefined
 			? null
 			: undefined;
 	}
@@ -359,7 +403,11 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 	muted: false,
 	mode: "loop",
 	queue: [],
+	streamSource: null,
+	previewRange: null,
+	trialBanner: null,
 	checkpointRestore: null,
+	setStreamSource: (source) => set({ streamSource: source }),
 	setCurrentTrack: (track) =>
 		set((s) => ({
 			...playbackPatchForTrack(track),
@@ -372,7 +420,14 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 	setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)), muted: volume <= 0 }),
 	toggleMute: () => set((s) => ({ muted: !s.muted })),
 	setMode: (mode) => set({ mode }),
-	setQueue: (tracks) => set({ queue: tracks }),
+	setQueue: (tracks) => set({
+		queue: tracks,
+		streamSource: null,
+		previewRange: null,
+		trialBanner: null,
+	}),
+	setPreviewRange: (range) => set({ previewRange: range }),
+	setTrialBanner: (banner) => set({ trialBanner: banner }),
 	enqueue: (track) => set((s) => ({ queue: [...s.queue, track] })),
 	insertAt: (index, track) =>
 		set((s) => {
@@ -416,6 +471,8 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 				currentTrack: request.candidate,
 				positionMs: Math.max(0, request.preservePositionMs),
 				durationMs: request.candidate.durationMs ?? state.durationMs,
+				previewRange: null,
+				trialBanner: null,
 				playbackIntentId: nextPlaybackIntent(state),
 			};
 		});
@@ -491,6 +548,7 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 	clearQueue: () =>
 		set((s) => ({
 			queue: [],
+			streamSource: null,
 			...stopPlaybackPatch(),
 			playbackIntentId: nextPlaybackIntent(s),
 		})),
@@ -606,6 +664,9 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 			muted: state.muted,
 			sourceKind,
 			restartRestorable: checkpointSourceIsRestartRestorable(sourceKind),
+			...(state.currentTrack && state.streamSource
+				? { streamSource: Object.freeze({ ...state.streamSource }) }
+				: {}),
 		} satisfies PlaybackExitCheckpointV1);
 		const encodedSize = checkpointEncodedSize(checkpoint);
 		return encodedSize !== null && encodedSize <= MAX_PLAYBACK_EXIT_CHECKPOINT_BYTES
@@ -645,10 +706,15 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 			return {
 				queue: restoredQueue,
 				currentTrack: restoredCurrentTrack,
+				streamSource: checkpoint.streamSource
+					? { ...checkpoint.streamSource }
+					: null,
 				playbackIntentId,
 				isPlaying: restoredCurrentTrack ? checkpoint.wasPlaying : false,
 				positionMs: restoredCurrentTrack ? checkpoint.positionMs : 0,
 				durationMs: restoredCurrentTrack ? checkpoint.durationMs : null,
+				previewRange: null,
+				trialBanner: null,
 				mode: checkpoint.mode,
 				volume: checkpoint.volume,
 				muted: checkpoint.muted,

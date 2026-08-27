@@ -155,6 +155,7 @@ const ALLOWED_PREFERENCE_KEYS: &[(&str, u32)] = &[
     ("desktop.wallpaperSelection", 1),
     ("home.listenLedger.v2", 2),
     ("search.history", 1),
+    ("accounts.providerOrder.v1", 1),
 ];
 
 const ALLOWED_LEGACY_PREFERENCE_MIGRATIONS: &[(&str, &str)] = &[
@@ -1468,6 +1469,47 @@ mod tests {
             .unwrap();
         assert_eq!(migration.entries[0].schema_version, 1);
         assert_eq!(migration.entries[0].preference_key, "playback.quality");
+    }
+
+    #[test]
+    fn provider_order_preference_round_trips_through_sqlite_restart() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "mineradio-provider-order-roundtrip-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&temp_dir);
+
+        let first = initialize(&temp_dir).expect("初始化首个数据库连接");
+        commit_preferences_transaction(
+            &first.conn,
+            PreferenceTransactionRequest {
+                operations: vec![PreferenceMutation::Set {
+                    key: "accounts.providerOrder.v1".to_string(),
+                    schema_version: 1,
+                    value: serde_json::json!({
+                        "version": 1,
+                        "order": ["qq", "netease", "soda"],
+                        "visible": ["qq", "netease", "soda"]
+                    }),
+                }],
+            },
+        )
+        .expect("Provider 顺序应通过 allowlist 写入");
+        drop(first);
+
+        let second = initialize(&temp_dir).expect("重启后重新打开数据库连接");
+        let snapshot = get_preferences_snapshot(&second.conn).expect("读取偏好快照");
+        assert_eq!(
+            snapshot.values["accounts.providerOrder.v1"].schema_version,
+            1
+        );
+        assert_eq!(
+            snapshot.values["accounts.providerOrder.v1"].value["order"],
+            serde_json::json!(["qq", "netease", "soda"])
+        );
+
+        drop(second);
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 
     #[test]

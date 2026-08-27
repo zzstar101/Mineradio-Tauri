@@ -6,10 +6,6 @@ import { createLegacyApplicationRuntime } from "./legacy-application-runtime";
 test("legacy application runtime creates one client and publishes one complete Port generation", async () => {
 	const calls: string[] = [];
 	const client = {
-		async health() {
-			calls.push("health");
-			return { ok: true };
-		},
 		imageProxyUrl(url: string) {
 			calls.push(`image:${url}`);
 			return `proxy:${url}`;
@@ -23,7 +19,7 @@ test("legacy application runtime creates one client and publishes one complete P
 	let clientCreations = 0;
 	const runtime = createLegacyApplicationRuntime({
 		initialRuntimeConfig: {
-			sidecarBaseUrl: "http://127.0.0.1:39999",
+			mediaProxyBase: "mineradio-tauri://localhost",
 			appDataDir: "D:/app-data",
 			appVersion: "0.1.0",
 			schemaVersion: "1",
@@ -41,35 +37,13 @@ test("legacy application runtime creates one client and publishes one complete P
 	expect(ports).not.toBeNull();
 	expect(clientCreations).toBe(1);
 	expect(ports?.desktop).toBe(desktop);
-	await ports?.apiRuntime.health();
 	await ports?.music.search.search("netease", "测试", 12);
 	expect(ports?.mediaUrl.imageUrl("https://example.com/cover.jpg"))
 		.toBe("proxy:https://example.com/cover.jpg");
 	expect(calls).toEqual([
-		"health",
 		"search:netease:测试:12",
 		"image:https://example.com/cover.jpg",
 	]);
-});
-
-test("legacy application runtime publishes no Ports when the transport is unavailable", async () => {
-	let clientCreations = 0;
-	const runtime = createLegacyApplicationRuntime({
-		initialRuntimeConfig: {
-			sidecarBaseUrl: "",
-			appDataDir: "D:/app-data",
-			appVersion: "0.1.0",
-			schemaVersion: "1",
-			updaterPublicKeyConfigured: false,
-		},
-		createClient: () => {
-			clientCreations += 1;
-			return {} as SidecarClient;
-		},
-	});
-
-	expect(await runtime.connect()).toBeNull();
-	expect(clientCreations).toBe(0);
 });
 
 test("legacy application runtime publishes no Ports when runtime configuration cannot be loaded", async () => {

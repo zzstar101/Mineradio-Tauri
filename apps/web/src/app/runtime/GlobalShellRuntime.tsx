@@ -6,6 +6,7 @@ import {
   type AiDepthStatusDetail,
 } from "../../visual/ai-depth-estimator";
 import { applyVisualThemeToRoot } from "../../visual/visual-theme";
+import { attachRecommendationRowWheelScroll } from "../../features/recommendation/recommendation-wheel-scroll";
 
 export interface AiDepthChipState {
   visible: boolean;
@@ -23,6 +24,12 @@ export function isHomeBlankDismissElement(
       ".home-card",
       ".home-tile",
       ".home-chip",
+      // 推荐卡片：有自己的点击交互（或即将有），不能被当成空白区 dismiss
+      ".home-recommendation-card-track",
+      ".home-recommendation-card-netease-mixed",
+      ".home-recommendation-media",
+      // 歌单详情页曲目行（div[role=button]，详情页期间 emptyHomeActive 仍为 true）
+      ".home-detail-track",
       "button",
       "a",
       "input",
@@ -79,6 +86,8 @@ export interface GlobalShellRuntimeOptions {
   setAccountDropdownOpen(open: boolean): void;
   dismissEmptyHome(): void;
   showToast(message: string): void;
+  /** 左侧歌单面板 open 状态 setter：peek 通过它驱动 React 状态（可选） */
+  setPlaylistPanelOpen?(open: boolean): void;
 }
 
 export interface GlobalShellRuntimeResult {
@@ -106,12 +115,81 @@ export function useGlobalShellRuntime({
   setAccountDropdownOpen,
   dismissEmptyHome,
   showToast,
+  setPlaylistPanelOpen,
 }: GlobalShellRuntimeOptions): GlobalShellRuntimeResult {
   const [userCapsulePeek, setUserCapsulePeek] = useState(false);
   const [aiDepthChip, setAiDepthChip] = useState<AiDepthChipState>({
     visible: false,
     text: "AI 深度估计…",
   });
+
+  // 推荐模块行：滚轮横滑替代横向滚动条（空白区域不受影响）
+  useEffect(
+    () => attachRecommendationRowWheelScroll(document),
+    [],
+  );
+
+  // 左侧歌单面板：一个"常开=强制"变量 + 普通规则。
+  // - 常开（pinned）：强制展开，鼠标移动完全忽略
+  // - 取消常开：强制解除，普通规则接管——光标仍在面板列内则原地保持，
+  //   移出该列即收起
+  // - 普通规则：贴左缘（视口宽 5%）弹出；面板同宽的左列为保持区，
+  //   越过右缘收回。peek 只通过 setPlaylistPanelOpen 驱动 React 状态，
+  //   不手工改 DOM 类，避免与渲染互相覆盖。
+  useEffect(() => {
+    if (!setPlaylistPanelOpen || typeof window === "undefined") return;
+    let frame = 0;
+    let peekOwned = false; // 当前展开是否由 peek 打开/接手
+    let prevPinned = false;
+    const evaluate = (event: MouseEvent) => {
+      const panel = document.getElementById("playlist-panel");
+      if (!panel) return;
+      const pinned = panel.classList.contains("pinned");
+      const shown = panel.classList.contains("show");
+      const justUnpinned = prevPinned && !pinned;
+      prevPinned = pinned;
+      if (pinned) return; // 强制展开：忽略一切鼠标变化
+
+      // 从常开切回非常开的瞬间：接手遗留的展开状态，交还普通规则
+      if (justUnpinned && shown) peekOwned = true;
+
+      const triggerX = document.documentElement.clientWidth * 0.05;
+      const rect = panel.getBoundingClientRect();
+      const inColumn = event.clientX <= Math.max(triggerX, rect.right);
+
+      if (inColumn) {
+        if (!shown) {
+          peekOwned = true;
+          setPlaylistPanelOpen(true);
+        }
+        return;
+      }
+      // 列外只收走自己打开/接手的展开，不碰外部路径打开的面板
+      if (shown && peekOwned) {
+        peekOwned = false;
+        setPlaylistPanelOpen(false);
+      }
+    };
+    const onMouseMove = (event: MouseEvent) => {
+      cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => evaluate(event));
+    };
+    const onMouseLeaveWindow = () => {
+      cancelAnimationFrame(frame);
+      const panel = document.getElementById("playlist-panel");
+      if (peekOwned && panel && !panel.classList.contains("pinned")) {
+        peekOwned = false;
+        setPlaylistPanelOpen(false);
+      }
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseleave", onMouseLeaveWindow);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseleave", onMouseLeaveWindow);
+    };
+  }, [setPlaylistPanelOpen]);
 
   useEffect(() => {
     if (accountLoggedIn) return;

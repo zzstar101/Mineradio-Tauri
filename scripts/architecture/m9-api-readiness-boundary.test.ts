@@ -1,8 +1,6 @@
 import { expect, test } from "bun:test";
-import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
 
 const repositoryRoot = resolve(import.meta.dir, "../..");
 
@@ -32,25 +30,45 @@ function repositoryPath(path: string): string {
 	return relative(repositoryRoot, path).replaceAll("\\", "/");
 }
 
-function normalizedTauriConfigDigest(source: string): string {
-	const normalizedNewlines = source.replaceAll("\r\n", "\n");
-	const versionPattern = /("version"\s*:\s*)"[^"]+"/g;
-	const matches = [...normalizedNewlines.matchAll(versionPattern)];
-	if (matches.length !== 1) {
-		throw new Error("tauri.conf.json 必须只包含一个顶层产品版本字段");
+type NativeRoute = `${"GET" | "POST" | "DELETE"} ${string}`;
+
+function clientNativeRoutes(source: string): NativeRoute[] {
+	const routes = new Set<NativeRoute>();
+	const calls = /this\.(?:request|invokeApiJson)\(\s*"(GET|POST|DELETE)"\s*,\s*(["'`])([\s\S]*?)\2\s*[,)]/gu;
+	for (const match of source.matchAll(calls)) {
+		let route = match[3];
+		route = route.split("${query ?", 1)[0] ?? route;
+		route = route.replaceAll("${suffix}", "");
+		route = route.replace(/\$\{[^}]*provider[^}]*\}/gu, ":provider");
+		route = route.replace(/\$\{encodeURIComponent\([^}]+\)\}/gu, ":id");
+		route = route.replace(/\$\{[^}]+\}/gu, ":id");
+		route = route.split("?", 1)[0] ?? route;
+		routes.add(`${match[1]} ${route}` as NativeRoute);
 	}
-	const config = JSON.parse(normalizedNewlines) as { version?: unknown };
-	if (typeof config.version !== "string") {
-		throw new Error("tauri.conf.json 产品版本必须是字符串");
-	}
-	const versionAgnostic = normalizedNewlines.replace(
-		versionPattern,
-		'$1"__PRODUCT_VERSION__"',
-	);
-	return createHash("sha256").update(versionAgnostic).digest("hex");
+	return [...routes].sort();
 }
 
-test("M9 keeps concrete Sidecar transport inside api and legacy adapters", () => {
+function bridgeNativeRoutes(source: string): NativeRoute[] {
+	const routes = new Set<NativeRoute>();
+	for (const match of source.matchAll(/\("(GET|POST|DELETE)",\s*"(\/[^"?]+)"\)/gu)) {
+		routes.add(`${match[1]} ${match[2]}` as NativeRoute);
+	}
+	for (const match of source.matchAll(
+		/\("(GET|POST|DELETE)",\s*\[([^\]]+)\]\)/gu,
+	)) {
+		const segments = match[2]
+			.split(",")
+			.map((item) => item.trim())
+			.filter(Boolean)
+			.map((item) => item.startsWith('"') ? item.slice(1, -1) : ":id");
+		if (segments.length === 0) continue;
+		const suffix = segments.join("/");
+		routes.add(`${match[1]} /providers/:provider/${suffix}` as NativeRoute);
+	}
+	return [...routes].sort();
+}
+
+test("native API compatibility client stays behind application ports", () => {
 	const webRoot = resolve(repositoryRoot, "apps/web/src");
 	const allowedPrefixes = [
 		"apps/web/src/api/",
@@ -68,7 +86,7 @@ test("M9 keeps concrete Sidecar transport inside api and legacy adapters", () =>
 	expect(violations).toEqual([]);
 });
 
-test("M9 business and visual modules do not receive sidecar base addresses", () => {
+test("business and visual modules do not receive retired Sidecar addresses", () => {
 	const guardedRoots = [
 		"apps/web/src/app",
 		"apps/web/src/features",
@@ -88,7 +106,7 @@ test("M9 business and visual modules do not receive sidecar base addresses", () 
 	expect(violations).toEqual([]);
 });
 
-test("M9 visual modules treat media URIs as opaque values", () => {
+test("visual modules treat native media URIs as opaque values", () => {
 	const visualRoots = [
 		"apps/web/src/visual",
 		"packages/visual-engine/src",
@@ -104,7 +122,7 @@ test("M9 visual modules treat media URIs as opaque values", () => {
 	expect(violations).toEqual([]);
 });
 
-test("M9 media image source is consumed by production code", () => {
+test("native media image source is consumed by production code", () => {
 	const portPath = resolve(repositoryRoot, "apps/web/src/ports/media-url-port.ts");
 	const portSource = readFileSync(portPath, "utf8");
 	const consumerRoots = [
@@ -124,50 +142,106 @@ test("M9 media image source is consumed by production code", () => {
 	expect(consumers.length).toBeGreaterThan(0);
 });
 
-test("M9 leaves the frozen Sidecar API, shared contracts and packaging unchanged", () => {
-	// 固定 D2 cutover 后的 Sidecar tree/blob 与 externalBin 组装对象；通用 Rust updater 依赖不属于 Sidecar API。
-	const frozenObjects = {
-		"sidecars/api": "1e1bebdabe0816830b103c2eb6d9268cb2b658cc",
-		"packages/shared": "f0579e8fb63fc1974faaf2a1226b9a50a2704959",
-		"apps/web/src/api/sidecar-client.ts": "64a60cfce7e8e6e622727ffb60d4a791285880be",
-		"apps/desktop/src-tauri/src/sidecar.rs": "6889c8f6d8b200c1af4f7b0f05792cbe9775ddeb",
-		"apps/desktop/scripts/build-sidecar-binary.mjs": "528bca986b626f52010beac6bd9f749d88a540f9",
-		"apps/desktop/src-tauri/build.rs": "b1707ceaf4500df1f9467946959f40d0c732110a",
-	} as const;
-	const frozenTargets = Object.keys(frozenObjects);
-	const committedObjects = Object.fromEntries(frozenTargets.map((target) => {
-		const result = spawnSync(
-			"git",
-			["rev-parse", `HEAD:${target}`],
-			{ cwd: repositoryRoot, encoding: "utf8" },
-		);
-		return [target, result.status === 0 ? result.stdout.trim() : result.stderr.trim()];
-	}));
-	const workingTreeResult = spawnSync(
-		"git",
-		["diff", "--name-only", "HEAD", "--", ...frozenTargets],
-		{ cwd: repositoryRoot, encoding: "utf8" },
-	);
-	const untrackedResult = spawnSync(
-		"git",
-		["ls-files", "--others", "--exclude-standard", "--", ...frozenTargets],
-		{ cwd: repositoryRoot, encoding: "utf8" },
-	);
+test("Sidecar HTTP runtime stays retired after the Rust crate cutover", () => {
+	// Sidecar HTTP 服务已迁移进 mineradio_api crate：旧工件必须保持删除，
+	// 防止意外复活旧架构；tauri 打包的 externalBin 也必须保持为空。
+	const retiredPaths = [
+		"sidecars/api/package.json",
+		"sidecars/api/src",
+		"apps/desktop/src-tauri/src/sidecar.rs",
+		"apps/desktop/scripts/build-sidecar-binary.mjs",
+	];
+	for (const target of retiredPaths) {
+		expect(existsSync(resolve(repositoryRoot, target))).toBe(false);
+	}
 
-	expect(committedObjects).toEqual(frozenObjects);
-	expect(workingTreeResult.status).toBe(0);
-	expect(workingTreeResult.stderr).toBe("");
-	expect(workingTreeResult.stdout.trim()).toBe("");
-	expect(untrackedResult.status).toBe(0);
-	expect(untrackedResult.stderr).toBe("");
-	expect(untrackedResult.stdout.trim()).toBe("");
+	const tauriConfig = JSON.parse(
+		readFileSync(
+			resolve(repositoryRoot, "apps/desktop/src-tauri/tauri.conf.json"),
+			"utf8",
+		),
+	) as { bundle?: { externalBin?: string[] } };
+	expect(tauriConfig.bundle?.externalBin ?? []).toEqual([]);
+});
 
-	// 产品版本由 release-version 门禁统一管理；除该字段外，Sidecar externalBin 与打包配置逐字冻结。
-	const tauriConfig = readFileSync(
-		resolve(repositoryRoot, "apps/desktop/src-tauri/tauri.conf.json"),
+test("canonical provider path is Tauri invoke to api_bridge and MineRadio-api", () => {
+	const clientSource = readFileSync(
+		resolve(repositoryRoot, "apps/web/src/api/sidecar-client.ts"),
 		"utf8",
 	);
-	expect(normalizedTauriConfigDigest(tauriConfig)).toBe(
-		"e55d77e67a3443e89cac20bf8d3935515d7c4b97a58d48453c984ebf4b569f1c",
+	const bridgeSource = readFileSync(
+		resolve(repositoryRoot, "apps/desktop/src-tauri/src/api_bridge.rs"),
+		"utf8",
 	);
+	const desktopSource = readFileSync(
+		resolve(repositoryRoot, "apps/desktop/src-tauri/src/lib.rs"),
+		"utf8",
+	);
+
+	expect(clientSource).toContain('invokeTauriCommand("api_call"');
+	expect(clientSource).not.toMatch(/\bfetch\s*\(/);
+	expect(clientSource).not.toContain("127.0.0.1");
+	expect(clientSource).not.toContain("sidecarBaseUrl");
+	expect(bridgeSource).toMatch(/use mineradio_api::\s*\{/);
+	expect(bridgeSource).toContain("api: &Api");
+	expect(bridgeSource).toContain("pub async fn api_call");
+	expect(desktopSource).toContain("api_bridge::api_call");
+});
+
+test("every Web native API route is handled by the Rust bridge or explicitly gated", () => {
+	const clientSource = readFileSync(
+		resolve(repositoryRoot, "apps/web/src/api/sidecar-client.ts"),
+		"utf8",
+	);
+	const bridgeSource = readFileSync(
+		resolve(repositoryRoot, "apps/desktop/src-tauri/src/api_bridge.rs"),
+		"utf8",
+	);
+	const gatedRoutes = new Set<NativeRoute>([
+		"GET /discover/home",
+		"POST /shared-playlist/import",
+	]);
+	const bridgeRoutes = new Set(bridgeNativeRoutes(bridgeSource));
+	const uncovered = clientNativeRoutes(clientSource).filter(
+		(route) => !bridgeRoutes.has(route) && !gatedRoutes.has(route),
+	);
+
+	expect(uncovered).toEqual([]);
+	for (const required of [
+		"GET /weather/radio",
+		"GET /discover/home",
+		"GET /podcast/search",
+		"GET /podcast/hot",
+		"GET /podcast/detail",
+		"GET /podcast/programs",
+		"GET /podcast/my",
+		"GET /podcast/my/items",
+		"POST /shared-playlist/import",
+	] satisfies NativeRoute[]) {
+		expect(clientNativeRoutes(clientSource)).toContain(required);
+	}
+
+	const appSource = readFileSync(
+		resolve(repositoryRoot, "apps/web/src/app/App.tsx"),
+		"utf8",
+	);
+	expect(appSource).toContain(
+		"discoverHomeAvailable: applicationRuntime !== defaultApplicationRuntime",
+	);
+	expect(appSource).toMatch(
+		/onSharedPlaylistImport:\s*applicationRuntime === defaultApplicationRuntime\s*\? undefined/u,
+	);
+});
+
+test("production native API transport never logs request or response payloads", () => {
+	const clientSource = readFileSync(
+		resolve(repositoryRoot, "apps/web/src/api/sidecar-client.ts"),
+		"utf8",
+	);
+	const invokeBody = clientSource.match(
+		/private async invokeApiJson[\s\S]*?\n\t\}\n\n\tprivate async request/u,
+	)?.[0] ?? "";
+
+	expect(invokeBody).not.toContain("console.log");
+	expect(invokeBody).not.toMatch(/console\.(?:debug|info|warn|error)\s*\([^)]*(?:body|tauriResult)/u);
 });

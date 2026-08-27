@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
 	DiscoverHomeResponse,
+	ProviderId,
+	RecommendationCard as RecommendationCardData,
+	RecommendationPage,
 	Track,
 	WeatherRadioResponse,
 } from "@mineradio/shared";
 import type { DiscoverPort } from "../../ports/music/discover-port";
+import { usePlaybackStore } from "../../stores/playback-store";
 import type { LibraryPort } from "../../ports/music/library-port";
 import type { SearchExperiencePort } from "../../ports/music/search-port";
 import type { HomePlaylistDetailView } from "../../home/EmptyHomeHost";
+import {
+	buildTrackFromRecommendationCard,
+	type RecommendationDetail,
+} from "../recommendation/recommendation-page-policy";
 import {
 	shouldUseCachedHomeDiscoverPlaylist,
 } from "./home-policy";
@@ -15,6 +23,11 @@ import type { HomeDashboardModel } from "./home-dashboard-policy";
 import type { HomeListenSummary } from "./home-listen-ledger";
 import type { HomeListenRepository } from "./home-listen-repository";
 import { defaultHomeListenRepository } from "./legacy-home-listen-adapter";
+import {
+	HOME_PLAYLIST_PAGE_SIZE,
+	applyPlaylistPageAtOffset,
+	playlistHasNextPage,
+} from "./home-playlist-paging";
 import {
 	useHomeDashboardController,
 	type HomeDashboardPlaybackFacade,
@@ -25,11 +38,15 @@ export type HomeListenStorage = HomeListenRepository;
 
 export interface HomeControllerResult {
 	discover: DiscoverHomeResponse | null;
+	recommendations: RecommendationPage[];
 	weatherRadio: WeatherRadioResponse | null;
 	playlistDetail: HomePlaylistDetailView | null;
+	recommendationDetail: RecommendationDetail | null;
 	discoverLoading: boolean;
+	recommendationsLoading: boolean;
 	weatherRadioLoading: boolean;
 	discoverError: string | null;
+	recommendationsError: string | null;
 	weatherRadioError: string | null;
 	forcedOpen: boolean;
 	suppressed: boolean;
@@ -38,6 +55,7 @@ export interface HomeControllerResult {
 	setForcedOpen(open: boolean): void;
 	setSuppressed(suppressed: boolean): void;
 	refreshDiscover(): Promise<DiscoverHomeResponse | null>;
+	refreshRecommendations(options?: { refresh?: boolean }): Promise<RecommendationPage[]>;
 	refreshWeatherRadio(): Promise<WeatherRadioResponse | null>;
 	recordListenPause(): void;
 	recordListenProgress(positionMs: number, durationMs: number | null): void;
@@ -48,6 +66,12 @@ export interface HomeControllerResult {
 	openPlaylist(index: number): Promise<void>;
 	closePlaylistDetail(): void;
 	playPlaylistDetail(index: number): void;
+	loadMorePlaylistTracks(): Promise<void>;
+	openRecommendations(anchorProvider: ProviderId): void;
+	closeRecommendations(): void;
+	playRecommendationTrack(provider: ProviderId, card: RecommendationCardData): void;
+	playRecommendationStream(provider: ProviderId, card: RecommendationCardData): Promise<void>;
+	openRecommendationPlaylist(provider: ProviderId, id: string): Promise<void>;
 	searchPlaylistDetailArtist(artist: string): void;
 	openPodcast(index: number): Promise<void>;
 	openPodcastSearch(): void;
@@ -86,6 +110,7 @@ export function useHomeController({
 	showToast,
 	storage = defaultHomeListenRepository,
 	autoRefresh = true,
+	discoverHomeAvailable = true,
 }: {
 	discover: DiscoverPort | null;
 	library: LibraryPort | null;
@@ -112,16 +137,23 @@ export function useHomeController({
 	showToast(message: string): void;
 	storage?: HomeListenStorage;
 	autoRefresh?: boolean;
+	/** MineRadio-api 未提供 discover/home 时由 composition root 显式关闭。 */
+	discoverHomeAvailable?: boolean;
 }): HomeControllerResult {
 	const [discover, setDiscover] = useState<DiscoverHomeResponse | null>(null);
+	const [recommendations, setRecommendations] = useState<RecommendationPage[]>([]);
 	const [weatherRadio, setWeatherRadio] = useState<WeatherRadioResponse | null>(
 		null,
 	);
 	const [playlistDetail, setPlaylistDetail] =
 		useState<HomePlaylistDetailView | null>(null);
+	const [recommendationDetail, setRecommendationDetail] =
+		useState<RecommendationDetail | null>(null);
 	const [discoverLoading, setDiscoverLoading] = useState(false);
+	const [recommendationsLoading, setRecommendationsLoading] = useState(false);
 	const [weatherRadioLoading, setWeatherRadioLoading] = useState(false);
 	const [discoverError, setDiscoverError] = useState<string | null>(null);
+	const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
 	const [weatherRadioError, setWeatherRadioError] = useState<string | null>(null);
 	const [forcedOpen, setForcedOpen] = useState(false);
 	const [suppressed, setSuppressed] = useState(false);
@@ -137,7 +169,11 @@ export function useHomeController({
 		repository: storage,
 	});
 	const discoverRequestRef = useRef(0);
+	const recommendationRequestRef = useRef(0);
 	const weatherRequestRef = useRef(0);
+	const playlistRequestRef = useRef(0);
+	const playlistLoadMoreBusyRequestRef = useRef<number | null>(null);
+	const playlistLoadedCountRef = useRef(0);
 	const dependenciesRef = useRef({
 		discoverPort,
 		library,
@@ -182,6 +218,12 @@ export function useHomeController({
 	}, []);
 
 	const refreshDiscover = useCallback(async () => {
+		if (!discoverHomeAvailable) {
+			setDiscover(null);
+			setDiscoverLoading(false);
+			setDiscoverError(null);
+			return null;
+		}
 		const port = dependenciesRef.current.discoverPort;
 		if (!port) {
 			setDiscover(null);
@@ -215,6 +257,37 @@ export function useHomeController({
 			return fallback;
 		} finally {
 			if (sequence === discoverRequestRef.current) setDiscoverLoading(false);
+		}
+	}, [discoverHomeAvailable]);
+
+	const refreshRecommendations = useCallback(async (
+		options: { refresh?: boolean } = {},
+	) => {
+		const port = dependenciesRef.current.discoverPort;
+		if (!port) {
+			setRecommendations([]);
+			setRecommendationsLoading(false);
+			setRecommendationsError(null);
+			return [];
+		}
+		const sequence = ++recommendationRequestRef.current;
+		setRecommendationsLoading(true);
+		setRecommendationsError(null);
+		try {
+			const next = await port.recommendationPages(options);
+			if (sequence === recommendationRequestRef.current) setRecommendations(next);
+			return next;
+		} catch (error) {
+			if (sequence === recommendationRequestRef.current) {
+				setRecommendationsError(
+					error instanceof Error ? error.message : "推荐内容载入失败",
+				);
+			}
+			return [];
+		} finally {
+			if (sequence === recommendationRequestRef.current) {
+				setRecommendationsLoading(false);
+			}
 		}
 	}, []);
 
@@ -255,19 +328,24 @@ export function useHomeController({
 		if (!autoRefresh) return;
 		if (!discoverPort) {
 			setDiscover(null);
+			setRecommendations([]);
 			setWeatherRadio(null);
 			setDiscoverLoading(false);
+			setRecommendationsLoading(false);
 			setWeatherRadioLoading(false);
 			setDiscoverError(null);
+			setRecommendationsError(null);
 			setWeatherRadioError(null);
 			return;
 		}
 		void refreshDiscover();
+		void refreshRecommendations();
 		void refreshWeatherRadio();
 	}, [
 		autoRefresh,
 		discoverPort,
 		typeof providerLoggedIn === "boolean" ? providerLoggedIn : false,
+		refreshRecommendations,
 		refreshDiscover,
 		refreshWeatherRadio,
 	]);
@@ -343,11 +421,14 @@ export function useHomeController({
 				return;
 			}
 			if (!current.library) {
-				current.showToast("sidecar 未连接，稍后再试");
+				current.showToast("API 未就绪，稍后再试");
 				return;
 			}
 			const key = `${item.provider}:${item.id}`;
+			const requestId = ++playlistRequestRef.current;
+			playlistLoadMoreBusyRequestRef.current = null;
 			setPlaylistDetail({ key, playlist: item, tracks: [], loading: true });
+			playlistLoadedCountRef.current = 0;
 			setSuppressed(false);
 			setForcedOpen(true);
 			current.setConsole(false);
@@ -356,13 +437,31 @@ export function useHomeController({
 			current.closeShelf();
 			current.selectShelfPlaylist(null);
 			try {
-				const detail = await current.library.playlistDetail(item.provider, item.id);
+				const detail = await current.library.playlistDetail(item.provider, item.id, {
+					offset: 0,
+					limit: HOME_PLAYLIST_PAGE_SIZE,
+				});
+				if (playlistRequestRef.current !== requestId) return;
+				playlistLoadedCountRef.current = detail.tracks.length;
 				setPlaylistDetail((value) =>
 					value?.key === key
-						? { key, playlist: detail, tracks: detail.tracks, loading: false }
+						? {
+								key,
+								playlist: detail,
+								tracks: detail.tracks,
+								loading: false,
+								exhausted: !playlistHasNextPage({
+									hasMore: detail.hasMore ?? null,
+									loadedCount: detail.tracks.length,
+									pageCount: detail.tracks.length,
+									pageSize: HOME_PLAYLIST_PAGE_SIZE,
+									totalCount: detail.trackCount ?? null,
+								}),
+							}
 						: value,
 				);
 			} catch (error) {
+				if (playlistRequestRef.current !== requestId) return;
 				const message = error instanceof Error ? error.message : "歌单载入失败";
 				setPlaylistDetail((value) =>
 					value?.key === key
@@ -375,7 +474,192 @@ export function useHomeController({
 		[discover, hasLogin, hasProviderLogin, refreshDiscover],
 	);
 
-	const closePlaylistDetail = useCallback(() => setPlaylistDetail(null), []);
+	const closePlaylistDetail = useCallback(() => {
+		playlistRequestRef.current += 1;
+		playlistLoadMoreBusyRequestRef.current = null;
+		playlistLoadedCountRef.current = 0;
+		setPlaylistDetail(null);
+	}, []);
+
+	/** 歌单详情加载下一页：同一 playlist generation 内单飞串行，
+	 *  新歌单会立即废弃旧 generation 的响应与单飞锁。
+	 *  已载数以 ref 为权威：快速滚动下旧渲染的闭包可能持有过期 tracks 快照，
+	 *  用它算 offset 会发出重复页；提交时再校验一次 offset 是否仍与已载数一致，
+	 *  不一致说明响应已过期，丢弃且不判尽（保留占位等下一次触发）。 */
+	const loadMorePlaylistTracks = useCallback(async () => {
+		const current = dependenciesRef.current;
+		const view = playlistDetail;
+		const requestId = playlistRequestRef.current;
+		if (
+			playlistLoadMoreBusyRequestRef.current === requestId ||
+			!view ||
+			view.loading ||
+			view.loadingMore ||
+			view.exhausted ||
+			playlistLoadedCountRef.current === 0 ||
+			!current.library
+		) {
+			return;
+		}
+		const offset = playlistLoadedCountRef.current;
+		const key = view.key;
+		playlistLoadMoreBusyRequestRef.current = requestId;
+		setPlaylistDetail((value) =>
+			value && value.key === key ? { ...value, loadingMore: true } : value,
+		);
+		try {
+			const page = await current.library.playlistDetail(
+				view.playlist.provider,
+				view.playlist.id,
+				{ offset, limit: HOME_PLAYLIST_PAGE_SIZE },
+			);
+			if (playlistRequestRef.current !== requestId) return;
+			setPlaylistDetail((value) => {
+				if (!value || (key != null && value.key !== key)) return value;
+				if (playlistLoadedCountRef.current !== offset) {
+					// 陈旧响应：期间列表已被其他写入推进，丢弃本页（不判尽）
+					return { ...value, loadingMore: false };
+				}
+				const merged = applyPlaylistPageAtOffset(value.tracks, offset, page.tracks);
+				playlistLoadedCountRef.current = merged.length;
+				return {
+					...value,
+					tracks: merged,
+					loadingMore: false,
+					exhausted: !playlistHasNextPage({
+						hasMore: page.hasMore ?? null,
+						loadedCount: merged.length,
+						pageCount: page.tracks.length,
+						pageSize: HOME_PLAYLIST_PAGE_SIZE,
+						totalCount: value.playlist.trackCount ?? null,
+					}),
+				};
+			});
+		} catch {
+			if (playlistRequestRef.current !== requestId) return;
+			// 静默收场：占位消失，用户可再次滚动重试
+			setPlaylistDetail((value) =>
+				value && value.key === key ? { ...value, loadingMore: false } : value,
+			);
+		} finally {
+			if (playlistLoadMoreBusyRequestRef.current === requestId) {
+				playlistLoadMoreBusyRequestRef.current = null;
+			}
+		}
+	}, [playlistDetail]);
+
+	const closeRecommendations = useCallback(() => setRecommendationDetail(null), []);
+
+	const openRecommendations = useCallback((anchorProvider: ProviderId) => {
+		const current = dependenciesRef.current;
+		setRecommendationDetail({ anchorProvider });
+		setSuppressed(false);
+		setForcedOpen(true);
+		current.setConsole(false);
+		current.setMiniQueue(false);
+		if (!current.libraryPanelPinned) current.closeLibraryPanel();
+		current.closeShelf();
+		current.selectShelfPlaylist(null);
+	}, []);
+
+	const playRecommendationTrack = useCallback(
+		(provider: ProviderId, card: RecommendationCardData) => {
+			const current = dependenciesRef.current;
+			const track = buildTrackFromRecommendationCard(provider, card);
+			current.playback.setQueue([track]);
+			current.playback.playAt(0);
+			enterPlayback();
+		},
+		[enterPlayback],
+	);
+
+	/** 流式电台：首拉一首即播并登记 streamSource，
+	 *  之后由播放会话 ended 钩子按需续拉生长队列。 */
+	const playRecommendationStream = useCallback(
+		async (provider: ProviderId, card: RecommendationCardData) => {
+			const current = dependenciesRef.current;
+			if (!current.library || !discoverPort) {
+				current.showToast("API 未就绪，稍后再试");
+				return;
+			}
+			try {
+				const track = await discoverPort.streamNext(provider, card.id);
+				current.playback.setQueue([track]);
+				usePlaybackStore.getState().setStreamSource({ provider, id: card.id });
+				current.playback.playAt(0);
+				enterPlayback();
+				current.showToast("电台已连接");
+			} catch {
+				current.showToast("流式电台连接失败");
+			}
+		},
+		[discoverPort, enterPlayback],
+	);
+
+	/** 打开推荐歌单：与 openPlaylist 同一套详情页/导航样板，
+	 *  但按 provider + card.id 定位（不依赖 discover 数组下标）。
+	 *  playlist 先放最小占位，playlistDetail 返回后整体替换。 */
+	const openRecommendationPlaylist = useCallback(
+		async (provider: ProviderId, id: string) => {
+			const current = dependenciesRef.current;
+			if (!current.library) {
+				current.showToast("API 未就绪，稍后再试");
+				return;
+			}
+			const key = `${provider}:${id}`;
+			const requestId = ++playlistRequestRef.current;
+			playlistLoadMoreBusyRequestRef.current = null;
+			setPlaylistDetail({
+				key,
+				playlist: { provider, id, name: "", coverUrl: "", trackIds: [], subscribed: false },
+				tracks: [],
+				loading: true,
+			});
+			playlistLoadedCountRef.current = 0;
+			setSuppressed(false);
+			setForcedOpen(true);
+			current.setConsole(false);
+			current.setMiniQueue(false);
+			if (!current.libraryPanelPinned) current.closeLibraryPanel();
+			current.closeShelf();
+			current.selectShelfPlaylist(null);
+			try {
+				const detail = await current.library.playlistDetail(provider, id, {
+					offset: 0,
+					limit: HOME_PLAYLIST_PAGE_SIZE,
+				});
+				if (playlistRequestRef.current !== requestId) return;
+				playlistLoadedCountRef.current = detail.tracks.length;
+				setPlaylistDetail((value) =>
+					value?.key === key
+						? {
+								key,
+								playlist: detail,
+								tracks: detail.tracks,
+								loading: false,
+								exhausted: !playlistHasNextPage({
+									hasMore: detail.hasMore ?? null,
+									loadedCount: detail.tracks.length,
+									pageCount: detail.tracks.length,
+									pageSize: HOME_PLAYLIST_PAGE_SIZE,
+									totalCount: detail.trackCount ?? null,
+								}),
+							}
+						: value,
+				);
+			} catch (error) {
+				if (playlistRequestRef.current !== requestId) return;
+				const message = error instanceof Error ? error.message : "歌单载入失败";
+				setPlaylistDetail((value) =>
+					value?.key === key
+						? { ...value, loading: false, error: message, tracks: [] }
+						: value,
+				);
+				current.showToast(message);
+			}
+		},
+		[],
+	);
 
 	const playPlaylistDetail = useCallback(
 		(index: number) => {
@@ -517,11 +801,15 @@ export function useHomeController({
 
 	return {
 		discover,
+		recommendations,
 		weatherRadio,
 		playlistDetail,
+		recommendationDetail,
 		discoverLoading,
+		recommendationsLoading,
 		weatherRadioLoading,
 		discoverError,
+		recommendationsError,
 		weatherRadioError,
 		forcedOpen,
 		suppressed,
@@ -530,6 +818,7 @@ export function useHomeController({
 		setForcedOpen,
 		setSuppressed,
 		refreshDiscover,
+		refreshRecommendations,
 		refreshWeatherRadio,
 		recordListenPause,
 		recordListenProgress,
@@ -540,6 +829,12 @@ export function useHomeController({
 		openPlaylist,
 		closePlaylistDetail,
 		playPlaylistDetail,
+		openRecommendations,
+		closeRecommendations,
+		playRecommendationTrack,
+		playRecommendationStream,
+		openRecommendationPlaylist,
+		loadMorePlaylistTracks,
 		searchPlaylistDetailArtist,
 		openPodcast,
 		openPodcastSearch,

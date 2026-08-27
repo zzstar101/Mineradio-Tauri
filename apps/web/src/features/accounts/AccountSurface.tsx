@@ -5,14 +5,19 @@ import type {
   ReactElement,
   RefObject,
 } from "react";
-import type {
-  ProviderId,
-  ProviderLoginStatus,
-  ProviderVipIcon,
-} from "@mineradio/shared";
+import type { ProviderLoginStatus, ProviderVipIcon } from "@mineradio/shared";
 import { TopRightControls, VipBadge } from "../../components/shell/TopRightControls";
 import type { AccountStatusByProvider } from "./useAccountSessionController";
 import {
+  accountProviderLabel,
+  cookiePlaceholderForProvider,
+  loginDescriptionForMethod,
+  loginMethodLabel,
+  loginMethodsForProvider,
+  loginTitleForMethod,
+  providerForLogin,
+  qrLoadingMarkForMethod,
+  type AccountProviderId,
   type LoginModalMode,
   type LoginProviderId,
   type LoginQrByProvider,
@@ -49,40 +54,6 @@ function accountVipBadge(
   };
 }
 
-function providerLabel(provider: ProviderId): string {
-  if (provider === "netease") return "网易云";
-  if (provider === "qq") return "QQ 音乐";
-  return "汽水音乐";
-}
-
-function loginTitleForProvider(provider: ProviderId): string {
-  if (provider === "netease") return "扫码登录网易云音乐";
-  if (provider === "qq") return "扫码登录 QQ 音乐";
-  return "扫码登录汽水音乐";
-}
-
-function loginDescriptionForProvider(provider: ProviderId): string {
-  if (provider === "netease") {
-    return "使用网易云音乐 App 扫码，可同步歌单、红心与播客。";
-  }
-  if (provider === "qq") {
-    return "使用 QQ 音乐 App 扫码，可同步歌单和播放授权。";
-  }
-  return "使用汽水音乐 App 扫码，可同步歌单、收藏与播放授权。";
-}
-
-function qrLoadingMarkForProvider(provider: ProviderId): string {
-  if (provider === "netease") return "NE";
-  if (provider === "qq") return "QQ";
-  return "SD";
-}
-
-function cookiePlaceholderForProvider(provider: ProviderId): string {
-  if (provider === "netease") return "MUSIC_U=...; __csrf=...";
-  if (provider === "qq") return "uin=...; qm_keyst=...; qqmusic_key=...";
-  return "sid_tt=...; sessionid=...";
-}
-
 export interface AccountSurfaceProps {
   statuses: AccountStatusByProvider;
   dropdownOpen: boolean;
@@ -90,9 +61,9 @@ export interface AccountSurfaceProps {
   onHome(): void;
   onAccountClick(): void;
   onHideCapsule(): void;
-  onRefreshStatus(provider: LoginProviderId): void;
-  onLogout(provider: LoginProviderId): void;
-  onOpenSingleProvider(provider: LoginProviderId): void;
+  onRefreshStatus(provider: AccountProviderId): void;
+  onLogout(provider: AccountProviderId): void;
+  onOpenSingleProvider(provider: AccountProviderId): void;
   /** DI 注入口；缺省时使用应用共享单例。 */
   providerOrderStore?: ProviderOrderStore;
 }
@@ -106,24 +77,25 @@ export interface AccountOverlaySurfaceProps {
   qrByProvider: LoginQrByProvider;
   qrStatusByProvider: LoginQrStatusByProvider;
   cookieInputRefs: Record<
-    LoginProviderId,
+    AccountProviderId,
     RefObject<HTMLTextAreaElement | null>
   >;
   onClose(): void;
-  onProviderChange(provider: LoginProviderId): void;
+  onAccountProviderChange(provider: AccountProviderId): void;
+  onMethodChange(method: LoginProviderId): void;
   onManualCookieToggle(): void;
   onRefreshQr(provider: LoginProviderId): void;
-  onRefreshStatus(provider: LoginProviderId): void;
-  onImportCookie(provider: LoginProviderId): void;
-  onLogout(provider: LoginProviderId): void;
-  onOpenSingleProvider(provider: LoginProviderId): void;
+  onRefreshStatus(provider: AccountProviderId): void;
+  onImportCookie(provider: AccountProviderId): void;
+  onLogout(provider: AccountProviderId): void;
+  onOpenSingleProvider(provider: AccountProviderId): void;
   /** DI 注入口；缺省时使用应用共享单例。 */
   providerOrderStore?: ProviderOrderStore;
 }
 
 function providerCollections(
   statuses: AccountStatusByProvider,
-  orderedProviders: readonly LoginProviderId[],
+  orderedProviders: readonly AccountProviderId[],
 ) {
   const logged = orderedProviders.flatMap((provider) => {
     const status = statuses[provider];
@@ -138,7 +110,7 @@ function providerCollections(
 /** 上游 topAccountPillClickSuppressed 同款阈值：位移超过 4px 才视为拖拽。 */
 const PROVIDER_DRAG_THRESHOLD_PX = 4;
 
-function providerKeyFromPoint(x: number, y: number): LoginProviderId | null {
+function providerKeyFromPoint(x: number, y: number): AccountProviderId | null {
   if (
     typeof document === "undefined" ||
     typeof document.elementFromPoint !== "function"
@@ -150,7 +122,9 @@ function providerKeyFromPoint(x: number, y: number): LoginProviderId | null {
   const row = element.closest("[data-flip-key]");
   if (!row) return null;
   const key = row.getAttribute("data-flip-key");
-  return key === "netease" || key === "qq" || key === "soda" ? key : null;
+  return key === "netease" || key === "qq" || key === "kugou" || key === "soda"
+    ? key
+    : null;
 }
 
 export function AccountSurface({
@@ -171,7 +145,7 @@ export function AccountSurface({
   const flip = useFlipReorder();
   const listRef = useRef<HTMLDivElement | null>(null);
   const [draggingProvider, setDraggingProvider] =
-    useState<LoginProviderId | null>(null);
+    useState<AccountProviderId | null>(null);
   const suppressNextClickRef = useRef(false);
 
   const orderedProviders = orderController.orderedProviders();
@@ -192,7 +166,7 @@ export function AccountSurface({
   });
 
   const beginProviderRowDrag = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>, provider: LoginProviderId) => {
+    (event: ReactPointerEvent<HTMLDivElement>, provider: AccountProviderId) => {
       if (event.button !== 0) return;
       const startX = event.clientX;
       const startY = event.clientY;
@@ -239,7 +213,7 @@ export function AccountSurface({
   const handleProviderRowKeyDown = useCallback(
     (
       event: ReactKeyboardEvent<HTMLDivElement>,
-      provider: LoginProviderId,
+      provider: AccountProviderId,
       index: number,
     ) => {
       if (!event.altKey) return;
@@ -304,7 +278,7 @@ export function AccountSurface({
                   className={`account-dropdown-row account-pill ${provider}`}
                   data-flip-key={provider}
                   tabIndex={0}
-                  aria-label={`${providerLabel(provider)}账号，可拖拽或使用 Alt+方向键调整顺序`}
+                  aria-label={`${accountProviderLabel(provider)}账号，可拖拽或使用 Alt+方向键调整顺序`}
                   style={{
                     cursor: isDragging ? "grabbing" : "grab",
                     userSelect: "none",
@@ -334,7 +308,7 @@ export function AccountSurface({
                   )}
                   <div className="account-dropdown-main">
                     <div className="account-dropdown-provider">
-                      {providerLabel(provider)}
+                      {accountProviderLabel(provider)}
                       {vipBadge ? (
                         <VipBadge
                           text={vipBadge.text}
@@ -370,7 +344,7 @@ export function AccountSurface({
                 type="button"
                 onClick={() => onOpenSingleProvider(provider)}
               >
-                <span>添加 {providerLabel(provider)}</span>
+                <span>添加 {accountProviderLabel(provider)}</span>
                 <span>
                   {statuses[provider]?.loggedIn === false
                     ? "登录已失效"
@@ -395,7 +369,8 @@ export function AccountOverlaySurface({
   qrStatusByProvider,
   cookieInputRefs,
   onClose,
-  onProviderChange,
+  onAccountProviderChange,
+  onMethodChange,
   onManualCookieToggle,
   onRefreshQr,
   onRefreshStatus,
@@ -412,11 +387,12 @@ export function AccountOverlaySurface({
   const { logged, missing } = providerCollections(statuses, orderedProviders);
   const loggedSummaries = logged.map(
     ({ provider: id, status }) =>
-      `${providerLabel(id)} ${status.nickname ?? status.userId ?? "已登录"}`,
+      `${accountProviderLabel(id)} ${status.nickname ?? status.userId ?? "已登录"}`,
   );
   const activeQr = qrByProvider[provider];
   const activeQrStatus = qrStatusByProvider[provider];
-  const activeStatus = statuses[provider];
+  const activeProvider = providerForLogin(provider);
+  const activeStatus = statuses[activeProvider];
 
   return (
     <div
@@ -434,26 +410,44 @@ export function AccountOverlaySurface({
         aria-labelledby="login-modal-title"
       >
         {modalMode === "full" ? (
-          <div className="login-platform-tabs" id="login-platform-tabs">
-            {orderedProviders.map((id) => (
-              <button
-                key={id}
-                id={`login-provider-${id}`}
-                className={`${id}${provider === id ? " active" : ""}`}
-                type="button"
-                onClick={() => onProviderChange(id)}
-                aria-selected={provider === id}
-              >
-                {providerLabel(id)}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="login-platform-tabs" id="login-platform-tabs">
+              {orderedProviders.map((id) => (
+                <button
+                  key={id}
+                  id={`login-provider-${id}`}
+                  className={`${id}${activeProvider === id ? " active" : ""}`}
+                  type="button"
+                  onClick={() => onAccountProviderChange(id)}
+                  aria-selected={activeProvider === id}
+                >
+                  {accountProviderLabel(id)}
+                </button>
+              ))}
+            </div>
+            {loginMethodsForProvider(activeProvider).length > 1 ? (
+              <div className="login-method-tabs" id="login-method-tabs">
+                {loginMethodsForProvider(activeProvider).map((id) => (
+                  <button
+                    key={id}
+                    id={`login-method-${id}`}
+                    className={`${id}${provider === id ? " active" : ""}`}
+                    type="button"
+                    onClick={() => onMethodChange(id)}
+                    aria-selected={provider === id}
+                  >
+                    {loginMethodLabel(id)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
         ) : null}
         <div className="login-intro">
           <div className="login-intro-kicker">Mineradio</div>
           <div className="login-intro-title">音乐播放器，也是一座视觉舞台</div>
           <div className="login-intro-body">
-            搜索或导入一首歌即可播放；登录后会同步歌单、红心和播客，登录态会保存在本机 sidecar 数据目录。
+            搜索或导入一首歌即可播放；登录后会同步歌单、红心和播客，登录态会保存在本机数据目录。
           </div>
         </div>
         {modalMode === "add-account" ? (
@@ -478,7 +472,7 @@ export function AccountOverlaySurface({
                 >
                   <div className="login-account-card-main">
                     <span className="login-add-provider-name">
-                      {providerLabel(id)}
+                      {accountProviderLabel(id)}
                     </span>
                     <span className="login-add-provider-meta">
                       {status.nickname ?? status.userId ?? "已登录"}
@@ -511,7 +505,7 @@ export function AccountOverlaySurface({
                   onClick={() => onOpenSingleProvider(id)}
                 >
                   <span className="login-add-provider-name">
-                    {providerLabel(id)}
+                    {accountProviderLabel(id)}
                   </span>
                   <span className="login-add-provider-meta">
                     {statuses[id]?.loggedIn === false
@@ -529,20 +523,20 @@ export function AccountOverlaySurface({
           </>
         ) : (
           <>
-            <h2 id="login-modal-title">{loginTitleForProvider(provider)}</h2>
+            <h2 id="login-modal-title">{loginTitleForMethod(provider)}</h2>
             <div id="login-modal-desc" className="desc">
-              {loginDescriptionForProvider(provider)}
+              {loginDescriptionForMethod(provider)}
             </div>
             <div id="qr-shell" className="qr-shell">
               {activeQr?.img ? (
                 <img
                   id="qr-img"
                   src={activeQr.img}
-                  alt={`${providerLabel(provider)}登录二维码`}
+                  alt={`${loginMethodLabel(provider)}登录二维码`}
                 />
               ) : (
                 <div className="qr-loading-mark" aria-hidden="true">
-                  {qrLoadingMarkForProvider(provider)}
+                  {qrLoadingMarkForMethod(provider)}
                 </div>
               )}
             </div>
@@ -559,21 +553,21 @@ export function AccountOverlaySurface({
               className={`qq-cookie-panel${manualCookieOpen ? " show" : ""}`}
             >
               <textarea
-                ref={cookieInputRefs[provider]}
-                id={`${provider}-cookie-input`}
+                ref={cookieInputRefs[activeProvider]}
+                id={`${activeProvider}-cookie-input`}
                 className="qq-cookie-input"
                 spellCheck={false}
                 autoComplete="off"
-                placeholder={cookiePlaceholderForProvider(provider)}
+                placeholder={cookiePlaceholderForProvider(activeProvider)}
               />
               <div className="qq-cookie-actions">
                 <div className="qq-cookie-note">
-                  手动导入只会写入本机 sidecar 会话。
+                  手动导入只会写入本机会话。
                 </div>
                 <button
                   className="modal-btn primary"
                   type="button"
-                  onClick={() => onImportCookie(provider)}
+                  onClick={() => onImportCookie(activeProvider)}
                 >
                   保存
                 </button>
@@ -602,14 +596,14 @@ export function AccountOverlaySurface({
               <button
                 className="modal-btn"
                 type="button"
-                onClick={() => onRefreshStatus(provider)}
+                onClick={() => onRefreshStatus(activeProvider)}
               >
                 刷新状态
               </button>
               <button
                 className="modal-btn"
                 type="button"
-                onClick={() => onLogout(provider)}
+                onClick={() => onLogout(activeProvider)}
               >
                 退出
               </button>

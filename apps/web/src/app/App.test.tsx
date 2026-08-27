@@ -7,19 +7,17 @@ import {
 	App,
 	applyDesktopWindowShellState,
 	buildDesktopLyricsPayloadPatch,
-	deriveSidecarRecoveryNoticeState,
 	desktopLyricsBeatMapKey,
 	isCollectSupportedTrack,
 	isHomeBlankDismissElement,
 	isNeteaseLikeSupported,
 	mergeProviderPlaylists,
-	nextSidecarStatusPollDelayMs,
 	shouldUseSecondaryLeftDisplaySeamGuard,
 	shouldShowEmptyHome,
 	shouldUseCachedHomeDiscoverPlaylist,
 } from "./App";
 import type { SplashHostProps } from "../visual/SplashHost";
-import type { SidecarStatus, RuntimeConfig } from "../tauri/runtime";
+import type { RuntimeConfig } from "../tauri/runtime";
 import { useLyricsStore } from "../stores/lyrics-store";
 import { usePlaybackStore } from "../stores/playback-store";
 import { useSearchStore } from "../stores/search-store";
@@ -167,7 +165,7 @@ function installAppStubAudio(): () => void {
 function playbackSidecarClientStubs() {
 	return {
 		async resolveSongUrl(track: Track) {
-			return { url: `https://example.com/${track.id}.mp3`, quality: "standard", proxied: false };
+			return { url: `https://example.com/${track.id}.mp3`, quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return `http://127.0.0.1:39999/audio-proxy?url=${encodeURIComponent(url)}`;
@@ -272,10 +270,10 @@ test("App provider mutation guards reject import-only tracks", () => {
 	expect(isCollectSupportedTrack(qqTrack)).toBe(true);
 });
 
-test("legacy application runtime default client factory stays stable and does not storm health requests", async () => {
+test("compatibility client startup uses native invoke without HTTP health polling", async () => {
 	await import("../../../../packages/visual-engine/src/runtime/happy-dom-preload");
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -286,55 +284,7 @@ test("legacy application runtime default client factory stays stable and does no
 	globalThis.fetch = (async (input: RequestInfo | URL) => {
 		const url = typeof input === "string" ? input : input.toString();
 		seen.push(url);
-		if (url.endsWith("/health")) {
-			return new Response(JSON.stringify({
-				ok: true,
-				appVersion: "0.0.0-test",
-				apiVersion: "0.1.0",
-				schemaVersion: "0.1.0",
-				providers: ["netease", "qq", "soda"],
-			}), { headers: { "content-type": "application/json" } });
-		}
-		if (url.endsWith("/providers/capabilities")) {
-			return new Response(JSON.stringify({
-				ok: true,
-				data: { version: "0.1.0", providers: [] },
-			}), { headers: { "content-type": "application/json" } });
-		}
-		if (url.includes("/providers/") && url.endsWith("/login-status")) {
-			const provider = url.match(/\/providers\/([^/]+)\//)?.[1] ?? "netease";
-			return new Response(JSON.stringify({
-				ok: true,
-				data: { provider, loggedIn: false },
-			}), { headers: { "content-type": "application/json" } });
-		}
-		if (url.includes("/providers/") && url.endsWith("/playlists")) {
-			return new Response(JSON.stringify({ ok: true, data: [] }), { headers: { "content-type": "application/json" } });
-		}
-		if (url.endsWith("/podcast/my")) {
-			return new Response(JSON.stringify({
-				ok: true,
-				data: { loggedIn: false, collections: [] },
-			}), { headers: { "content-type": "application/json" } });
-		}
-		if (url.endsWith("/discover/home")) {
-			return new Response(JSON.stringify({
-				ok: true,
-				data: {
-					loggedIn: false,
-					user: null,
-					dailySongs: [],
-					playlists: [],
-					podcasts: [],
-					mode: "starter",
-					updatedAt: 1,
-				},
-			}), { headers: { "content-type": "application/json" } });
-		}
-		return new Response(JSON.stringify({
-			ok: false,
-			error: { code: "TEST_UNUSED", message: "unused", retryable: false },
-		}), { status: 500, headers: { "content-type": "application/json" } });
+		throw new Error(`生产启动不应发起 HTTP 请求: ${url}`);
 	}) as typeof fetch;
 
 	const host = document.createElement("div");
@@ -345,11 +295,7 @@ test("legacy application runtime default client factory stays stable and does no
 		for (let i = 0; i < 8; i += 1) {
 			await new Promise((resolve) => setTimeout(resolve, 0));
 		}
-		const healthCalls = seen.filter((url) => url.endsWith("/health")).length;
-		const loginStatusCalls = seen.filter((url) => url.endsWith("/login-status")).length;
-		expect(healthCalls).toBeLessThanOrEqual(1);
-		expect(loginStatusCalls).toBeLessThanOrEqual(3);
-		expect(seen.length).toBeLessThanOrEqual(13);
+		expect(seen).toEqual([]);
 	} finally {
 		root.unmount();
 		host.remove();
@@ -363,7 +309,7 @@ test("DIY desktop lyrics toggle drives the desktop lyrics window lifecycle", asy
 	const restoreAudio = installAppStubAudio();
 	const calls: string[] = [];
 	const runtimeConfig: RuntimeConfig = {
-		sidecarBaseUrl: "",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -527,7 +473,7 @@ test("App opens Search detail from the compact search Enter action", async () =>
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -598,7 +544,7 @@ test("App Search detail append action queues a song without starting playback", 
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -770,7 +716,7 @@ test("App restores persisted Netease login state on startup", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -859,7 +805,7 @@ test("App shows Netease avatar and VIP badge in the top account capsule", async 
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -900,6 +846,10 @@ test("Home blank dismiss accepts only empty Home surfaces", async () => {
 			<div class="empty-home-shell" id="blank"></div>
 			<button class="home-card" id="card">card</button>
 			<input id="search-input" />
+			<div class="home-recommendation-media" id="rec-media"></div>
+			<div class="home-recommendation-card-track" id="rec-track"></div>
+			<div class="home-recommendation-card-netease-mixed" id="rec-mixed"></div>
+			<div class="home-detail-track" id="detail-track"></div>
 			<div id="bottom-handle"></div>
 			<div id="fx-panel"></div>
 			<div id="playlist-panel"></div>
@@ -911,6 +861,10 @@ test("Home blank dismiss accepts only empty Home surfaces", async () => {
 	expect(isHomeBlankDismissElement(document.getElementById("blank"))).toBe(true);
 	expect(isHomeBlankDismissElement(document.getElementById("card"))).toBe(false);
 	expect(isHomeBlankDismissElement(document.getElementById("search-input"))).toBe(false);
+	expect(isHomeBlankDismissElement(document.getElementById("rec-media"))).toBe(false);
+	expect(isHomeBlankDismissElement(document.getElementById("rec-track"))).toBe(false);
+	expect(isHomeBlankDismissElement(document.getElementById("rec-mixed"))).toBe(false);
+	expect(isHomeBlankDismissElement(document.getElementById("detail-track"))).toBe(false);
 	expect(isHomeBlankDismissElement(document.getElementById("bottom-handle"))).toBe(false);
 	expect(isHomeBlankDismissElement(document.getElementById("fx-panel"))).toBe(false);
 	expect(isHomeBlankDismissElement(document.getElementById("playlist-panel"))).toBe(false);
@@ -1081,70 +1035,6 @@ test("App suppresses baseline Home while visual shelf detail content is open", a
 		usePlaybackStore.getState().clearQueue();
 		useShelfStore.setState({ open: false, selectedPlaylistId: null });
 	}
-});
-
-function sidecarStatus(overrides: Partial<SidecarStatus> = {}): SidecarStatus {
-	return {
-		phase: "ready",
-		baseUrl: "http://127.0.0.1:40000",
-		pid: 1,
-		restarts: 0,
-		lastError: null,
-		lastHealthOkMs: 10,
-		providers: ["netease", "qq"],
-		logPath: "",
-		...overrides,
-	};
-}
-
-test("deriveSidecarRecoveryNoticeState only marks ready as recovered after an unhealthy phase or restart", () => {
-	const firstReady = deriveSidecarRecoveryNoticeState(sidecarStatus(), null);
-	expect(firstReady.recovered).toBe(false);
-	expect(firstReady.phase).toBe("ready");
-
-	const recovering = deriveSidecarRecoveryNoticeState(sidecarStatus({ phase: "recovering", restarts: 1 }), firstReady);
-	expect(recovering.recovered).toBe(false);
-	expect(recovering.phase).toBe("recovering");
-
-	const recovered = deriveSidecarRecoveryNoticeState(sidecarStatus({ phase: "ready", restarts: 1 }), recovering);
-	expect(recovered.recovered).toBe(true);
-	expect(recovered.restarts).toBe(1);
-
-	const restartedWhileReady = deriveSidecarRecoveryNoticeState(sidecarStatus({ phase: "ready", restarts: 2 }), firstReady);
-	expect(restartedWhileReady.recovered).toBe(true);
-});
-
-test("nextSidecarStatusPollDelayMs backs off only during stable ready polling", () => {
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "ready" }),
-		consecutiveReadyPolls: 0,
-		documentHidden: false,
-	})).toBe(1500);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "ready" }),
-		consecutiveReadyPolls: 1,
-		documentHidden: false,
-	})).toBe(3000);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "ready" }),
-		consecutiveReadyPolls: 3,
-		documentHidden: false,
-	})).toBe(12000);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "ready" }),
-		consecutiveReadyPolls: 4,
-		documentHidden: true,
-	})).toBe(60000);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "recovering" }),
-		consecutiveReadyPolls: 4,
-		documentHidden: true,
-	})).toBe(1500);
-	expect(nextSidecarStatusPollDelayMs({
-		status: sidecarStatus({ phase: "error" }),
-		consecutiveReadyPolls: 4,
-		documentHidden: false,
-	})).toBe(1500);
 });
 
 test("applyDesktopWindowShellState mirrors baseline desktop shell classes", async () => {
@@ -1391,7 +1281,7 @@ test("App applies baseline lyric fallback when provider lyric fetch rejects", as
 
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -1401,7 +1291,7 @@ test("App applies baseline lyric fallback when provider lyric fetch rejects", as
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1462,7 +1352,7 @@ test("App replaces stale lyrics with current track fallback while provider lyric
 
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -1472,7 +1362,7 @@ test("App replaces stale lyrics with current track fallback while provider lyric
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1515,7 +1405,6 @@ test("App loads sidecar audio-proxy URL into the audio element for raw provider 
 		usePlaybackStore.getState().clearQueue();
 		useLyricsStore.getState().reset();
 		const rawProviderUrl = "https://media.example.test/song.mp3?token=raw-provider";
-		const proxiedUrl = `http://127.0.0.1:39999/audio-proxy?url=${encodeURIComponent(rawProviderUrl)}`;
 		usePlaybackStore.getState().setCurrentTrack({
 			provider: "netease",
 			id: "proxy-audio-1",
@@ -1533,11 +1422,7 @@ test("App loads sidecar audio-proxy URL into the audio element for raw provider 
 		const fakeClient = {
 			async resolveSongUrl() {
 				resolveCount += 1;
-				return { url: rawProviderUrl, quality: "standard", proxied: false };
-			},
-			audioProxyUrl(url: string) {
-				expect(url).toBe(rawProviderUrl);
-				return proxiedUrl;
+				return { url: rawProviderUrl, quality: "standard" };
 			},
 			async lyric() {
 				return {
@@ -1550,7 +1435,7 @@ test("App loads sidecar audio-proxy URL into the audio element for raw provider 
 			},
 		} as unknown as SidecarClient;
 		const rootConfig: RuntimeConfig = {
-			sidecarBaseUrl: "http://127.0.0.1:39999",
+			mediaProxyBase: "mineradio-tauri://localhost",
 			appDataDir: "",
 			appVersion: "0.0.0-test",
 			schemaVersion: "0.1.0",
@@ -1560,14 +1445,13 @@ test("App loads sidecar audio-proxy URL into the audio element for raw provider 
 		root = createRoot(host);
 		flushSync(() => root?.render(<App updateController={APP_UPDATE_CONTROLLER} SplashComponent={() => null} VisualComponent={() => <div id="visual-host" />} applicationRuntime={legacyRuntimeForTest(rootConfig, fakeClient)} />));
 
-		for (let i = 0; i < 12 && appStubAudioInstances[0]?.src !== proxiedUrl; i += 1) {
+		for (let i = 0; i < 12 && appStubAudioInstances[0]?.src !== rawProviderUrl; i += 1) {
 			await new Promise((resolve) => setTimeout(resolve, 0));
 		}
 
 		expect(resolveCount).toBe(1);
-		expect(appStubAudioInstances[0]?.src).toBe(proxiedUrl);
-		expect(appStubAudioInstances[0]?.src).toContain("/audio-proxy?url=");
-		expect(appStubAudioInstances[0]?.src).not.toBe(rawProviderUrl);
+		// 代理统一由 Rust 侧完成：直链地址原样进 audio 元素
+		expect(appStubAudioInstances[0]?.src).toBe(rawProviderUrl);
 		expect(appStubAudioInstances[0]?.loadCalled).toBeGreaterThan(0);
 	} finally {
 		root?.unmount();
@@ -1631,7 +1515,7 @@ test("App resolves proxied Soda URLs against the sidecar base when reloading aft
 			},
 		} as unknown as SidecarClient;
 		const rootConfig: RuntimeConfig = {
-			sidecarBaseUrl: baseUrl,
+			mediaProxyBase: "mineradio-tauri://localhost",
 			appDataDir: "",
 			appVersion: "0.0.0-test",
 			schemaVersion: "0.1.0",
@@ -1720,7 +1604,7 @@ test("App retries playback after applying an automatic quality fallback", async 
 				if (quality === "m4a") {
 					return { url: "", quality, proxied: false, message: "quality unavailable" };
 				}
-				return { url: "https://media.example.test/fallback-flac.mp3", quality, proxied: false };
+				return { url: "https://media.example.test/fallback-flac.mp3", quality, };
 			},
 			audioProxyUrl(url: string) {
 				return `http://127.0.0.1:39999/audio-proxy?url=${encodeURIComponent(url)}`;
@@ -1736,7 +1620,7 @@ test("App retries playback after applying an automatic quality fallback", async 
 			},
 		} as unknown as SidecarClient;
 		const rootConfig: RuntimeConfig = {
-			sidecarBaseUrl: "http://127.0.0.1:39999",
+			mediaProxyBase: "mineradio-tauri://localhost",
 			appDataDir: "",
 			appVersion: "0.0.0-test",
 			schemaVersion: "0.1.0",
@@ -1752,7 +1636,8 @@ test("App retries playback after applying an automatic quality fallback", async 
 		}
 
 		expect(resolveQualities).toEqual(["m4a", "flac"]);
-		expect(audio?.src).toContain(encodeURIComponent("https://media.example.test/fallback-flac.mp3"));
+		// 代理统一由 Rust 侧完成：直链地址不再被前端 audio-proxy 包装
+		expect(audio?.src).toBe("https://media.example.test/fallback-flac.mp3");
 		expect(localStorage.getItem("mineradio-playback-quality-v1")).toBe("flac");
 	} finally {
 		root?.unmount();
@@ -1790,14 +1675,7 @@ test("App shows the baseline trial banner when provider returns a trial-only URL
 			return {
 				url: "https://example.com/trial.mp3",
 				quality: "标准",
-				proxied: false,
-				provider: "netease",
-				trial: true,
-				playable: true,
-				loggedIn: false,
-				vipLevel: "none",
-				reason: "trial_only",
-				message: "当前未登录 · 仅播放试听片段",
+				previewRange: { startMs: 0, endMs: 60_000 },
 			};
 		},
 		audioProxyUrl(url: string) {
@@ -1814,7 +1692,7 @@ test("App shows the baseline trial banner when provider returns a trial-only URL
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1825,15 +1703,29 @@ test("App shows the baseline trial banner when provider returns a trial-only URL
 	const root = createRoot(host);
 	flushSync(() => root.render(<App updateController={APP_UPDATE_CONTROLLER} SplashComponent={() => null} VisualComponent={() => <div id="visual-host" />} applicationRuntime={legacyRuntimeForTest(rootConfig, fakeClient)} />));
 
+	// 试听确认依赖时长测量：让 deck 的音频元素报出与区间一致的时长
+	let trialAudioEl: AppStubAudioElement | null = null;
+	for (let i = 0; i < 12 && !trialAudioEl; i += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		trialAudioEl = appStubAudioInstances.find((el) => el.src.includes("trial.mp3")) ?? null;
+	}
+	if (trialAudioEl) {
+		trialAudioEl.duration = 60;
+		trialAudioEl.dispatchEvent(new Event("durationchange"));
+		// 测量挂在 timeupdate 的首帧时长分支上，补发一次驱动
+		trialAudioEl.dispatchEvent(new Event("timeupdate"));
+	}
+
 	for (let i = 0; i < 12 && !host.querySelector("#trial-banner.show"); i += 1) {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 	}
 
 	const banner = host.querySelector("#trial-banner");
 	expect(banner?.classList.contains("show")).toBe(true);
-	expect(host.querySelector("#trial-text")?.textContent).toBe("当前未登录 · 仅播放试听片段");
+	expect(host.querySelector("#trial-text")?.textContent).toBe("需要 VIP · 当前歌曲试听中");
 	const loginButton = host.querySelector("#trial-login-btn") as HTMLButtonElement | null;
-	expect(loginButton?.style.display).not.toBe("none");
+	// 试听判定不再推断登录态：登录按钮隐藏，横幅只提示试听
+	expect(loginButton?.style.display).toBe("none");
 	loginButton?.click();
 	await new Promise((resolve) => setTimeout(resolve, 0));
 	expect(host.querySelector("#login-modal")).not.toBeNull();
@@ -1875,7 +1767,7 @@ test("App renders upstream-style Netease QR login inside the login modal", async
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1936,7 +1828,7 @@ test("App renders direct QQ QR login inside the login modal", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -1958,10 +1850,22 @@ test("App renders direct QQ QR login inside the login modal", async () => {
 	}
 
 	expect(host.querySelector("#login-provider-qq")?.className).toContain("active");
-	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ 音乐");
+	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ");
 	expect(host.querySelector("#qr-img")?.getAttribute("src")).toBe("data:image/png;base64,qq-img");
 	expect(host.querySelector("#qq-web-login-card")).toBeNull();
-	expect(host.querySelector("#qr-status")?.textContent).toContain("QQ 音乐 App");
+	expect(host.querySelector("#qr-status")?.textContent).toContain("QQ App");
+
+	expect(host.querySelector("#login-method-tabs")).not.toBeNull();
+	expect(host.querySelector("#login-method-qq")?.className).toContain("active");
+	expect(host.querySelector("#login-method-qq_music")).not.toBeNull();
+	expect(host.querySelector("#login-method-wechat")).not.toBeNull();
+	(host.querySelector("#login-method-qq_music") as HTMLButtonElement).click();
+	for (let i = 0; i < 12 && !(host.querySelector("#login-method-qq_music")?.className ?? "").includes("active"); i += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+	expect(host.querySelector("#login-method-qq_music")?.className).toContain("active");
+	expect(host.querySelector("#login-provider-qq")?.className).toContain("active");
+	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ 音乐");
 
 	root.unmount();
 	host.remove();
@@ -2000,7 +1904,7 @@ test("App renders Soda QR login as a first-class provider in the login modal", a
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2124,7 +2028,7 @@ test("App opens account dropdown from a single logged-in account and launches on
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2159,9 +2063,9 @@ test("App opens account dropdown from a single logged-in account and launches on
 	}
 
 	expect(host.querySelector("#account-dropdown")).toBeNull();
-	expect(host.querySelector("#login-provider-netease")).toBeNull();
-	expect(host.querySelector("#login-provider-qq")).toBeNull();
-	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ 音乐");
+	expect(host.querySelector("#login-provider-netease")).not.toBeNull();
+	expect(host.querySelector("#login-provider-qq")?.className).toContain("active");
+	expect(host.querySelector("#login-modal-title")?.textContent).toContain("扫码登录 QQ");
 	expect(host.querySelector("#qr-img")?.getAttribute("src")).toBe("data:image/png;base64,qq-img");
 	expect(qrProviders).toEqual(["qq"]);
 
@@ -2244,7 +2148,7 @@ test("App uses Soda's own login status for the add-account hint", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2370,7 +2274,7 @@ test("App opens account dropdown instead of QR login when both providers are alr
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2468,7 +2372,7 @@ test("App syncs QQ account status after direct QR login succeeds", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2537,14 +2441,7 @@ test("App clears the trial banner when the audio element reports a playback erro
 			return {
 				url: "https://example.com/trial-error.mp3",
 				quality: "标准",
-				proxied: false,
-				provider: "netease",
-				trial: true,
-				playable: true,
-				loggedIn: false,
-				vipLevel: "none",
-				reason: "trial_only",
-				message: "当前未登录 · 仅播放试听片段",
+				previewRange: { startMs: 0, endMs: 60_000 },
 			};
 		},
 		audioProxyUrl(url: string) {
@@ -2561,7 +2458,7 @@ test("App clears the trial banner when the audio element reports a playback erro
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2571,6 +2468,20 @@ test("App clears the trial banner when the audio element reports a playback erro
 	document.body.appendChild(host);
 	const root = createRoot(host);
 	flushSync(() => root.render(<App updateController={APP_UPDATE_CONTROLLER} SplashComponent={() => null} VisualComponent={() => <div id="visual-host" />} applicationRuntime={legacyRuntimeForTest(rootConfig, fakeClient)} />));
+
+	// 试听确认依赖时长测量：等真实 deck 的音频元素挂上 src 后，
+	// 让它报出与 previewRange.endMs 一致的时长
+	let trialAudioEl: AppStubAudioElement | null = null;
+	for (let i = 0; i < 12 && !trialAudioEl; i += 1) {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		trialAudioEl = appStubAudioInstances.find((el) => el.src.includes("trial-error.mp3")) ?? null;
+	}
+	if (trialAudioEl) {
+		trialAudioEl.duration = 60;
+		trialAudioEl.dispatchEvent(new Event("durationchange"));
+		// 测量挂在 timeupdate 的首帧时长分支上，补发一次驱动
+		trialAudioEl.dispatchEvent(new Event("timeupdate"));
+	}
 
 	for (let i = 0; i < 12 && !host.querySelector("#trial-banner.show"); i += 1) {
 		await new Promise((resolve) => setTimeout(resolve, 0));
@@ -2616,7 +2527,7 @@ test("App resolves playback beatmap and forwards it to visual host", async () =>
 	const map = { cameraBeats: [{ t: 1.2, strength: 0.8 }], analyzedAt: 123, duration: 120, tempoSource: "podcast-dj-offline" };
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/beat.mp3", quality: "standard", proxied: false };
+			return { url: "https://example.com/beat.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return `http://127.0.0.1:39999/audio-proxy?url=${encodeURIComponent(url)}`;
@@ -2636,7 +2547,7 @@ test("App resolves playback beatmap and forwards it to visual host", async () =>
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2696,7 +2607,7 @@ test("App does not run the podcast DJ beatmap analyzer for ordinary songs", asyn
 	const beatmapCalls: unknown[] = [];
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/song.mp3", quality: "standard", proxied: false };
+			return { url: "https://example.com/song.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -2716,7 +2627,7 @@ test("App does not run the podcast DJ beatmap analyzer for ordinary songs", asyn
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2749,7 +2660,7 @@ test("App starts baseline Home private radar from discover songs", async () => {
 
 	const fakeClient = {
 		async resolveSongUrl() {
-			return { url: "https://example.com/rain.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/rain.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -2798,7 +2709,7 @@ test("App starts baseline Home private radar from discover songs", async () => {
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -2875,7 +2786,7 @@ test("App derives Home Continue and Next Up from the live queue before recent hi
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3043,7 +2954,7 @@ test("App starts baseline Home weather radio from a weather rail song", async ()
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3115,7 +3026,7 @@ test("App opens Home playlist tiles as a full-screen detail page before playback
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3188,7 +3099,7 @@ test("App imports a local audio file from the baseline Home import tile", async 
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3263,7 +3174,7 @@ test("App applies and clears a custom cover image from the baseline import contr
 			};
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3279,7 +3190,7 @@ test("App applies and clears a custom cover image from the baseline import contr
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3349,7 +3260,7 @@ test("App plays centered shelf playlist hotspots by loading the playlist into th
 			return { provider, id, name: "Shelf Mix", coverUrl: "", trackCount: tracks.length, tracks };
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3377,7 +3288,7 @@ test("App plays centered shelf playlist hotspots by loading the playlist into th
 		return <div id="visual-host" />;
 	}
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3429,7 +3340,7 @@ test("App routes the logged-out Home library card to local audio import", async 
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3493,7 +3404,7 @@ test("App routes the logged-in Home library card to the baseline left playlist p
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3577,7 +3488,7 @@ test("App opens the baseline collect picker for shelf detail collect and adds on
 		return <div id="visual-host" />;
 	}
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3659,7 +3570,7 @@ test("App opens the collect picker for QQ detail rows and filters to writable QQ
 		return <div id="visual-host" />;
 	}
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3724,7 +3635,7 @@ test("App checks current Netease like state and wires bottom heart mutations thr
 			return { provider, id, liked, code: 200 };
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3734,7 +3645,7 @@ test("App checks current Netease like state and wires bottom heart mutations thr
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3805,7 +3716,7 @@ test("App shows QQ unsupported notice for bottom heart without calling like muta
 			throw new Error("QQ should not run like mutation");
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3815,7 +3726,7 @@ test("App shows QQ unsupported notice for bottom heart without calling like muta
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3875,7 +3786,7 @@ test("App checks current Soda like state and wires bottom heart mutations throug
 			return { provider, id, liked, code: 200 };
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3885,7 +3796,7 @@ test("App checks current Soda like state and wires bottom heart mutations throug
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -3951,7 +3862,7 @@ test("App rolls back bottom heart state and shows baseline failure copy when Net
 			throw new Error("like failed");
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -3961,7 +3872,7 @@ test("App rolls back bottom heart state and shows baseline failure copy when Net
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",
@@ -4025,7 +3936,7 @@ test("App opens login modal when Netease heart mutation requires login", async (
 			});
 		},
 		async resolveSongUrl() {
-			return { url: "https://example.com/audio.mp3", quality: "standard", proxied: true };
+			return { url: "https://example.com/audio.mp3", quality: "standard", };
 		},
 		audioProxyUrl(url: string) {
 			return url;
@@ -4035,7 +3946,7 @@ test("App opens login modal when Netease heart mutation requires login", async (
 		},
 	} as unknown as SidecarClient;
 	const rootConfig: RuntimeConfig = {
-		sidecarBaseUrl: "http://127.0.0.1:39999",
+		mediaProxyBase: "mineradio-tauri://localhost",
 		appDataDir: "",
 		appVersion: "0.0.0-test",
 		schemaVersion: "0.1.0",

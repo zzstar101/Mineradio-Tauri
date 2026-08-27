@@ -11,6 +11,7 @@ import {
 } from "./AccountSurface";
 import type { AccountStatusByProvider } from "./useAccountSessionController";
 import {
+	type AccountProviderId,
 	type LoginProviderId,
 	type LoginQrByProvider,
 	type LoginQrStatusByProvider,
@@ -36,6 +37,7 @@ function allLoggedIn(): AccountStatusByProvider {
 	return {
 		netease: loggedInStatus("网易账号"),
 		qq: loggedInStatus("QQ账号"),
+		kugou: loggedInStatus("酷狗账号"),
 		soda: loggedInStatus("汽水账号"),
 	};
 }
@@ -70,7 +72,7 @@ async function createIsolatedOrderFixture(
 test("account dropdown rows render in the persisted provider order", async () => {
 	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
 	reactTestEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
-	const fixture = await createIsolatedOrderFixture(["soda", "netease", "qq"]);
+	const fixture = await createIsolatedOrderFixture(["soda", "netease", "qq", "kugou"]);
 
 	const host = document.createElement("div");
 	document.body.appendChild(host);
@@ -95,7 +97,7 @@ test("account dropdown rows render in the persisted provider order", async () =>
 	const rowKeys = [
 		...host.querySelectorAll("#account-dropdown .account-dropdown-row"),
 	].map((row) => row.getAttribute("data-flip-key"));
-	expect(rowKeys).toEqual(["soda", "netease", "qq"]);
+	expect(rowKeys).toEqual(["soda", "netease", "qq", "kugou"]);
 	// 行可聚焦，支持 Alt+方向键重排。
 	for (const row of host.querySelectorAll("#account-dropdown .account-dropdown-row")) {
 		expect(row.getAttribute("tabindex")).toBe("0");
@@ -108,7 +110,7 @@ test("account dropdown rows render in the persisted provider order", async () =>
 test("Alt+ArrowDown on a focused row reorders providers through the same commit path", async () => {
 	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
 	reactTestEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
-	const fixture = await createIsolatedOrderFixture(["soda", "netease", "qq"]);
+	const fixture = await createIsolatedOrderFixture(["soda", "netease", "qq", "kugou"]);
 
 	const host = document.createElement("div");
 	document.body.appendChild(host);
@@ -157,12 +159,12 @@ test("Alt+ArrowDown on a focused row reorders providers through the same commit 
 	const rowKeys = [
 		...host.querySelectorAll("#account-dropdown .account-dropdown-row"),
 	].map((row) => row.getAttribute("data-flip-key"));
-	expect(rowKeys).toEqual(["netease", "soda", "qq"]);
+	expect(rowKeys).toEqual(["netease", "soda", "qq", "kugou"]);
 
 	const persisted = (await fixture.repository.get(
 		ACCOUNT_PROVIDER_ORDER_PREFERENCE,
 	)) as { order: string[] };
-	expect(persisted.order).toEqual(["netease", "soda", "qq"]);
+	expect(persisted.order).toEqual(["netease", "soda", "qq", "kugou"]);
 
 	await act(async () => root.unmount());
 	host.remove();
@@ -171,24 +173,31 @@ test("Alt+ArrowDown on a focused row reorders providers through the same commit 
 test("login modal platform tabs follow the same persisted order", async () => {
 	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
 	reactTestEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
-	const fixture = await createIsolatedOrderFixture(["soda", "netease", "qq"]);
+	const fixture = await createIsolatedOrderFixture(["soda", "netease", "qq", "kugou"]);
 
 	const qrStatus: LoginQrStatusByProvider = {
 		netease: { text: "", tone: "idle" },
 		qq: { text: "", tone: "idle" },
+		qq_music: { text: "", tone: "idle" },
+		wechat: { text: "", tone: "idle" },
+		kugou: { text: "", tone: "idle" },
 		soda: { text: "", tone: "idle" },
 	};
 	const qrByProvider: LoginQrByProvider = {
 		netease: null,
 		qq: null,
+		qq_music: null,
+		wechat: null,
+		kugou: null,
 		soda: null,
 	};
 	const cookieInputRefs: Record<
-		LoginProviderId,
+		AccountProviderId,
 		RefObject<HTMLTextAreaElement | null>
 	> = {
 		netease: { current: null },
 		qq: { current: null },
+		kugou: { current: null },
 		soda: { current: null },
 	};
 
@@ -207,7 +216,8 @@ test("login modal platform tabs follow the same persisted order", async () => {
 				qrStatusByProvider: qrStatus,
 				cookieInputRefs,
 				onClose: () => undefined,
-				onProviderChange: () => undefined,
+				onAccountProviderChange: () => undefined,
+				onMethodChange: () => undefined,
 				onManualCookieToggle: () => undefined,
 				onRefreshQr: () => undefined,
 				onRefreshStatus: () => undefined,
@@ -226,6 +236,7 @@ test("login modal platform tabs follow the same persisted order", async () => {
 		"login-provider-soda",
 		"login-provider-netease",
 		"login-provider-qq",
+		"login-provider-kugou",
 	]);
 
 	await act(async () => root.unmount());

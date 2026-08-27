@@ -4,10 +4,13 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import type {
 	DiscoverHomeResponse,
+	PlaylistDetail,
+	ProviderId,
 	Track,
 	WeatherRadioResponse,
 } from "@mineradio/shared";
 import type { DiscoverPort } from "../../ports/music/discover-port";
+import type { LibraryPort } from "../../ports/music/library-port";
 import {
 	useHomeController,
 	type HomeControllerResult,
@@ -43,6 +46,32 @@ function home(updatedAt: number): DiscoverHomeResponse {
 		podcasts: [],
 		mode: "member",
 		updatedAt,
+	};
+}
+
+function playlistPage(
+	provider: ProviderId,
+	id: string,
+	start: number,
+	count: number,
+	hasMore: boolean,
+): PlaylistDetail {
+	const tracks = Array.from({ length: count }, (_, index): Track => ({
+		...track,
+		provider,
+		id: `${id}-${start + index}`,
+		sourceId: `${id}-${start + index}`,
+	}));
+	return {
+		provider,
+		id,
+		name: id,
+		coverUrl: "",
+		trackCount: 40,
+		trackIds: tracks.map((item) => item.id),
+		subscribed: false,
+		tracks,
+		hasMore,
 	};
 }
 
@@ -198,4 +227,92 @@ test("listen session commits on completed playback but not on a short incomplete
 
 	completedRoot.unmount();
 	completedHost.remove();
+});
+
+test("playlist generation rejects a stale first page and fast-scroll load-more stays single-flight", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	const staleFirst = deferred<PlaylistDetail>();
+	const currentFirst = deferred<PlaylistDetail>();
+	const currentNext = deferred<PlaylistDetail>();
+	const calls: Array<{ provider: ProviderId; id: string; offset: number }> = [];
+	const playlistDetail: LibraryPort["playlistDetail"] = async (provider, id, options) => {
+		const offset = options?.offset ?? 0;
+		calls.push({ provider, id, offset });
+		if (id === "stale") return staleFirst.promise;
+		return offset === 0 ? currentFirst.promise : currentNext.promise;
+	};
+	const library = { playlistDetail } as unknown as LibraryPort;
+	const controllerRef: { current: HomeControllerResult | null } = { current: null };
+	const options = { ...createOptions(null), library };
+
+	function Harness() {
+		controllerRef.current = useHomeController(options);
+		return null;
+	}
+
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	flushSync(() => root.render(<Harness />));
+	const staleOpen = controllerRef.current!.openRecommendationPlaylist("netease", "stale");
+	const currentOpen = controllerRef.current!.openRecommendationPlaylist("qq", "current");
+	currentFirst.resolve(playlistPage("qq", "current", 0, 20, true));
+	await currentOpen;
+	await new Promise((resolve) => setTimeout(resolve, 0));
+
+	staleFirst.resolve(playlistPage("netease", "stale", 0, 7, false));
+	await staleOpen;
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	expect(controllerRef.current?.playlistDetail?.key).toBe("qq:current");
+	expect(controllerRef.current?.playlistDetail?.tracks.length).toBe(20);
+
+	const firstLoadMore = controllerRef.current!.loadMorePlaylistTracks();
+	const repeatedLoadMore = controllerRef.current!.loadMorePlaylistTracks();
+	expect(calls.filter((call) => call.id === "current")).toEqual([
+		{ provider: "qq", id: "current", offset: 0 },
+		{ provider: "qq", id: "current", offset: 20 },
+	]);
+	currentNext.resolve(playlistPage("qq", "current", 20, 20, false));
+	await Promise.all([firstLoadMore, repeatedLoadMore]);
+	await new Promise((resolve) => setTimeout(resolve, 0));
+
+	expect(controllerRef.current?.playlistDetail?.tracks.length).toBe(40);
+	expect(controllerRef.current?.playlistDetail?.tracks[39]?.id).toBe("current-39");
+	expect(controllerRef.current?.playlistDetail?.exhausted).toBe(true);
+
+	root.unmount();
+	host.remove();
+});
+
+test("native capability gate keeps unavailable discover home out of production calls", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	let discoverCalls = 0;
+	const discover = {
+		discoverHome: async () => {
+			discoverCalls += 1;
+			return home(1);
+		},
+	} as unknown as DiscoverPort;
+	const controllerRef: { current: HomeControllerResult | null } = { current: null };
+
+	function Harness() {
+		controllerRef.current = useHomeController({
+			...createOptions(discover),
+			discoverHomeAvailable: false,
+		});
+		return null;
+	}
+
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	flushSync(() => root.render(<Harness />));
+	const result = await controllerRef.current!.refreshDiscover();
+
+	expect(result).toBeNull();
+	expect(discoverCalls).toBe(0);
+	expect(controllerRef.current?.discoverError).toBeNull();
+
+	root.unmount();
+	host.remove();
 });
