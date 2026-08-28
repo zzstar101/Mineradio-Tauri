@@ -1,5 +1,7 @@
 # Mineradio 2.1.0 Convergence Report
 
+> **SUPERSEDED / HISTORICAL.** 本报告记录当时分支、构建与架构 convergence，不是当前 HEAD 的产品 parity 或 RC authority。2.1 权威见 `docs/audit/2.1-product-parity-audit.md` 与 `docs/audit/2.1-surface-manifest.json`；本报告不能单独决定 `RC_READY`。
+
 生成日期：2026-08-28
 
 ## 1. Final Git State

@@ -1,5 +1,7 @@
 # M9 未来 API 接入准备实施计划
 
+> **Historical architecture evidence only.** M9 的 transport/ownership guards 可继续证明 Sidecar removal 与 native command boundary；它们不证明 provider operational、UI/product parity 或 RC readiness。当前产品权威见 `docs/audit/2.1-surface-manifest.json`。
+
 **设计：** `docs/superpowers/specs/2026-07-30-m9-api-readiness-design.md`
 
 **当前状态：** Code Complete / Automated Verification Complete

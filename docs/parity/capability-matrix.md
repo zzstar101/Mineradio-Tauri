@@ -1,6 +1,8 @@
 # Mineradio 2.1.0 能力矩阵
 
-下表是活动上游行为身份的唯一机器可读记录；历史能力行仍可保留当时使用的 2.0.2 来源证据。
+> **Historical implementation evidence only.** 本矩阵已被 `docs/audit/2.1-surface-manifest.json` 与 `docs/audit/2.1-product-parity-audit.md` 取代为 2.1 产品 parity / RC authority。`implemented` 只表示代码/自动化证据，不能单独决定 `RC_READY`。
+
+下表仅保留活动上游 identity 与历史 capability implementation 记录；历史能力行仍可保留当时使用的 2.0.2 来源证据。
 
 | baseline_role | repository | tag | peeled_commit | tree | package_version |
 | --- | --- | --- | --- | --- | --- |

@@ -1,0 +1,1529 @@
+{
+  "schemaVersion": 1,
+  "authority": "docs/audit/2.1-product-parity-audit.md",
+  "upstreamBaseline": "XxHuberrr/Mineradio@v2.1.0#96091d123b36783f5604d1acd47b00b0708cabbd",
+  "rcReady": false,
+  "evidenceSemantics": {
+    "codePresent": "Implementation is present; this does not imply product parity.",
+    "automatedVerified": "Layer 1/2 automated evidence exists for this surface.",
+    "visualVerified": "Layer 3 and Layer 4 visual evidence has been reviewed.",
+    "fieldVerified": "Required Layer 5 field evidence has been reviewed; performance surfaces also require Layer 6."
+  },
+  "surfaces": [
+    {
+      "id": "S001",
+      "name": "启动 Splash",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "application-shell",
+      "notes": "启动壳存在；未有同分辨率 golden 或释放现场证据"
+    },
+    {
+      "id": "S002",
+      "name": "Titlebar / window chrome",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "application-shell",
+      "notes": "Tauri titlebar 可见；窗口状态/多屏未现场验证"
+    },
+    {
+      "id": "S003",
+      "name": "DIY 玩家模式入口",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "application-shell",
+      "notes": "DIY 入口存在；与上游边缘入口和导入闭环未证"
+    },
+    {
+      "id": "S004",
+      "name": "Home 主壳",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "application-shell",
+      "notes": "当前布局与上游截图明显不同，并显示推荐/天气错误条"
+    },
+    {
+      "id": "S005",
+      "name": "顶部搜索壳",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "application-shell",
+      "notes": "搜索 surface 存在；密度、覆盖关系、键盘现场未证"
+    },
+    {
+      "id": "S006",
+      "name": "账号胶囊",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "application-shell",
+      "notes": "账号 surface 存在；状态刷新和上游贴边视觉未证"
+    },
+    {
+      "id": "S007",
+      "name": "歌单/队列侧面板",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "application-shell",
+      "notes": "队列/歌单能打开；拖排和 podcast tab parity 未证"
+    },
+    {
+      "id": "S008",
+      "name": "Bottom handle",
+      "severity": "P2",
+      "productStatus": "CLOSE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "application-shell",
+      "notes": "当前有底栏入口；未完成 field auto-hide 验证"
+    },
+    {
+      "id": "S009",
+      "name": "Bottom bar 总体",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "application-shell",
+      "notes": "当前播放器 shell 结构不同，当前截图存在大面积布局差异"
+    },
+    {
+      "id": "S010",
+      "name": "Mini queue",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "application-shell",
+      "notes": "当前为 popover，提供 next/remove，但无等价关闭/拖排语义"
+    },
+    {
+      "id": "S011",
+      "name": "Track metadata",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "application-shell",
+      "notes": "当前 cover 被隐藏为非交互，metadata/detail 链路缺失或不等价"
+    },
+    {
+      "id": "S012",
+      "name": "Overlay/modal 层",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "application-shell",
+      "notes": "多个 overlay 存在；统一焦点/层级未现场证"
+    },
+    {
+      "id": "S013",
+      "name": "Context menus",
+      "severity": "P2",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "application-shell",
+      "notes": "未发现与上游 track/playlist context menu 等价面"
+    },
+    {
+      "id": "S014",
+      "name": "Toast / banner",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "application-shell",
+      "notes": "错误 banner 直接暴露 schema failure；产品级恢复语义不足"
+    },
+    {
+      "id": "S015",
+      "name": "响应式与显隐规则",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "application-shell",
+      "notes": "当前 1440x900 截图出现空白区与布局不一致；多 viewport 未证"
+    },
+    {
+      "id": "S016",
+      "name": "播放/暂停",
+      "severity": "P1",
+      "productStatus": "CLOSE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "button/owner 结构存在；真实媒体播放未现场验证"
+    },
+    {
+      "id": "S017",
+      "name": "上一首/下一首",
+      "severity": "P1",
+      "productStatus": "CLOSE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "transport 存在；generation/queue field 行为未证"
+    },
+    {
+      "id": "S018",
+      "name": "Progress / seek",
+      "severity": "P1",
+      "productStatus": "CLOSE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "进度与时间节点存在；精确 seek/缓冲现场未证"
+    },
+    {
+      "id": "S019",
+      "name": "Volume / fade",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "playback",
+      "notes": "当前 popover 嵌入完整 Playback 2.0，层级和信息密度偏离上游"
+    },
+    {
+      "id": "S020",
+      "name": "Quality selector",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "quality 控件存在；provider tier/真实 URL 切换未证"
+    },
+    {
+      "id": "S021",
+      "name": "Playback mode",
+      "severity": "P1",
+      "productStatus": "CLOSE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "mode 控件存在；持久化与循环语义未 field 验证"
+    },
+    {
+      "id": "S022",
+      "name": "Preview 提示",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "preview surface/状态存在；measured duration 和边界现场未证"
+    },
+    {
+      "id": "S023",
+      "name": "Loading 状态",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "代码有 loading 状态；无覆盖 supersede 场景的现场证据"
+    },
+    {
+      "id": "S024",
+      "name": "Playback error / fallback",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "fallback 代码存在；provider error 语义/可理解文案未证"
+    },
+    {
+      "id": "S025",
+      "name": "End-of-track",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "代码链路存在；真实 ended/尾部现场未证"
+    },
+    {
+      "id": "S026",
+      "name": "Gapless / crossfade",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "audio runtime 有相关设计；Windows/WebView2 gapless 未测"
+    },
+    {
+      "id": "S027",
+      "name": "Stream continuation",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "native/API 路径存在；真实 tail provider 未证"
+    },
+    {
+      "id": "S028",
+      "name": "Startup resume",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "runtime 有 resume 代码；quit/relaunch 现场未证"
+    },
+    {
+      "id": "S029",
+      "name": "Output routing",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "playback",
+      "notes": "Playback 2.0 面板存在；设备/bridge field 未证"
+    },
+    {
+      "id": "S030",
+      "name": "Cuefield AutoMix",
+      "severity": "P1",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "playback",
+      "notes": "未发现等价产品 surface；旧 delta 将其 POST_2_1 不能替代上游审计"
+    },
+    {
+      "id": "S031",
+      "name": "舞台歌词布局",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "stage-lyrics",
+      "notes": "stage lyric engine 存在；上游 geometry golden 未建立"
+    },
+    {
+      "id": "S032",
+      "name": "字体与排版",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "stage-lyrics",
+      "notes": "控件与 builder 存在；字体 metrics/多语言视觉未证"
+    },
+    {
+      "id": "S033",
+      "name": "行切换视觉",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "stage-lyrics",
+      "notes": "代码存在同步 build/commit hitch 机制，未满足真实 frame gate"
+    },
+    {
+      "id": "S034",
+      "name": "翻译显示",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "stage-lyrics",
+      "notes": "lyric parser/render 支持部分模式；行为矩阵未证"
+    },
+    {
+      "id": "S035",
+      "name": "逐字 Karaoke",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "stage-lyrics",
+      "notes": "mask/texture 实现存在；长文本/高频 seek field 未证"
+    },
+    {
+      "id": "S036",
+      "name": "粒子与 glow",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "stage-lyrics",
+      "notes": "stage visual 实现存在；GPU p95 未测"
+    },
+    {
+      "id": "S037",
+      "name": "Camera / positioning",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "stage-lyrics",
+      "notes": "部分 controls 存在；自由镜头冲突和场景一致性未证"
+    },
+    {
+      "id": "S038",
+      "name": "歌词颜色",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "stage-lyrics",
+      "notes": "settings controls 存在；上游同位关系未证"
+    },
+    {
+      "id": "S039",
+      "name": "Cover interaction",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "stage-lyrics",
+      "notes": "QQ 空 mid 假 URL、proxy Referer/CSP 和 DOM/WebGL 分裂"
+    },
+    {
+      "id": "S040",
+      "name": "空/回退歌词",
+      "severity": "P1",
+      "productStatus": "CLOSE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "stage-lyrics",
+      "notes": "fallback 代码/测试存在；字段 provider 现场未证"
+    },
+    {
+      "id": "S041",
+      "name": "动画 timing",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "stage-lyrics",
+      "notes": "motion prefs 存在；视觉 timing golden 未证"
+    },
+    {
+      "id": "S042",
+      "name": "单曲歌词时差",
+      "severity": "P1",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "stage-lyrics",
+      "notes": "当前播放器没有等价 offset control"
+    },
+    {
+      "id": "S043",
+      "name": "Transition 性能",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "stage-lyrics",
+      "notes": "builder 在关键帧同步 raster/build；无真实 p95/p99/max/GPU 证据"
+    },
+    {
+      "id": "S044",
+      "name": "默认视觉",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "visual engine host 存在；当前截图未证明同构"
+    },
+    {
+      "id": "S045",
+      "name": "视觉预设",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "当前 preset 列表可见；名称/缩略表达/全量联动未证"
+    },
+    {
+      "id": "S046",
+      "name": "Visual Console 外壳",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "visual-system",
+      "notes": "当前标题为“设置工作台”，壳和隐藏规则不同"
+    },
+    {
+      "id": "S047",
+      "name": "Console 信息架构",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "visual-system",
+      "notes": "当前六 tab + 搜索/低规格/undo 工作台，属于 IA 回退"
+    },
+    {
+      "id": "S048",
+      "name": "Master / FX controls",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "部分 slider 存在；monitor/上游 section 顺序未证"
+    },
+    {
+      "id": "S049",
+      "name": "用户视觉存档",
+      "severity": "P1",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "visual-system",
+      "notes": "未发现 archive 等价闭环"
+    },
+    {
+      "id": "S050",
+      "name": "Accent / tint / color lab",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "色彩 settings 存在；跨 surface 同步未证"
+    },
+    {
+      "id": "S051",
+      "name": "Background media/color",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "部分设置存在；Blob 生命周期/导入 field 未证"
+    },
+    {
+      "id": "S052",
+      "name": "Cover picker / clarity",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "cover controls 存在；pipeline semantic gate 未过"
+    },
+    {
+      "id": "S053",
+      "name": "Lyric visual controls",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "controls 分散在工作台，非上游连续 sections"
+    },
+    {
+      "id": "S054",
+      "name": "Sonic Topography",
+      "severity": "P2",
+      "productStatus": "CLOSE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "预设和组件存在；上游视觉 golden 未证"
+    },
+    {
+      "id": "S055",
+      "name": "Sonic Workshop",
+      "severity": "P2",
+      "productStatus": "CLOSE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "预设存在；冷加载/禁用恢复未证"
+    },
+    {
+      "id": "S056",
+      "name": "3D Shelf",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "shelf controls/组件存在；场景密度和虚拟化未证"
+    },
+    {
+      "id": "S057",
+      "name": "摄像头手势",
+      "severity": "P2",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "未发现等价用户面"
+    },
+    {
+      "id": "S058",
+      "name": "Wallpaper controls/library",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "当前只显示有限 wallpaper entries；完整 library 未证"
+    },
+    {
+      "id": "S059",
+      "name": "Visual performance controls",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "设置面存在；真实 scheduler/资源效果未证"
+    },
+    {
+      "id": "S060",
+      "name": "Hotkeys editor",
+      "severity": "P2",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "visual-system",
+      "notes": "未发现等价编辑器"
+    },
+    {
+      "id": "S061",
+      "name": "本地音乐库",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "library",
+      "notes": "local library 代码存在；重启和混合浏览 field 未证"
+    },
+    {
+      "id": "S062",
+      "name": "导入入口",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "library",
+      "notes": "import/drop surface 存在；多文件/metadata field 未证"
+    },
+    {
+      "id": "S063",
+      "name": "启动水合",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "library",
+      "notes": "代码有 hydration；无破坏索引现场证据"
+    },
+    {
+      "id": "S064",
+      "name": "Provider 歌单列表",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "library",
+      "notes": "playlist capability 存在；真实 providers/cover 未证"
+    },
+    {
+      "id": "S065",
+      "name": "歌单详情",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "library",
+      "notes": "PlaylistDetail 结构可测；当前 UI/detail 视觉未证"
+    },
+    {
+      "id": "S066",
+      "name": "歌单/队列拖排",
+      "severity": "P1",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "library",
+      "notes": "当前 queue 提供 next/remove，不等价拖排"
+    },
+    {
+      "id": "S067",
+      "name": "Favorites / liked songs",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "library",
+      "notes": "like/collect controls 存在；真实 capability/rollback 未证"
+    },
+    {
+      "id": "S068",
+      "name": "Album surfaces",
+      "severity": "P1",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "library",
+      "notes": "Rust 类型存在但无等价 TS schema/client/surface"
+    },
+    {
+      "id": "S069",
+      "name": "Search 主 surface",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "search",
+      "notes": "搜索 surface 存在；视觉和取消语义未证"
+    },
+    {
+      "id": "S070",
+      "name": "Provider switching",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "search",
+      "notes": "当前 shared schema/UI 排除 Spotify，能力面不闭合"
+    },
+    {
+      "id": "S071",
+      "name": "独立分页",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "search",
+      "notes": "search controller/offset 设计存在；跨源 field 未证"
+    },
+    {
+      "id": "S072",
+      "name": "结果 rows/cards",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "search",
+      "notes": "result components 存在；cover/data semantic 未证"
+    },
+    {
+      "id": "S073",
+      "name": "Artist/song/album detail",
+      "severity": "P1",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "search",
+      "notes": "未发现完整 detail surface，尤其 album path"
+    },
+    {
+      "id": "S074",
+      "name": "Inline actions",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "search",
+      "notes": "actions 存在；provider capability enforcement 未证"
+    },
+    {
+      "id": "S075",
+      "name": "空/loading/error",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "search",
+      "notes": "有状态组件；真实 provider 分源错误矩阵未证"
+    },
+    {
+      "id": "S076",
+      "name": "QQ provider",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "providers-accounts",
+      "notes": "API/bridge 路径存在；空 album mid 已确认缺陷"
+    },
+    {
+      "id": "S077",
+      "name": "Netease provider",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "providers-accounts",
+      "notes": "API adapter 注册；真实登录/播放未现场验证"
+    },
+    {
+      "id": "S078",
+      "name": "Soda/Qishui provider",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "providers-accounts",
+      "notes": "adapter/能力存在；真实字段与 Referer 未证"
+    },
+    {
+      "id": "S079",
+      "name": "Kugou provider",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "providers-accounts",
+      "notes": "Rust/provider code exists; current UI/field route not verified"
+    },
+    {
+      "id": "S080",
+      "name": "Spotify provider",
+      "severity": "P2",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "providers-accounts",
+      "notes": "Rust adapter/ProviderId 有注册，但 shared schema/capability/UI 明确排除；若 release 宣称 all upstream providers，severity 升为 P1。"
+    },
+    {
+      "id": "S081",
+      "name": "登录 modal shell",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "providers-accounts",
+      "notes": "modal 存在；完整 provider matrix 未证"
+    },
+    {
+      "id": "S082",
+      "name": "QR lifecycle",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "providers-accounts",
+      "notes": "代码路径存在；真实端到端生命周期未证"
+    },
+    {
+      "id": "S083",
+      "name": "Avatar / VIP / account state",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "providers-accounts",
+      "notes": "LoginStatus 结构存在；真实账号现场未证"
+    },
+    {
+      "id": "S084",
+      "name": "Provider order / logout",
+      "severity": "P2",
+      "productStatus": "CLOSE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "providers-accounts",
+      "notes": "provider order 常量/bridge 路径一致；现场未证"
+    },
+    {
+      "id": "S085",
+      "name": "Home dashboard composition",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "home-recommendation",
+      "notes": "当前 Home composition 与上游截图不同，推荐/天气失败"
+    },
+    {
+      "id": "S086",
+      "name": "Recommendation cards",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "home-recommendation",
+      "notes": "card schema/组件存在；实际 pages schema failure"
+    },
+    {
+      "id": "S087",
+      "name": "Recommendation modules/layout",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "home-recommendation",
+      "notes": "`recommendations/pages` 在正常路由 schema validation failure"
+    },
+    {
+      "id": "S088",
+      "name": "Home hover/click",
+      "severity": "P2",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "home-recommendation",
+      "notes": "cards 可见；目标和键盘命中未 field 验证"
+    },
+    {
+      "id": "S089",
+      "name": "Cover rendering / refresh",
+      "severity": "P1",
+      "productStatus": "REGRESSION",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "home-recommendation",
+      "notes": "cover pipeline 缺陷 + 当前错误条，不能签通过"
+    },
+    {
+      "id": "S090",
+      "name": "Tray / close behavior",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "desktop-tauri",
+      "notes": "Tauri runtime code 存在；Windows field 未证"
+    },
+    {
+      "id": "S091",
+      "name": "Desktop lyrics",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "desktop-tauri",
+      "notes": "native surface 存在；多屏/穿透现场未证"
+    },
+    {
+      "id": "S092",
+      "name": "Window behavior",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "desktop-tauri",
+      "notes": "window commands 存在；Explorer/monitor field 未证"
+    },
+    {
+      "id": "S093",
+      "name": "Startup restore",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "desktop-tauri",
+      "notes": "runtime 逻辑存在；无真实重启证据"
+    },
+    {
+      "id": "S094",
+      "name": "Updater",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "desktop-tauri",
+      "notes": "updater 模块存在；签名/升级现场未证"
+    },
+    {
+      "id": "S095",
+      "name": "Installer / N-1 upgrade",
+      "severity": "P1",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "desktop-tauri",
+      "notes": "release 配置存在；N-1→N 没有现场证据"
+    },
+    {
+      "id": "S096",
+      "name": "Local file/media protocol",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "desktop-tauri",
+      "notes": "custom protocol/Range 路径存在；混合媒体 field 未证"
+    },
+    {
+      "id": "S097",
+      "name": "Wallpaper Engine runtime",
+      "severity": "P2",
+      "productStatus": "UNVERIFIED",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "desktop-tauri",
+      "notes": "runtime 有实现；进程/恢复现场未证"
+    },
+    {
+      "id": "S098",
+      "name": "WGC glass sampler",
+      "severity": "P2",
+      "productStatus": "MISSING",
+      "evidence": {
+        "codePresent": false,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": false,
+      "ownerArea": "desktop-tauri",
+      "notes": "未发现可签发的等价用户面/field evidence"
+    },
+    {
+      "id": "S099",
+      "name": "Visual audio debug overlay",
+      "severity": "P1",
+      "productStatus": "DEBUG_LEAKAGE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "release-hygiene",
+      "notes": "URL/localStorage/Ctrl+Alt+D 可创建 z-index 2147483647 overlay，且随生产 visual composition 导入"
+    },
+    {
+      "id": "S100",
+      "name": "M4 parity fixture root",
+      "severity": "P1",
+      "productStatus": "DEBUG_LEAKAGE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "release-hygiene",
+      "notes": "`?m4-parity=1` 在 `main.tsx` 旁路正常 bootstrap；生产 dist 含 `M4ParityRoot` chunk"
+    },
+    {
+      "id": "S101",
+      "name": "Raw desktop diagnostics panel",
+      "severity": "P1",
+      "productStatus": "DEBUG_LEAKAGE",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": false,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "release-hygiene",
+      "notes": "正常 startup 无条件 refresh diagnostics，UI 展示 runtime/cache/resource/visual 原始项"
+    }
+  ]
+}

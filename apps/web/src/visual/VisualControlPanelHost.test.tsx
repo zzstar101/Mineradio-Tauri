@@ -68,7 +68,7 @@ test("VisualControlPanelHost selects Workshop and leaves it through transactiona
   container.remove();
 });
 
-test("VisualControlPanelHost renders baseline DIY control sections", () => {
+test("VisualControlPanelHost server-renders its current structural control catalog", () => {
   const html = renderToStaticMarkup(
     React.createElement(VisualControlPanelHost, {}),
   );
@@ -104,10 +104,8 @@ test("VisualControlPanelHost renders baseline DIY control sections", () => {
   expect(html).toContain('id="shelf-seg"');
   expect(html).toContain('id="t-shelfShowPodcasts"');
   expect(html).toContain('id="t-shelfMergeCollections"');
-  expect(html).not.toContain('data-cam="gesture"');
-  expect(html).not.toContain("手势触碰");
-  expect(html).not.toContain("手势");
-  expect(html).not.toContain("摄像头交互");
+  // Camera gesture parity is intentionally not asserted here. It requires a future
+  // upstream visual/product oracle rather than freezing the current absence as PASS.
   expect(html).toContain('id="fx-advanced"');
   expect(html).toContain('id="performance-background-seg"');
   expect(html).toContain('id="performance-quality-seg"');

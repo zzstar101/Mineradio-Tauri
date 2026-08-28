@@ -1,5 +1,7 @@
 # M4 Lyrics and Visual Parity Implementation Plan
 
+> **SUPERSEDED authority:** 本计划及其 fixture 是历史 engine/component implementation smoke evidence；“Complete/implemented/parity”不能解释为 full product visual parity 或 RC readiness。当前 authority 为 `docs/audit/2.1-product-parity-audit.md` 与 `docs/audit/2.1-surface-manifest.json`。
+
 > 每个任务使用纵向 tracer bullet。TDD 只用于核心时序、资源、取消、预算、对象池和性能路径；其余使用 characterization、architecture 与 parity tests。
 
 **Goal:** 在现有 M3 runtime foundation 上完成 Stage Lyrics 2.0、歌词纹理/GPU 上传预算、Sonic Topography preset 7 和 3D Shelf 资源/行为 parity，同时保持 Sidecar/API 行为冻结。

@@ -1,15 +1,15 @@
-# M4 视觉证据采集
+# M4 Engine / Component Smoke Evidence
 
-该 runner 通过 `@playwright/cli` 驱动真实 Edge/Chromium，调用隔离的
-`?m4-parity=1` 页面 contract，不加载普通 `App`、Sidecar 或账户状态。
+> **Authority boundary:** 该 fixture 只证明 isolated Stage/Sonic/Shelf engine 与 component smoke/resource contract；不证明 full App、上游视觉、产品 parity 或 RC readiness。
+
+该 runner 通过 `@playwright/cli` 驱动真实 Edge/Chromium，调用仅由 Vite development server 提供的独立 `m4-fixture.html` test entry，不加载普通 `App`、账户状态或 production bootstrap。该 fixture 不进入 production build。
 
 ## 运行
 
-先构建并启动最新 Web preview：
+启动独立 development/test fixture server（不要使用 production preview）：
 
 ```powershell
-bun run web:build
-bun run --filter ./apps/web preview -- --host 127.0.0.1 --port 4173 --strictPort
+bun run --filter ./apps/web dev -- --host 127.0.0.1 --port 4173 --strictPort
 ```
 
 另一个终端执行 quick evidence：

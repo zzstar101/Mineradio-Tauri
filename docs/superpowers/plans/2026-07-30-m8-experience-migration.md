@@ -1,5 +1,7 @@
 # M8 P1 体验与数据迁移实施计划
 
+> **Historical implementation evidence only.** M8 deterministic checks cover synthetic resource/performance budgets, not full product parity or Stage Lyrics Windows/WebView2 transition performance。当前权威见 `docs/audit/2.1-surface-manifest.json` 与 `docs/audit/stage-lyrics-performance.md`。
+
 **设计：** `docs/superpowers/specs/2026-07-30-m8-experience-migration-design.md`
 
 **当前状态：** Code Complete / Automated Verification Complete / Field Validation Pending（non-blocking）

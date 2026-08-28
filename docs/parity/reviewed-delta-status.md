@@ -1,5 +1,7 @@
 # Mineradio 2.1.0 reviewed delta 状态
 
+> **SUPERSEDED / HISTORICAL.** 本文件是当时的 selected-delta implementation 汇总，不再是 2.1 产品 parity 或 RC readiness authority。新权威为 `docs/audit/2.1-product-parity-audit.md` 与 `docs/audit/2.1-surface-manifest.json`；本文件中的 convergence/release disposition 不得单独生成 `RC_READY=true`。
+
 本文以 `XxHuberrr/Mineradio@v2.1.0` 为活动产品行为基线，并把 capability 实现状态与 2.1.0 release disposition 分开。自动化实现完成不代表 Windows/WebView2、真实账号、真实网络或升级链路已经通过实机验证。
 
 ## D0-D3 状态

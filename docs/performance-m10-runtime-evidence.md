@@ -1,5 +1,7 @@
 # M10 Runtime Performance Evidence
 
+> **Historical runtime evidence only.** Headless/synthetic M10 数据不证明完整产品 parity、Windows/WebView2 Stage Lyrics transition performance 或 RC readiness；当前权威见 `docs/audit/2.1-surface-manifest.json` 与 `docs/audit/stage-lyrics-performance.md`。
+
 本文件区分 deterministic/code evidence、Tier 2 headless benchmark 与真实 Windows WebView2 field evidence。没有采到的指标明确写为 `Not Measured`。
 
 ## Before / After

@@ -1,5 +1,7 @@
 # M8 Windows release performance evidence
 
+> **Authority boundary:** M8 deterministic gate 只证明 synthetic deterministic resource/performance budget；它不能证明 Stage Lyrics Windows/WebView2 transition performance，也不能单独决定产品 parity 或 `RC_READY`。Stage transition field authority 见 `docs/audit/stage-lyrics-performance.md`。
+
 这个 runner 只用于正式 Windows release 构建，不进入普通 PR 的确定性门禁。它会：
 
 - 启动目标程序 5 次，以主窗口出现为 ready signal，报告冷启动中位数；

@@ -1,5 +1,7 @@
 # M10 Upstream Delta Audit
 
+> **Historical selected-delta evidence only.** M10 不覆盖完整 S001-S101 产品面，不能替代 `docs/audit/2.1-surface-manifest.json`，也不能单独决定产品 parity 或 `RC_READY`。
+
 活动产品行为基线为 `XxHuberrr/Mineradio@v2.1.0`（tag object `37993d337c73b130e4a81da7c973b8d246fe32a3`，peeled commit `96091d123b36783f5604d1acd47b00b0708cabbd`，tree `b1b9f80a72d96afcbc8b4685256c3adba9014551`）。审计输入是实际 `git diff v2.0.3...v2.1.0`，不是 CHANGELOG 推断。
 
 ## 行为 Delta
