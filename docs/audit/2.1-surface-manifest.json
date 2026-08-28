@@ -584,16 +584,16 @@
       "id": "S039",
       "name": "Cover interaction",
       "severity": "P1",
-      "productStatus": "PARTIAL",
+      "productStatus": "CLOSE",
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
         "visualVerified": false,
-        "fieldVerified": false
+        "fieldVerified": true
       },
-      "blocker": true,
+      "blocker": false,
       "ownerArea": "stage-lyrics",
-      "notes": "Cover semantic contract, canonical MediaUrlPort source, provider-aware proxy, stale generation guard, and CSP are automated; packaged Windows DOM/WebGL provider field evidence is pending."
+      "notes": "Exact Candidate B passed packaged Windows/WebView2 QQ, Netease, Soda, Kugou, and Local DOM/WebGL cover rendering, production CSP, stale A-to-B replacement, and valid-to-no-cover fallback; full stage-lyrics visual parity remains separately unverified."
     },
     {
       "id": "S040",
@@ -668,7 +668,7 @@
       },
       "blocker": false,
       "ownerArea": "visual-system",
-      "notes": "visual engine host exists; cover-only evidence now uses the canonical MediaUrlPort source, while full default-visual parity and Windows field rendering remain pending."
+      "notes": "visual engine host exists; cover-only packaged field evidence passed on Candidate B, while full default-visual upstream parity remains pending."
     },
     {
       "id": "S045",
@@ -1088,7 +1088,7 @@
       },
       "blocker": false,
       "ownerArea": "search",
-      "notes": "result components exist and their cover sources use the canonical resolver; search-row visual parity and provider field rendering remain pending."
+      "notes": "result components use the canonical resolver and Candidate B proved provider cover rendering; full search-row visual parity remains pending."
     },
     {
       "id": "S073",
@@ -1148,7 +1148,7 @@
       },
       "blocker": false,
       "ownerArea": "providers-accounts",
-      "notes": "QQ empty/missing album-mid cover mapping is fixed and covered by Rust tests; authenticated provider and Windows cover field evidence remain pending."
+      "notes": "QQ empty/missing album-mid cover mapping is fixed; a real QQ cover rendered in packaged DOM/WebGL, and the missing-mid mapper remains SEMANTIC_VERIFIED with no real missing upstream sample found. Broader authenticated provider behavior remains unverified."
     },
     {
       "id": "S077",
@@ -1163,7 +1163,7 @@
       },
       "blocker": false,
       "ownerArea": "providers-accounts",
-      "notes": "captured Netease cover semantics and native header policy are automated; real Windows DOM/WebGL field rendering remains pending."
+      "notes": "A real Netease cover passed packaged canonical proxy, captured native Referer/Accept/User-Agent, DOM, WebGL, and production CSP. Broader login/playback parity remains unverified."
     },
     {
       "id": "S078",
@@ -1178,13 +1178,13 @@
       },
       "blocker": false,
       "ownerArea": "providers-accounts",
-      "notes": "captured Soda cover semantics and Qishui Referer policy are automated; real Windows DOM/WebGL field rendering remains pending."
+      "notes": "A real Soda cover passed packaged canonical proxy, DOM, WebGL, and production CSP; native policy proves Qishui Referer and excludes the former Netease Referer. Broader provider parity remains unverified."
     },
     {
       "id": "S079",
       "name": "Kugou provider",
       "severity": "P1",
-      "productStatus": "UNVERIFIED",
+      "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
         "automatedVerified": false,
@@ -1193,7 +1193,7 @@
       },
       "blocker": false,
       "ownerArea": "providers-accounts",
-      "notes": "Kugou host policy is deterministic and attacker-safe; confirmed real cover fixture and Windows DOM/WebGL field rendering are FIELD_SAMPLE_PENDING."
+      "notes": "Confirmed live mobile-search fixture maps trans_param.union_cover; Candidate B passed packaged Kugou Referer capture, canonical proxy, DOM, WebGL, and CSP. Broader login/playlist/playback parity remains unverified."
     },
     {
       "id": "S080",
@@ -1298,7 +1298,7 @@
       },
       "blocker": false,
       "ownerArea": "home-recommendation",
-      "notes": "card schemas and canonical cover resolution are automated; authenticated recommendation content and Windows cover field rendering remain pending."
+      "notes": "card schemas and canonical cover resolution are automated, and provider cover rendering passed Candidate B; authenticated recommendation content remains pending."
     },
     {
       "id": "S087",
@@ -1334,16 +1334,16 @@
       "id": "S089",
       "name": "Cover rendering / refresh",
       "severity": "P1",
-      "productStatus": "PARTIAL",
+      "productStatus": "CLOSE",
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
         "visualVerified": false,
-        "fieldVerified": false
+        "fieldVerified": true
       },
-      "blocker": true,
+      "blocker": false,
       "ownerArea": "home-recommendation",
-      "notes": "Canonical source resolution, invalid/empty fallback, stale WebGL replacement, and production CSP are automated; packaged Windows provider DOM/WebGL refresh evidence is pending."
+      "notes": "Candidate B passed five-source packaged DOM/WebGL rendering, controlled abnormal responses, stale A-to-B request release, actual local valid-to-no-cover fallback, and production CSP. Full Home visual parity remains separate."
     },
     {
       "id": "S090",
@@ -1448,7 +1448,7 @@
       },
       "blocker": false,
       "ownerArea": "desktop-tauri",
-      "notes": "local media cover URI is preserved as an opaque non-proxied source and production CSP admits it; packaged Windows DOM/WebGL field evidence remains pending."
+      "notes": "Candidate B preserved the real local cover as an opaque mineradio-local URI and rendered it in packaged DOM/WebGL under production CSP; actual valid-to-no-cover fallback also passed. Audio/lyrics and broader mixed-library field scope remain separate."
     },
     {
       "id": "S097",
