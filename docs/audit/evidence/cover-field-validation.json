@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "evidenceLayer": "packaged-windows-webview2-field",
+  "capturedAtUtc": "2026-08-28T17:03:46Z",
+  "candidate": {
+    "parentSha": "2eba3b079bf2a76f5a84d7491913bc56f60cb909",
+    "apiSha": "fb00fafe837a875639b905443115ce16b1abdc96",
+    "buildId": "wave2b-candidate-b-2eba3b0-fb00faf-20260828T170346Z",
+    "artifact": "apps/desktop/src-tauri/target/release/bundle/nsis/MineRadio-Tauri_2.1.0_x64-setup.exe",
+    "artifactSha256": "d74bc16cc95cd2b96b7bfe3d7bb1d5b3090ab8cd9b3dddbb158e4c0f586e3216",
+    "artifactSize": 9370154,
+    "installedExecutableSha256": "fa4fc9ad65ddb0946a94fc30deaf8cde490bdbacd97706743d488897957312ef",
+    "unsigned": true
+  },
+  "environment": {
+    "os": "Windows 11 x64 build 26200",
+    "webview2": "151.0.4129.107",
+    "rustc": "1.95.0 (59807616e 2026-04-14)",
+    "cargo": "1.95.0 (f2d3ce0bd 2026-03-21)",
+    "bun": "1.4.0",
+    "fieldTransport": "installed NSIS executable with localhost CDP enabled by WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"
+  },
+  "gitReachability": {
+    "apiRemoteReachable": true,
+    "parentRemoteReachable": true,
+    "freshRecursiveClone": "PASS",
+    "freshCloneParentSha": "2eba3b079bf2a76f5a84d7491913bc56f60cb909",
+    "freshCloneApiSha": "fb00fafe837a875639b905443115ce16b1abdc96",
+    "frozenInstall": "PASS",
+    "webBuild": "PASS",
+    "desktopCargoCheckLocked": "PASS"
+  },
+  "samples": [
+    {
+      "provider": "qq",
+      "sampleKind": "cover",
+      "trackId": "sample-qq-01",
+      "rawCover": "https://y.gtimg.cn/music/photo_new/T002R300x300M000000MkMni19ClKG.jpg",
+      "normalizedSource": "https://y.gtimg.cn/music/photo_new/T002R300x300M000000MkMni19ClKG.jpg",
+      "resolvedUriKind": "mineradio-tauri",
+      "proxyPolicy": "qq",
+      "classifiedHost": "y.gtimg.cn",
+      "refererPolicy": "https://y.qq.com/",
+      "httpStatus": 200,
+      "contentType": "image/webp",
+      "responseSize": 23077,
+      "dimensions": "300x300",
+      "dom": "PASS",
+      "webgl": "PASS",
+      "webglPixelHash": "f36c85e3"
+    },
+    {
+      "provider": "netease",
+      "sampleKind": "cover",
+      "trackId": "sample-netease-01",
+      "rawCover": "http://p1.music.126.net/F0fTkmBTVykCa2o7Vgu1rQ==/109951173569626660.jpg",
+      "normalizedSource": "http://p1.music.126.net/F0fTkmBTVykCa2o7Vgu1rQ==/109951173569626660.jpg",
+      "resolvedUriKind": "mineradio-tauri",
+      "proxyPolicy": "netease",
+      "classifiedHost": "p1.music.126.net",
+      "refererPolicy": "https://music.163.com/",
+      "httpStatus": 200,
+      "contentType": "image/jpg",
+      "responseSize": 120750,
+      "dimensions": "1500x1500",
+      "dom": "PASS",
+      "webgl": "PASS",
+      "webglPixelHash": "bcbb7dad"
+    },
+    {
+      "provider": "soda",
+      "sampleKind": "cover",
+      "trackId": "sample-soda-01",
+      "rawCover": "https://p3-luna.douyinpic.com/img/tos-cn-v-2774c002/okqANLFW7BZIsCFZwAnI2ftAAgtGgWfEnXiDEU~tplv-1v05vqsscw-qishui:0:360.image",
+      "normalizedSource": "https://p3-luna.douyinpic.com/img/tos-cn-v-2774c002/okqANLFW7BZIsCFZwAnI2ftAAgtGgWfEnXiDEU~tplv-1v05vqsscw-qishui:0:360.image",
+      "resolvedUriKind": "mineradio-tauri",
+      "proxyPolicy": "soda",
+      "classifiedHost": "p3-luna.douyinpic.com",
+      "refererPolicy": "https://www.qishui.com/",
+      "httpStatus": 200,
+      "contentType": "image/jpeg",
+      "responseSize": 46628,
+      "dimensions": "360x360",
+      "dom": "PASS",
+      "webgl": "PASS",
+      "webglPixelHash": "606778bc"
+    },
+    {
+      "provider": "kugou",
+      "sampleKind": "cover",
+      "trackId": "sample-kugou-01",
+      "rawCover": "http://imge.kugou.com/stdmusic/400/20230920/20230920142503632013.jpg",
+      "normalizedSource": "http://imge.kugou.com/stdmusic/400/20230920/20230920142503632013.jpg",
+      "resolvedUriKind": "mineradio-tauri",
+      "proxyPolicy": "kugou",
+      "classifiedHost": "imge.kugou.com",
+      "refererPolicy": "https://www.kugou.com/",
+      "httpStatus": 200,
+      "contentType": "image/webp",
+      "responseSize": 46425,
+      "dimensions": "400x400",
+      "dom": "PASS",
+      "webgl": "PASS",
+      "webglPixelHash": "e2dcc32c"
+    },
+    {
+      "provider": "local",
+      "sampleKind": "cover",
+      "trackId": "sample-local-01",
+      "rawCover": "http://mineradio-local.localhost/cover/<sanitized>?cap=<redacted>",
+      "normalizedSource": "http://mineradio-local.localhost/cover/<sanitized>?cap=<redacted>",
+      "resolvedUriKind": "mineradio-local",
+      "proxyPolicy": "opaque-local",
+      "classifiedHost": "mineradio-local.localhost",
+      "refererPolicy": null,
+      "httpStatus": 200,
+      "contentType": "image/jpeg",
+      "responseSize": 599799,
+      "dimensions": "792x792",
+      "dom": "PASS",
+      "webgl": "PASS",
+      "webglPixelHash": "0b48a710"
+    }
+  ],
+  "noCover": {
+    "qqEmptyMid": {
+      "semanticVerified": true,
+      "realMissingUpstreamSample": "FIELD_SAMPLE_PENDING",
+      "coverUrl": "",
+      "networkImageRequest": false,
+      "fakeM000UrlPossible": false
+    },
+    "neteaseFallbackPath": {
+      "sampleKind": "controlled-empty-logical-source",
+      "networkImageRequest": false,
+      "deterministicFallback": "PASS"
+    },
+    "localActualAudio": {
+      "source": "real FLAC audio stream copied without metadata or embedded picture",
+      "coverUrl": "",
+      "finalTitle": "wave2b-local-no-cover",
+      "domPlaceholder": "PASS",
+      "webglFallbackVisual": "PASS",
+      "staleCoverUriAbsent": true,
+      "validVisualCrop": "cover-field-local-valid.jpg",
+      "validVisualCropSha256": "b0fc08d4c37cc89149b0ba94162d71dbcdb3214f71942272886ffd9fa20d08d8",
+      "noCoverVisualCrop": "cover-field-local-no-cover.jpg",
+      "noCoverVisualCropSha256": "3cf69ea564824446a5221f7eb700b80edddf4970a89f7e97caff50ae1be95d55"
+    }
+  },
+  "kugouFixture": {
+    "captureProvenance": "live unauthenticated response from http://mobilecdn.kugou.com/api/v3/search/song on 2026-08-28; minimized after capture",
+    "sanitizedFixture": "api/src/providers/kugou/fixtures/search-cover-response.json",
+    "credentialsCaptured": false,
+    "mapper": "PASS",
+    "sharedContract": "PASS",
+    "resolvedSource": "mineradio-tauri",
+    "fieldResult": "PASS"
+  },
+  "headerEvidence": [
+    {
+      "provider": "netease",
+      "capture": "packaged native request through controlled HTTP forward proxy",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      "referer": "https://music.163.com/",
+      "result": "PASS"
+    },
+    {
+      "provider": "kugou",
+      "capture": "packaged native request through controlled HTTP forward proxy",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      "referer": "https://www.kugou.com/",
+      "result": "PASS"
+    },
+    {
+      "provider": "qq",
+      "capture": "HTTPS real image success plus native request-policy regression test; payload headers were not MITM-decrypted",
+      "referer": "https://y.qq.com/",
+      "result": "PASS"
+    },
+    {
+      "provider": "soda",
+      "capture": "HTTPS real image success plus native request-policy regression test; payload headers were not MITM-decrypted",
+      "referer": "https://www.qishui.com/",
+      "neteaseRefererSent": false,
+      "result": "PASS"
+    }
+  ],
+  "abnormalResponses": [
+    { "sampleKind": "200-text-html", "packagedImageResult": "ERROR", "automatedProxyStatus": 502, "result": "PASS" },
+    { "sampleKind": "empty-image-body", "packagedImageResult": "ERROR", "automatedProxyStatus": 502, "result": "PASS" },
+    { "sampleKind": "non-2xx", "packagedImageResult": "ERROR", "automatedProxyStatus": 502, "result": "PASS" },
+    { "sampleKind": "non-image-content-type", "packagedImageResult": "ERROR", "automatedProxyStatus": 502, "result": "PASS" },
+    { "sampleKind": "oversized-over-20-mib", "packagedImageResult": "ERROR", "automatedProxyStatus": 502, "result": "PASS" }
+  ],
+  "staleLifecycle": {
+    "scenario": "pause Track A image-proxy request, switch to Track B, commit B, release A",
+    "aRequestHeld": true,
+    "bReadyBeforeARelease": true,
+    "finalTitle": "Track B",
+    "finalDomIsB": true,
+    "finalQueueIsB": true,
+    "identifiableWebglUploads": ["B"],
+    "aUploadedAfterRelease": false,
+    "finalWebglUploadIsB": true,
+    "result": "PASS"
+  },
+  "csp": {
+    "productionOrigin": "http://tauri.localhost/",
+    "canonicalRemoteUriKind": "mineradio-tauri",
+    "localUriKind": "mineradio-local",
+    "allFiveSamplesRendered": true,
+    "result": "PASS"
+  },
+  "spotify": {
+    "scope": "transport-audit-only",
+    "productScope": "unresolved"
+  },
+  "fieldConsistency": "PASS"
+}

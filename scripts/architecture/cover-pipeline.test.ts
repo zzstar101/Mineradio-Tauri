@@ -48,3 +48,48 @@ test("production CSP admits the canonical cover protocols", () => {
   expect(imageDirective).toContain("http://mineradio-tauri.localhost");
   expect(imageDirective).toContain("http://mineradio-local.localhost");
 });
+
+test("packaged cover field evidence is complete and credential-free", () => {
+  const raw = read("docs/audit/evidence/cover-field-validation.json");
+  const evidence = JSON.parse(raw) as {
+    evidenceLayer: string;
+    candidate: { parentSha: string; apiSha: string; artifactSha256: string };
+    samples: Array<{
+      provider: string;
+      resolvedUriKind: string;
+      httpStatus: number;
+      contentType: string;
+      dom: string;
+      webgl: string;
+    }>;
+    abnormalResponses: Array<{ result: string }>;
+    staleLifecycle: { result: string; aUploadedAfterRelease: boolean };
+    csp: { result: string };
+    fieldConsistency: string;
+  };
+
+  expect(evidence.evidenceLayer).toBe("packaged-windows-webview2-field");
+  expect(evidence.candidate.parentSha).toMatch(/^[0-9a-f]{40}$/);
+  expect(evidence.candidate.apiSha).toMatch(/^[0-9a-f]{40}$/);
+  expect(evidence.candidate.artifactSha256).toMatch(/^[0-9a-f]{64}$/);
+  expect(evidence.samples.map((sample) => sample.provider).sort()).toEqual([
+    "kugou",
+    "local",
+    "netease",
+    "qq",
+    "soda"
+  ]);
+  for (const sample of evidence.samples) {
+    expect(sample.resolvedUriKind).toMatch(/^mineradio-(tauri|local)$/);
+    expect(sample.httpStatus).toBe(200);
+    expect(sample.contentType).toMatch(/^image\//);
+    expect(sample.dom).toBe("PASS");
+    expect(sample.webgl).toBe("PASS");
+  }
+  expect(evidence.abnormalResponses.every((sample) => sample.result === "PASS")).toBe(true);
+  expect(evidence.staleLifecycle.result).toBe("PASS");
+  expect(evidence.staleLifecycle.aUploadedAfterRelease).toBe(false);
+  expect(evidence.csp.result).toBe("PASS");
+  expect(evidence.fieldConsistency).toBe("PASS");
+  expect(raw).not.toMatch(/"(?:cookie|token|authorization|sessionCredential)"\s*:/i);
+});
