@@ -1,0 +1,338 @@
+{
+  "meta": {
+    "baseline": "XxHuberrr/Mineradio@v2.1.0",
+    "peeledCommit": "96091d123b36783f5604d1acd47b00b0708cabbd",
+    "tree": "b1b9f80a72d96afcbc8b4685256c3adba9014551",
+    "frozenAt": "wave-3",
+    "sourceDom": "public/index.html:1255-1409",
+    "sourceCss": "public/css/index.css (bottom-bar / player-shell sections)",
+    "semantics": "STRUCTURE + GEOMETRY + INTERACTION contract for the v2.1.0 Player Shell / Bottom Bar. Machine-readable golden; must not be hand-tuned to current React component boundaries."
+  },
+  "structure": {
+    "root": "bottom-bar",
+    "order": [
+      "mini-queue-popover",
+      "progress-bar",
+      "controls"
+    ],
+    "nodes": {
+      "bottom-bar": {
+        "id": "bottom-bar",
+        "class": "visible|soft-hidden|stage-mode",
+        "role": null,
+        "note": "fixed column shell; mini queue precedes progress in DOM"
+      },
+      "mini-queue-popover": {
+        "id": "mini-queue-popover",
+        "class": "mini-queue-popover",
+        "openClass": "show",
+        "anchor": "absolute; left 50%; bottom calc(100% + 14px)",
+        "childOrder": ["mini-queue-head", "mini-queue-list"],
+        "zIndex": 7,
+        "width": "min(420px, calc(100vw - 32px))"
+      },
+      "mini-queue-head": {
+        "id": null,
+        "class": "mini-queue-head",
+        "childOrder": ["mini-queue-head-copy", "mini-queue-close"]
+      },
+      "mini-queue-head-copy": {
+        "childOrder": ["mini-queue-title", "mini-queue-count"]
+      },
+      "mini-queue-title": { "id": null, "class": "mini-queue-title", "text": "当前队列" },
+      "mini-queue-count": { "id": "mini-queue-count", "text": "{n} 首" },
+      "mini-queue-close": {
+        "id": null,
+        "class": "fx-mini-btn ghost",
+        "title": "关闭",
+        "text": "×",
+        "action": "closeMiniQueue()",
+        "note": "显式关闭按钮是 upstream 语义的一部分"
+      },
+      "mini-queue-list": {
+        "id": "mini-queue-list",
+        "class": "mini-queue-list",
+        "maxHeight": "min(320px, calc(100vh - 250px))",
+        "virtualized": true,
+        "row": {
+          "class": "mini-queue-item",
+          "dataAttr": "data-queue-index",
+          "playAction": "playQueueAt(index)",
+          "reorder": "long-press(~520ms) drag reorder within #mini-queue-list",
+          "childOrder": ["cover", "info", "next", "remove"]
+        }
+      },
+      "progress-bar": {
+        "id": "progress-bar",
+        "class": "is-dragging|stage-mode",
+        "childOrder": ["progress-fill", "progress-thumb"],
+        "zIndex": 1,
+        "note": "upstream places progress AFTER mini queue and BEFORE controls"
+      },
+      "progress-fill": { "id": "progress-fill", "style": "width %" },
+      "progress-thumb": { "id": "progress-thumb", "aria-hidden": "true", "style": "left %" },
+      "controls": {
+        "id": "controls",
+        "layout": "grid 3 columns: minmax(340px,1.08fr) | minmax(380px,auto) | minmax(400px,1.08fr)",
+        "childOrder": ["control-cluster.actions", "control-cluster.transport", "control-cluster.modes"]
+      },
+      "control-cluster.actions": {
+        "class": "control-cluster actions",
+        "gridColumn": 1,
+        "justify": "flex-start",
+        "childOrder": ["control-track", "heart-btn", "collect-btn"]
+      },
+      "control-track": {
+        "class": "control-track",
+        "childOrder": ["control-cover", "control-meta"]
+      },
+      "control-cover": {
+        "id": "control-cover",
+        "class": "control-cover cover-empty|has-cover",
+        "role": "button",
+        "tabindex": "0",
+        "title": "专辑详情",
+        "aria-label": "专辑详情",
+        "action": "openTrackDetailModal('album')",
+        "keyboard": "Enter/Space opens album detail",
+        "size": "52x52 px, radius 12"
+      },
+      "control-meta": { "class": "control-meta", "childOrder": ["control-title", "control-artist"] },
+      "control-title": {
+        "id": "control-title",
+        "class": "control-title",
+        "title": "歌曲详情",
+        "action": "openTrackDetailModal('song')",
+        "childOrder": ["control-title-text", "control-title-badges"]
+      },
+      "control-title-text": { "id": "control-title-text", "class": "control-title-text" },
+      "control-title-badges": {
+        "id": "control-title-badges",
+        "class": "control-title-badges",
+        "childOrder": ["source-chip*", "quality-control"]
+      },
+      "quality-control": {
+        "id": "quality-control",
+        "class": "quality-control control-quality-chip",
+        "childOrder": ["quality-btn", "quality-popover"],
+        "note": "quality chip 位于 metadata 内部（title badges），不是漂浮 utility"
+      },
+      "quality-btn": {
+        "id": "quality-btn",
+        "class": "ctrl-btn quality-pill",
+        "childOrder": ["quality-btn-label"],
+        "size": "height 15px, min-width 34px max-width 52px"
+      },
+      "quality-btn-label": { "id": "quality-btn-label", "text": "SQ|HQ|STD|臻音|母带" },
+      "quality-popover": { "class": "quality-popover", "childOrder": ["quality-option-list"], "anchorBottom": 24 },
+      "control-artist": {
+        "id": "control-artist",
+        "class": "control-artist",
+        "title": "歌手详情",
+        "action": "openTrackDetailModal('artist')"
+      },
+      "heart-btn": {
+        "id": "heart-btn",
+        "class": "ctrl-btn",
+        "title": "红心喜欢",
+        "action": "toggleLikeCurrent()",
+        "states": ["liked", "busy"]
+      },
+      "collect-btn": {
+        "id": "collect-btn",
+        "class": "ctrl-btn",
+        "title": "收藏到歌单",
+        "action": "openCollectModalForCurrent()"
+      },
+      "control-cluster.transport": {
+        "class": "control-cluster transport",
+        "gridColumn": 2,
+        "justify": "center",
+        "childOrder": ["play-mode-btn", "prev-btn", "play-btn", "next-btn", "mini-queue-btn"]
+      },
+      "play-mode-btn": { "id": "play-mode-btn", "class": "ctrl-btn", "title": "播放顺序", "action": "cyclePlayMode()" },
+      "prev-btn": { "id": "prev-btn", "class": "ctrl-btn", "title": "上一首", "action": "prevTrack(true)" },
+      "play-btn": { "id": "play-btn", "class": "ctrl-btn", "title": "播放/暂停", "action": "togglePlay()", "size": "58x58 radius 50%" },
+      "next-btn": { "id": "next-btn", "class": "ctrl-btn", "title": "下一首", "action": "nextTrack(true)" },
+      "mini-queue-btn": { "id": "mini-queue-btn", "class": "ctrl-btn", "title": "当前队列", "action": "toggleMiniQueue(event)" },
+      "control-cluster.modes": {
+        "class": "control-cluster modes",
+        "gridColumn": 3,
+        "justify": "flex-end",
+        "childOrder": ["lyric-timing-control", "volume-control", "controls-hide-btn", "immersive-btn", "fullscreen-toggle-btn", "time-display"]
+      },
+      "lyric-timing-control": {
+        "id": "lyric-timing-control",
+        "class": "lyric-timing-control",
+        "hasOffsetClass": "has-offset",
+        "childOrder": ["lyrics-toggle-btn", "lyric-timing-popover"]
+      },
+      "lyrics-toggle-btn": { "id": "lyrics-toggle-btn", "class": "ctrl-btn lyrics-toggle-btn", "title": "歌词", "text": "词" },
+      "lyric-timing-popover": {
+        "id": "lyric-timing-popover",
+        "class": "lyric-timing-popover",
+        "childOrder": ["lyric-timing-head", "lyric-timing-song", "lyric-timing-actions"],
+        "anchor": "absolute; left 50%; bottom 46px",
+        "zIndex": 8
+      },
+      "lyric-timing-head": { "class": "lyric-timing-head", "childOrder": ["head-label", "lyric-timing-value"] },
+      "lyric-timing-value": { "id": "lyric-timing-value", "text": "0.0s|+0.1s|-0.1s" },
+      "lyric-timing-song": { "id": "lyric-timing-song", "text": "当前歌曲" },
+      "lyric-timing-actions": {
+        "class": "lyric-timing-actions",
+        "childOrder": ["offset-minus", "offset-reset", "offset-plus"],
+        "grid": "repeat(3, minmax(0,1fr))"
+      },
+      "offset-minus": { "dataAttr": "data-lyric-offset-step=-0.1", "title": "歌词延后 0.1 秒", "text": "-0.1" },
+      "offset-reset": { "dataAttr": "data-lyric-offset-reset", "title": "重置当前歌曲歌词校准", "text": "0" },
+      "offset-plus": { "dataAttr": "data-lyric-offset-step=0.1", "title": "歌词提前 0.1 秒", "text": "+0.1" },
+      "volume-control": {
+        "id": "volume-control",
+        "class": "volume-control",
+        "childOrder": ["volume-btn", "volume-popover"],
+        "note": "compact: volume + fade only; 不得内嵌完整 Playback 2.0/audio 面板"
+      },
+      "volume-btn": { "id": "volume-btn", "class": "ctrl-btn", "title": "音量 / 静音" },
+      "volume-popover": {
+        "class": "volume-popover",
+        "anchor": "absolute; left 50%; bottom 46px",
+        "childOrder": ["volume-main-row", "fade-control-row", "fade-control-row"],
+        "width": 226
+      },
+      "volume-main-row": { "class": "volume-main-row", "childOrder": ["volume-slider", "volume-value"] },
+      "volume-slider": { "id": "volume-slider", "type": "range", "min": 0, "max": 1, "step": 0.01, "aria-label": "音量" },
+      "volume-value": { "id": "volume-value", "text": "100%" },
+      "fade-row-in": { "class": "fade-control-row", "childOrder": ["fade-in-label", "fade-in-slider", "fade-in-value"], "label": "淡入" },
+      "fade-in-slider": { "id": "fade-in-slider", "type": "range", "min": 0, "max": 3, "step": 0.05, "aria-label": "音乐淡入秒数" },
+      "fade-in-value": { "id": "fade-in-value", "text": "0.45s" },
+      "fade-row-out": { "class": "fade-control-row", "childOrder": ["fade-out-label", "fade-out-slider", "fade-out-value"], "label": "淡出" },
+      "fade-out-slider": { "id": "fade-out-slider", "type": "range", "min": 0, "max": 3, "step": 0.05, "aria-label": "音乐淡出秒数" },
+      "fade-out-value": { "id": "fade-out-value", "text": "0.40s" },
+      "controls-hide-btn": { "id": "controls-hide-btn", "class": "ctrl-btn", "title": "控制条自动隐藏", "activeWhen": "controlsAutoHide" },
+      "immersive-btn": {
+        "id": "immersive-btn",
+        "class": "ctrl-btn",
+        "title": "全沉浸式",
+        "aria-pressed": false,
+        "action": "toggleImmersiveMode()",
+        "activeWhen": "immersiveMode"
+      },
+      "fullscreen-toggle-btn": { "class": "ctrl-btn fullscreen-toggle-btn", "title": "全屏 (F)", "action": "toggleFullscreen()" },
+      "time-display": { "id": "time-display", "text": "0:00 / 0:00" }
+    }
+  },
+  "geometry": {
+    "viewport": { "width": 1920, "height": 1080 },
+    "bottom-handle": {
+      "id": "bottom-handle",
+      "position": "fixed",
+      "zIndex": 8,
+      "left": "50%",
+      "bottom": "13px",
+      "width": 236,
+      "height": 28,
+      "borderRadius": 999,
+      "opacity": 0.14,
+      "transform": "translateX(-50%) translateY(0) scale(.96)",
+      "span": { "width": 164, "height": 4, "opacity": 1, "borderRadius": 999 },
+      "states": {
+        "hover": { "opacity": 0.82, "translateY": -2 },
+        "active/awake": { "opacity": 0.82, "translateY": -2 },
+        "controls-visible": { "opacity": 0, "pointerEvents": "none", "translateY": 10, "scale": 0.78 },
+        "immersive": { "opacity": 0, "pointerEvents": "none", "translateY": 16, "scale": 0.92 }
+      }
+    },
+    "bottom-bar": {
+      "position": "fixed",
+      "zIndex": 6,
+      "bottom": "16px",
+      "left": "50%",
+      "width": "min(1080px, calc(100vw - 56px))",
+      "padding": "9px 22px 14px",
+      "borderRadius": 50,
+      "gap": 10,
+      "flexDirection": "column",
+      "alignItems": "center",
+      "opacity": { "default": 0, "visible": 0.91 },
+      "pointerEvents": { "default": "none", "visible": "auto" },
+      "transform": "translateX(-50%)",
+      "diyWidth": "min(1160px, calc(100vw - 148px))",
+      "offsetX": "left calc(50% - 34px)",
+      "bottomDiy": "18px"
+    },
+    "progress-bar": {
+      "width": "calc(100% - clamp(86px, 10vw, 156px))",
+      "height": { "default": 4, "hover/dragging": 5 },
+      "margin": "4px auto 1px",
+      "zIndex": 1,
+      "borderRadius": 999
+    },
+    "progress-thumb": { "width": 13, "height": 13, "scale": { "default": 0.72, "hover": 1 } },
+    "controls-grid": {
+      "columns": ["minmax(340px,1.08fr)", "minmax(380px,auto)", "minmax(400px,1.08fr)"],
+      "gap": 18,
+      "narrow920Columns": ["minmax(0,1fr)", "auto", "minmax(0,1fr)"],
+      "narrow620Columns": ["1fr"]
+    },
+    "control-cluster": { "gap": 13, "height": 62, "narrow920": { "gap": 8, "height": 56 } },
+    "control-cover": { "size": 52, "radius": 12, "narrow920": { "size": 44 } },
+    "control-meta": { "maxWidth": 360, "gap": 3, "narrow920": { "maxWidth": 170 } },
+    "control-title": { "fontSize": 13.5, "fontWeight": 700, "gap": 6, "narrow920FontSize": 12.5 },
+    "quality-btn": { "height": 15, "minWidth": 34, "maxWidth": 52, "radius": 4, "fontSize": 8 },
+    "control-artist": { "fontSize": 11.5 },
+    "ctrl-btn": { "size": 36, "radius": 11, "narrow920": { "size": 32 } },
+    "play-btn": { "size": 58, "radius": "50%", "svg": 24, "narrow920": { "size": 54 } },
+    "popovers": {
+      "anchor": "absolute; left 50%; bottom 46px; translateX(-50%)",
+      "volume": { "width": 226, "padding": "10px 12px 11px", "radius": 14, "zIndex": 1 },
+      "quality": { "width": 238, "padding": 8, "radius": 14, "zIndex": 8, "anchorBottom": 24 },
+      "lyric-timing": { "width": 226, "padding": 10, "radius": 14, "zIndex": 8 },
+      "mini-queue": { "left": "50%", "bottom": "calc(100% + 14px)", "width": "min(420px, calc(100vw - 32px))", "maxHeight": "min(420px, calc(100vh - 170px))", "radius": 16, "zIndex": 7 }
+    },
+    "immersive": {
+      "barWidth": "min(620px, calc(100vw - 56px))",
+      "barBottom": "22px",
+      "visibleBottomBar": "bottom 22px; z-index 32",
+      "hiddenSurfaces": ["desktop-titlebar", "search-area", "top-right", "fx-fab", "trial-banner", "toast"],
+      "hiddenControls": ["control-track", "heart-btn", "collect-btn", "play-mode-btn", "lyrics-toggle-btn", "mini-queue-btn", "quality-control", "volume-control", "controls-hide-btn", "fullscreen-toggle-btn"],
+      "playBtnImmersive": { "size": 64, "svg": 25 },
+      "ctrlBtnImmersive": { "size": 40, "svg": 22 }
+    }
+  },
+  "interactions": {
+    "reorder": "mini-queue long-press ~520ms then drag reorder within list; queue panel shares reorder state",
+    "closeMiniQueue": "explicit × button; outside pointerdown closes",
+    "lyricOffset": {
+      "model": "per-track offset map keyed by track identity (provider+id / local key)",
+      "steps": [-0.1, 0, 0.1],
+      "range": [-5, 5],
+      "apply": "lyric view clock only (never mutates payload); toast 歌词提前/延后/已重置",
+      "persistKey": "mineradio-lyric-timing-offsets-v1",
+      "limit": 500
+    },
+    "autoHide": {
+      "toggle": "controls-hide-btn (active = auto-hide on)",
+      "idle": "mouse idle / leave → controls condensed",
+      "hover": "hovering shell keeps visible",
+      "popoverOpen": "popover remains usable",
+      "immersiveForcesOn": true
+    },
+    "immersive": {
+      "enter": "save shelf/lyrics/autoHide/bottom state; add body.immersive-mode; force particle lyrics; force auto-hide on; close all popovers/modals; reveal then auto-hide after ~980ms",
+      "exit": "restore saved state; close mini queue; toast 已退出全沉浸式",
+      "fullscreen": "independent; fullscreen button remains"
+    },
+    "fullscreen": {
+      "buttonTitle": "全屏 (F)",
+      "behavior": "Tauri window fullscreen command; shell hidden surfaces unchanged otherwise"
+    },
+    "detail": {
+      "cover": "album detail",
+      "title": "song detail",
+      "artist": "artist detail",
+      "capabilityGate": "provider without detail capability must gate affordance; never call missing route"
+    },
+    "like": "capability-gated by provider (netease/soda like; netease/qq collect); supported→render/enable, unsupported→hidden/disabled consistent with upstream",
+    "quality": "metadata chip; entitlement disabled state + current label; switching reloads URL"
+  }
+}

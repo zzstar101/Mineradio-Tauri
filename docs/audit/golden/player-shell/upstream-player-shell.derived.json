@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "baseline": "XxHuberrr/Mineradio@v2.1.0",
+    "peeledCommit": "96091d123b36783f5604d1acd47b00b0708cabbd",
+    "regeneratedAt": "2026-08-28T18:04:06.858Z",
+    "sourceDom": "public/index.html:1255-1409",
+    "generator": "scripts/player-shell/extract-upstream-golden.mjs"
+  },
+  "requiredIdCount": 39,
+  "missingRequiredIds": [],
+  "bottomBarDirectChildren": [
+    "mini-queue-popover",
+    "progress-bar",
+    "controls"
+  ]
+}
