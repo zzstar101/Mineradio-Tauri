@@ -304,6 +304,60 @@ export const SEARCH_HISTORY_PREFERENCE = createJsonPreferenceKey({
 	parse: normalizeSearchHistory,
 });
 
+export interface LyricTimingOffsetEntryV1 {
+	readonly offset: number;
+	readonly updatedAt: number;
+	readonly title: string;
+	readonly artist: string;
+}
+
+export type LyricTimingOffsetMapV1 = Record<string, LyricTimingOffsetEntryV1>;
+
+export const LYRIC_TIMING_OFFSET_LIMIT = 500;
+
+export const LYRIC_TIMING_OFFSETS_PREFERENCE = createJsonPreferenceKey<LyricTimingOffsetMapV1>({
+	name: "lyrics.timingOffsets",
+	schemaVersion: 1,
+	defaultValue: () => ({}),
+	parse(value) {
+		const record = parseObject(value);
+		if (!record) return undefined;
+		const items = parseObject(record.items) ?? record;
+		const out: LyricTimingOffsetMapV1 = {};
+		for (const [key, raw] of Object.entries(items)) {
+			if (!/^.{1,120}$/.test(key)) continue;
+			const entry = parseObject(raw) ?? (typeof raw === "number" ? { offset: raw } : undefined);
+			if (!entry) continue;
+			const offsetRaw = Number(entry.offset);
+			const offset = Number.isFinite(offsetRaw)
+				? Math.max(-5, Math.min(5, Math.round(offsetRaw * 10) / 10))
+				: 0;
+			if (offset === 0) continue;
+			out[key] = {
+				offset,
+				updatedAt: Number.isFinite(Number(entry.updatedAt)) ? Math.max(0, Number(entry.updatedAt)) : 0,
+				title: typeof entry.title === "string" ? entry.title.slice(0, 80) : "",
+				artist: typeof entry.artist === "string" ? entry.artist.slice(0, 80) : "",
+			};
+		}
+		return Object.keys(out).length > 0 ? out : {};
+	},
+});
+
+export const CONTROLS_AUTO_HIDE_PREFERENCE = createJsonPreferenceKey({
+	name: "player.controlsAutoHide",
+	schemaVersion: 1,
+	defaultValue: true,
+	parse: parseBoolean,
+});
+
+export const PLAYER_IMMERSIVE_PREFERENCE = createJsonPreferenceKey({
+	name: "player.immersiveMode",
+	schemaVersion: 1,
+	defaultValue: false,
+	parse: parseBoolean,
+});
+
 export const M8_PREFERENCE_KEYS: readonly PreferenceKey<unknown>[] = Object.freeze([
 	PLAYBACK_QUALITY_PREFERENCE,
 	PLAYBACK_AUDIO_PREFERENCE,
@@ -319,7 +373,18 @@ export const M8_PREFERENCE_KEYS: readonly PreferenceKey<unknown>[] = Object.free
 	HOME_LISTEN_LEDGER_PREFERENCE,
 	ACCOUNT_PROVIDER_ORDER_PREFERENCE,
 	SEARCH_HISTORY_PREFERENCE,
+	LYRIC_TIMING_OFFSETS_PREFERENCE,
+	CONTROLS_AUTO_HIDE_PREFERENCE,
+	PLAYER_IMMERSIVE_PREFERENCE,
 ]);
+
+// 旧版本 M8 快照可能不包含 Wave 3 新增 key；预留一个兼容导出供清单/基线读取。
+export const PLAYER_SHELL_WAVE3_PREFERENCE_KEYS: readonly PreferenceKey<unknown>[] =
+	Object.freeze([
+		LYRIC_TIMING_OFFSETS_PREFERENCE,
+		CONTROLS_AUTO_HIDE_PREFERENCE,
+		PLAYER_IMMERSIVE_PREFERENCE,
+	]);
 
 export const M8_PREFERENCE_KEY_BY_NAME: ReadonlyMap<string, PreferenceKey<unknown>> =
 	new Map(M8_PREFERENCE_KEYS.map((key) => [key.name, key]));

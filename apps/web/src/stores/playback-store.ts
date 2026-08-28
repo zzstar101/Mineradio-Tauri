@@ -148,6 +148,8 @@ export interface PlaybackState {
 	enqueue: (track: Track) => void;
 	insertAt: (index: number, track: Track) => void;
 	insertNext: (track: Track) => void;
+	/** 队列内搬移（Wave 3 mini queue drag-sort）。保留曲目对象身份。 */
+	moveTrack: (fromIndex: number, toIndex: number) => void;
 	replaceCurrentSource: (request: ReplaceCurrentSourceRequest) => boolean;
 	commitPreparedHandoff: (request: PreparedHandoffCommitRequest) => boolean;
 	playAt: (index: number) => void;
@@ -455,6 +457,22 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
 
 			const insertAt = Math.min(next.length, adjustedCurrentIdx + 1);
 			next.splice(insertAt, 0, moved);
+			return { queue: next };
+		}),
+	moveTrack: (fromIndex, toIndex) =>
+		set((s) => {
+			if (
+				fromIndex === toIndex
+				|| !Number.isInteger(fromIndex)
+				|| !Number.isInteger(toIndex)
+				|| fromIndex < 0
+				|| fromIndex >= s.queue.length
+				|| toIndex < 0
+				|| toIndex >= s.queue.length
+			) return {};
+			const next = [...s.queue];
+			const [moved] = next.splice(fromIndex, 1);
+			next.splice(toIndex, 0, moved);
 			return { queue: next };
 		}),
 	replaceCurrentSource: (request) => {

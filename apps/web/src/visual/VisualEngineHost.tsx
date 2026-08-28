@@ -43,6 +43,8 @@ export interface VisualEngineHostProps {
 	currentCoverUrl?: string | null;
 	beatMapKey?: string | null;
 	beatMap?: unknown;
+	/** Wave 3: stage lyric 视图时钟偏移（秒），仅影响歌词 index。 */
+	lyricOffsetSeconds?: number;
 	mediaUrl?: Pick<MediaUrlPort, "imageSource">;
 	coverResolution?: number;
 	fxDefaults?: Partial<FxState>;
@@ -367,6 +369,7 @@ export function VisualEngineHost(props: VisualEngineHostProps): ReactElement {
 		shelfSnapshot,
 		settingsSnapshot,
 		events: eventsRef.current,
+		lyricOffsetSeconds: props.lyricOffsetSeconds,
 		performanceSnapshotReaderRef: props.performanceSnapshotReaderRef,
 	});
 

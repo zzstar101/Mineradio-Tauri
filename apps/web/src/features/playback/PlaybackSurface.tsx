@@ -2,7 +2,6 @@ import type { ComponentProps, ReactElement } from "react";
 import type { Track } from "@mineradio/shared";
 import { BottomControlsHost } from "../../components/shell/BottomControlsHost";
 import { PlaybackRuntimeHost } from "./PlaybackRuntimeHost";
-import { PlaybackAudioSettings } from "./PlaybackAudioSettings";
 import type { PlaybackAudioSettingsResult } from "./usePlaybackAudioSettings";
 import type { PlaybackSessionRuntimeResult } from "./usePlaybackSessionRuntime";
 import type { TrackCustomizationControllerResult } from "../customization/useTrackCustomizationController";
@@ -52,17 +51,11 @@ export function PlaybackSurface({
   controlsProps,
   audioSettings,
 }: PlaybackSurfaceProps): ReactElement {
-  const renderVolumePanelExtras = audioSettings
-    ? (active: boolean) => (
-        <PlaybackAudioSettings settings={audioSettings} active={active} />
-      )
-    : controlsProps.renderVolumePanelExtras;
-  return (
-    <BottomControlsHost
-      {...controlsProps}
-      renderVolumePanelExtras={renderVolumePanelExtras}
-    />
-  );
+  // Wave 3: Playback 2.0 audio settings 不再注入 bottom-bar 音量 popover（避免
+  // 劫持 upstream volume/fade 信息架构）。audioSettings 由 App 注入
+  // Settings Workbench 的 advanced audio slot（非 bottom-bar 入口）。
+  void audioSettings;
+  return <BottomControlsHost {...controlsProps} />;
 }
 
 export function PlaybackCustomizationOverlay({

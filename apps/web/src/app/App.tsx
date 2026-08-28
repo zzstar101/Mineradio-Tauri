@@ -75,6 +75,8 @@ import { resolveUpdatePresentationMode } from "../features/updater/update-view-m
 import type { TauriPlaybackQuiescenceAdapter } from "../adapters/tauri/tauri-playback-quiescence-adapter";
 import { useLikesController } from "../features/likes/useLikesController";
 export { isNeteaseLikeSupported } from "../features/likes/likes-policy";
+import { usePlayerShellRuntime } from "../features/playback/usePlayerShellRuntime";
+import { PlaybackAudioSettings } from "../features/playback/PlaybackAudioSettings";
 import {
   useLibraryController,
   type LibraryControllerResult,
@@ -469,6 +471,7 @@ export function App({
   const playQueueAt = usePlaybackStore((s) => s.playAt);
   const removeQueueAt = usePlaybackStore((s) => s.removeAt);
   const insertQueueNext = usePlaybackStore((s) => s.insertNext);
+  const moveQueueTrack = usePlaybackStore((s) => s.moveTrack);
   const setQueue = usePlaybackStore((s) => s.setQueue);
   const clearQueue = usePlaybackStore((s) => s.clearQueue);
   const searchKeyword = useSearchStore((s) => s.keyword);
@@ -1522,6 +1525,14 @@ export function App({
     setConsole(false);
     setMiniQueue(false);
   }, [setConsole, setHomeForcedOpen, setHomeSuppressed, setMiniQueue]);
+  const playerShellRuntime = usePlayerShellRuntime({
+    preferences,
+    currentTrack,
+    showToast,
+    onEnterImmersive: () => {
+      setMiniQueue(false);
+    },
+  });
   const { aiDepthChip } = useGlobalShellRuntime({
     diyMode,
     splashActive,
@@ -1605,6 +1616,7 @@ export function App({
         currentCoverUrl: currentTrack?.coverUrl,
         beatMapKey: currentBeatMapState?.key,
         beatMap: currentBeatMapState?.map,
+        lyricOffsetSeconds: playerShellRuntime.currentLyricOffsetMs / 1000,
         mediaUrl: applicationPorts?.mediaUrl,
         coverResolution: visualFx.coverResolution,
         fxState: visualFx,
@@ -1691,6 +1703,9 @@ export function App({
           </>
         ),
         desktopRuntimeSearchTerms: DESKTOP_RUNTIME_SEARCH_TERMS,
+        audioSettingsSlot: (
+          <PlaybackAudioSettings settings={playbackAudioSettings} active />
+        ),
       },
       aiDepthChip,
     },
@@ -1838,6 +1853,7 @@ export function App({
         onNext: nextTrack,
         onModeChange: setPlaybackMode,
         onQueue: toggleMiniQueue,
+        onCloseMiniQueue: () => setMiniQueue(false),
         onLyrics: () =>
           showNotice(
             lyricsPayload ? "歌词已载入舞台层" : "播放歌曲后会自动加载歌词",
@@ -1868,9 +1884,25 @@ export function App({
         onPlayQueueIndex: playMiniQueueIndex,
         onRemoveQueueIndex: removeQueueAt,
         onInsertQueueNext: insertMiniQueueNext,
+        onMoveQueueIndex: (fromIndex, toIndex) => moveQueueTrack(fromIndex, toIndex),
         onMinimize: () => void minimizeWindow(),
         onToggleMaximize: () => void toggleWindowMaximize(),
         onToggleFullscreen: () => void toggleWindowFullscreen(),
+        onTrackDetail: (kind) => {
+          const track = usePlaybackStore.getState().currentTrack;
+          if (!track) return;
+          if (kind === "artist") {
+            const artist = track.artists.join(" ");
+            if (artist) searchQuery(artist, "song");
+            return;
+          }
+          const query = kind === "album" ? track.album : track.title;
+          if (query) searchQuery(query, "song");
+        },
+        onToggleControlsAutoHide: () => playerShellRuntime.toggleControlsAutoHide(),
+        onToggleImmersive: () => playerShellRuntime.toggleImmersiveMove(),
+        onLyricOffsetAdjust: (stepSeconds) => playerShellRuntime.adjustLyricOffset(stepSeconds),
+        onLyricOffsetReset: () => playerShellRuntime.resetLyricOffset(),
         mode: playbackMode,
         isPlaying,
         currentTitle: currentTrack?.title,
@@ -1885,11 +1917,19 @@ export function App({
         durationMs,
         volume,
         muted,
+        fadeInMs: playbackAudioSettings.preference.fadeInMs,
+        fadeOutMs: playbackAudioSettings.preference.fadeOutMs,
+        onFadeInMsChange: (fadeInMs) => void playbackAudioSettings.setFadeInMs(fadeInMs),
+        onFadeOutMsChange: (fadeOutMs) => void playbackAudioSettings.setFadeOutMs(fadeOutMs),
         playbackQuality,
         qualityOptions: trackQualityOptions,
         sourceProviders: sourceSwitchProviders,
         sourceSwitchBusy,
         sourceSwitchDisabled,
+        controlsAutoHide: playerShellRuntime.controlsAutoHide,
+        immersiveMode: playerShellRuntime.immersiveMode,
+        lyricOffsetLabel: playerShellRuntime.currentLyricOffsetLabel,
+        lyricTimingDisabled: playerShellRuntime.lyricTimingDisabled,
         shelfMode,
         shelfCameraMode,
         shelfPresence,

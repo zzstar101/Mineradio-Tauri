@@ -972,6 +972,8 @@ export interface CreateLegacyVisualCompositionOptions {
 	readonly events: LegacyVisualEventSink;
 	readonly getPrefersReducedMotion?: () => boolean;
 	readonly getPlaybackVolume: () => number;
+	/** Wave 3: 歌词视图时钟偏移（秒），只作用于 stage lyric index，不碰进度/粒子。 */
+	readonly getLyricOffsetSeconds?: () => number;
 	/** M4 确定性视觉证据使用；产品路径继续使用默认随机源。 */
 	readonly random?: () => number;
 	/** 仅暴露正式运行时的有限控制面给隔离 parity route。 */
@@ -1533,7 +1535,12 @@ export function createLegacyVisualComposition(
 
 			lifecycle = createStageLyricsLifecycle({
 				scene: renderer.scene,
-				currentTimeSupplier: () => nextContext.mediaClock.currentTimeSeconds(),
+				currentTimeSupplier: () => {
+					const raw = nextContext.mediaClock.currentTimeSeconds();
+					const offset = Number(options.getLyricOffsetSeconds?.() ?? 0);
+					const adjusted = raw + (Number.isFinite(offset) ? offset : 0);
+					return adjusted >= 0 ? adjusted : 0;
+				},
 				isPlayingSupplier: () => nextContext.mediaClock.isPlaying(),
 				lyricLinesSupplier: () => refs?.lyricLinesRef.current ?? [],
 				...createStageLyricsHostSuppliers(refs),

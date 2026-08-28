@@ -13,6 +13,7 @@ export interface BottomControlsHostProps {
 	onNext?: () => void;
 	onModeChange?: (mode: PlaybackMode) => void;
 	onQueue?: () => void;
+	onCloseMiniQueue?: () => void;
 	onLyrics?: () => void;
 	onLyricSourceChange?: (mode: "original" | "custom") => void;
 	onOpenCustomLyrics?: () => void;
@@ -22,6 +23,8 @@ export interface BottomControlsHostProps {
 	onNotice?: (message: string) => void;
 	onSeek?: (positionMs: number) => void;
 	onVolumeChange?: (volume: number) => void;
+	onFadeInMsChange?: (fadeInMs: number) => void;
+	onFadeOutMsChange?: (fadeOutMs: number) => void;
 	onToggleMute?: () => void;
 	renderVolumePanelExtras?: (active: boolean) => ReactNode;
 	onQualityChange?: (
@@ -36,9 +39,15 @@ export interface BottomControlsHostProps {
 	onPlayQueueIndex?: (index: number) => void;
 	onRemoveQueueIndex?: (index: number) => void;
 	onInsertQueueNext?: (index: number) => void;
+	onMoveQueueIndex?: (fromIndex: number, toIndex: number) => void;
 	onMinimize?: () => void;
 	onToggleMaximize?: () => void;
 	onToggleFullscreen?: () => void;
+	onTrackDetail?: (kind: "album" | "song" | "artist") => void;
+	onToggleControlsAutoHide?: () => void;
+	onToggleImmersive?: () => void;
+	onLyricOffsetAdjust?: (stepSeconds: number) => void;
+	onLyricOffsetReset?: () => void;
 	mode?: PlaybackMode;
 	isPlaying?: boolean;
 	currentTitle?: string;
@@ -53,6 +62,8 @@ export interface BottomControlsHostProps {
 	durationMs?: number | null;
 	volume?: number;
 	muted?: boolean;
+	fadeInMs?: number;
+	fadeOutMs?: number;
 	playbackQuality?: PlaybackQualityRequest;
 	qualityOptions?: TrackQualityOption[];
 	sourceProviders?: readonly ProviderId[];
@@ -65,6 +76,14 @@ export interface BottomControlsHostProps {
 	shelfMergeCollections?: boolean;
 	lyricSourceMode?: "original" | "custom";
 	hasCustomLyric?: boolean;
+	controlsAutoHide?: boolean;
+	immersiveMode?: boolean;
+	lyricOffsetLabel?: string;
+	lyricTimingDisabled?: boolean;
+	timers?: {
+		setTimeout?: typeof window.setTimeout;
+		clearTimeout?: typeof window.clearTimeout;
+	};
 	deps?: {
 		setTimeoutRef?: typeof window.setTimeout;
 		clearTimeoutRef?: typeof window.clearTimeout;
@@ -189,6 +208,7 @@ export function BottomControlsHost(props: BottomControlsHostProps): ReactElement
 				onNext={props.onNext}
 				onModeChange={props.onModeChange}
 				onQueue={props.onQueue}
+				onCloseMiniQueue={props.onCloseMiniQueue}
 				onLyrics={props.onLyrics}
 				onLyricSourceChange={props.onLyricSourceChange}
 				onOpenCustomLyrics={props.onOpenCustomLyrics}
@@ -198,6 +218,8 @@ export function BottomControlsHost(props: BottomControlsHostProps): ReactElement
 				onNotice={props.onNotice}
 				onSeek={props.onSeek}
 				onVolumeChange={props.onVolumeChange}
+				onFadeInMsChange={props.onFadeInMsChange}
+				onFadeOutMsChange={props.onFadeOutMsChange}
 				onToggleMute={props.onToggleMute}
 				renderVolumePanelExtras={props.renderVolumePanelExtras}
 				onQualityChange={props.onQualityChange}
@@ -210,9 +232,15 @@ export function BottomControlsHost(props: BottomControlsHostProps): ReactElement
 				onPlayQueueIndex={props.onPlayQueueIndex}
 				onRemoveQueueIndex={props.onRemoveQueueIndex}
 				onInsertQueueNext={props.onInsertQueueNext}
+				onMoveQueueIndex={props.onMoveQueueIndex}
 				onMinimize={props.onMinimize}
 				onToggleMaximize={props.onToggleMaximize}
 				onToggleFullscreen={props.onToggleFullscreen}
+				onTrackDetail={props.onTrackDetail}
+				onToggleControlsAutoHide={props.onToggleControlsAutoHide}
+				onToggleImmersive={props.onToggleImmersive}
+				onLyricOffsetAdjust={props.onLyricOffsetAdjust}
+				onLyricOffsetReset={props.onLyricOffsetReset}
 				mode={props.mode}
 				isPlaying={props.isPlaying}
 				currentTitle={props.currentTitle}
@@ -227,6 +255,8 @@ export function BottomControlsHost(props: BottomControlsHostProps): ReactElement
 				durationMs={props.durationMs}
 				volume={props.volume}
 				muted={props.muted}
+				fadeInMs={props.fadeInMs}
+				fadeOutMs={props.fadeOutMs}
 				playbackQuality={props.playbackQuality}
 				qualityOptions={props.qualityOptions}
 				sourceProviders={props.sourceProviders}
@@ -239,6 +269,14 @@ export function BottomControlsHost(props: BottomControlsHostProps): ReactElement
 				shelfMergeCollections={props.shelfMergeCollections}
 				lyricSourceMode={props.lyricSourceMode}
 				hasCustomLyric={props.hasCustomLyric}
+				controlsAutoHide={props.controlsAutoHide}
+				immersiveMode={props.immersiveMode}
+				lyricOffsetLabel={props.lyricOffsetLabel}
+				lyricTimingDisabled={props.lyricTimingDisabled}
+				timers={{
+					setTimeout: props.timers?.setTimeout,
+					clearTimeout: props.timers?.clearTimeout,
+				}}
 				deps={{
 					controlsHovering: () => hoveringRef.current,
 					miniQueueOpen: () => propsRef.current.miniQueueOpen === true,

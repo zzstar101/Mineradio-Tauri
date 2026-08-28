@@ -461,6 +461,8 @@ export interface VisualControlPanelHostProps {
   onNotice?: (message: string) => void;
   desktopRuntimeSlot?: ReactElement | null;
   desktopRuntimeSearchTerms?: readonly string[];
+  /** Wave 3: advanced audio / output routing surface（不占用 upstream bottom bar）。 */
+  audioSettingsSlot?: ReactElement | null;
 }
 
 function readFxFabAutoHidePreference(): boolean {
@@ -1523,6 +1525,22 @@ export function VisualControlPanelHost(
               <p>缓存清理、完整桌面、Wallpaper Engine 与其他系统动作不会进入设置历史。</p>
               <div className="settings-native-boundary-slot">
                 {props.desktopRuntimeSlot}
+              </div>
+            </div>
+          ) : null}
+          {props.audioSettingsSlot ? (
+            <div
+              className="settings-native-boundary"
+              data-settings-audio-boundary
+              data-undoable="false"
+            >
+              <div className="settings-native-boundary-head">
+                <span>音频与输出</span>
+                <strong>Playback 2.0 扩展</strong>
+              </div>
+              <p>输出路由、镜像、虚拟桥接与 fade 参数（Tauri 扩展能力，不占用播放器底栏）。</p>
+              <div className="settings-native-boundary-slot">
+                {props.audioSettingsSlot}
               </div>
             </div>
           ) : null}

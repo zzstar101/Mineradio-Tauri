@@ -33,6 +33,8 @@ export interface UseVisualEngineInput {
 	readonly shelfSnapshot: ShelfVisualSnapshot;
 	readonly settingsSnapshot: VisualSettingsSnapshot;
 	readonly events: LegacyVisualEventSink;
+	/** Wave 3: stage lyric 视图时钟偏移（秒），仅影响歌词 index。 */
+	readonly lyricOffsetSeconds?: number;
 	readonly performanceSnapshotReaderRef?: VisualPerformanceSnapshotReaderRef;
 }
 
@@ -120,6 +122,7 @@ export function useVisualEngine(
 
 	const positionMsRef = useRef(input.positionMs);
 	const playbackVolumeRef = useRef(input.playbackVolume);
+	const lyricsOffsetSecondsRef = useRef(input.lyricOffsetSeconds ?? 0);
 	const playbackSnapshotRef = useRef(input.playbackSnapshot);
 	const lyricsSnapshotRef = useRef(input.lyricsSnapshot);
 	const shelfSnapshotRef = useRef(input.shelfSnapshot);
@@ -129,6 +132,7 @@ export function useVisualEngine(
 
 	positionMsRef.current = input.positionMs;
 	playbackVolumeRef.current = input.playbackVolume;
+	lyricsOffsetSecondsRef.current = input.lyricOffsetSeconds ?? 0;
 	playbackSnapshotRef.current = input.playbackSnapshot;
 	lyricsSnapshotRef.current = input.lyricsSnapshot;
 	shelfSnapshotRef.current = input.shelfSnapshot;
@@ -177,6 +181,7 @@ export function useVisualEngine(
 					audioFrameSource: input.audioFrameSource,
 					events: eventsRef.current,
 					getPlaybackVolume: () => playbackVolumeRef.current,
+					getLyricOffsetSeconds: () => lyricsOffsetSecondsRef.current,
 					getPrefersReducedMotion: () => environment?.getPrefersReducedMotion() ?? false,
 				}),
 			});

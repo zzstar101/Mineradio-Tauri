@@ -1,0 +1,744 @@
+/* ============================================================================
+   WAVE 3 — Player Shell / Bottom Bar product parity (upstream v2.1.0)
+   Baseline: XxHuberrr/Mineradio@v2.1.0 96091d1
+   Docs: docs/audit/golden/player-shell/upstream-player-shell.json
+   Imported after styles.css in main.tsx (later source order wins for equal
+   specificity). Do not move these rules into other stylesheets.
+   ========================================================================== */
+
+/* --- Track metadata: title text + badges + quality chip inside badges --- */
+.control-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  cursor: pointer;
+  color: rgba(255, 255, 255, .92);
+  line-height: 1.2;
+  position: relative;
+  overflow: visible;
+}
+
+.control-title-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.control-title-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  max-width: none;
+}
+
+.control-title:hover,
+.control-artist:hover {
+  color: #fff;
+  text-shadow: 0 0 16px rgba(0, 245, 212, .20);
+}
+
+.control-title-badges .tag-source {
+  height: 15px;
+  min-width: 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 8px;
+  line-height: 15px;
+  letter-spacing: 0;
+}
+
+.tag-source.control-source-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.control-title-badges .control-source-chip {
+  position: relative;
+  transition: transform .16s, filter .16s, border-color .16s;
+  background: rgba(86, 224, 255, .09);
+  border: 1px solid rgba(86, 224, 255, .30);
+  color: #c9f5ff;
+}
+
+.control-title-badges .control-source-chip:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.14) saturate(1.12);
+}
+
+.control-title-badges .tag-vip {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+/* SourceSwitcher rendered inside title badges → compact chip row. */
+.control-title-badges .source-switcher {
+  flex: 0 0 auto;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 3px;
+  border: 1px solid rgba(86, 224, 255, .30);
+  border-radius: 4px;
+  background: rgba(86, 224, 255, .075);
+}
+
+.control-title-badges .source-switcher > span {
+  display: none;
+}
+
+.control-title-badges .source-switcher button {
+  height: 13px;
+  min-width: 22px;
+  padding: 0 3px;
+  border-radius: 3px;
+  font-size: 8px;
+  color: #c9f5ff;
+}
+
+.control-title-badges .source-switcher button:hover:not(:disabled) {
+  background: rgba(86, 224, 255, .18);
+  color: #fff;
+}
+
+/* --- Cover album-detail trigger --- */
+#control-cover.control-cover {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, .070);
+}
+
+#control-cover.control-cover:focus-visible {
+  outline: 2px solid rgba(var(--fc-accent-rgb), .78);
+  outline-offset: 3px;
+}
+
+/* --- Quality chip: metadata-context pill (upstream geometry) --- */
+.control-quality-chip {
+  height: 15px;
+  align-self: center;
+  flex: 0 0 auto;
+  margin-left: -1px;
+  line-height: 1;
+}
+
+.quality-control,
+.lyric-timing-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#quality-btn.quality-pill {
+  width: auto;
+  min-width: 34px;
+  max-width: 52px;
+  height: 15px;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(86, 224, 255, .30);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 15px;
+  color: #c9f5ff;
+  background: rgba(86, 224, 255, .075);
+  box-shadow: none;
+}
+
+#quality-btn-label {
+  display: block;
+  min-width: 0;
+  max-width: 42px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Quality popover inside metadata badges: center-anchor under chip (upstream). */
+.control-title-badges #quality-control .quality-popover,
+.control-quality-chip .quality-popover {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%) translateY(8px);
+}
+
+.control-title-badges #quality-control .quality-popover.show,
+.control-title-badges #quality-control:hover .quality-popover,
+.control-title-badges #quality-control:focus-within .quality-popover,
+.control-quality-chip .quality-popover.show,
+.control-quality-chip:hover .quality-popover,
+.control-quality-chip:focus-within .quality-popover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.control-title-badges .quality-popover {
+  width: 238px;
+  padding: 8px;
+}
+
+/* --- Volume / fade compact surface (upstream geometry) --- */
+#volume-control .volume-popover {
+  position: absolute;
+  left: 50%;
+  bottom: 46px;
+  transform: translateX(-50%) translateY(8px);
+  width: 226px;
+  padding: 10px 12px 11px;
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+#volume-control .volume-popover.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.volume-main-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 9px;
+}
+
+#volume-slider {
+  width: 100%;
+  accent-color: var(--fc-accent);
+  cursor: pointer;
+}
+
+#volume-value {
+  width: 34px;
+  text-align: right;
+  font-size: 10px;
+  color: rgba(255, 255, 255, .52);
+  font-variant-numeric: tabular-nums;
+}
+
+.fade-control-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+}
+
+.fade-control-row label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, .46);
+  white-space: nowrap;
+}
+
+.fade-control-row input {
+  width: 100%;
+  accent-color: var(--fc-accent);
+  cursor: pointer;
+}
+
+.fade-control-row span {
+  font-size: 10px;
+  color: rgba(255, 255, 255, .42);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.volume-control.muted .ctrl-btn {
+  color: rgba(255, 255, 255, .38);
+}
+
+/* --- Lyric timing (歌词校准) offset surface --- */
+.lyric-timing-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lyric-timing-control.has-offset .lyrics-toggle-btn {
+  color: #fff6c8;
+  box-shadow: inset 0 0 2px 1px rgba(255, 255, 255, .32), inset 0 0 12px rgba(255, 220, 128, .18), 0 0 18px rgba(255, 220, 128, .12);
+}
+
+#lyric-timing-popover {
+  position: absolute;
+  left: 50%;
+  bottom: 46px;
+  transform: translateX(-50%) translateY(8px);
+  width: 226px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, .10);
+  background: rgba(10, 10, 14, .82);
+  backdrop-filter: blur(24px) saturate(1.16);
+  -webkit-backdrop-filter: blur(24px) saturate(1.16);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .40), inset 0 1px 0 rgba(255, 255, 255, .08);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 8;
+}
+
+#lyric-timing-control:hover #lyric-timing-popover,
+#lyric-timing-control:focus-within #lyric-timing-popover,
+#lyric-timing-popover.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.lyric-timing-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lyric-timing-head span {
+  font-size: 11px;
+  font-weight: 850;
+  color: rgba(255, 255, 255, .72);
+  white-space: nowrap;
+}
+
+.lyric-timing-head strong {
+  min-width: 48px;
+  text-align: right;
+  font-size: 12px;
+  color: rgba(255, 246, 200, .94);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#lyric-timing-song {
+  min-height: 16px;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .44);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lyric-timing-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.lyric-timing-actions button {
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  background: rgba(255, 255, 255, .045);
+  color: rgba(255, 255, 255, .72);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background .18s, border-color .18s, color .18s, transform .18s;
+}
+
+.lyric-timing-actions button:hover {
+  transform: translateY(-1px);
+  color: #fff;
+  border-color: rgba(255, 246, 200, .34);
+  background: rgba(255, 246, 200, .10);
+}
+
+.lyric-timing-actions button:active {
+  transform: translateY(0) scale(.98);
+}
+
+.lyric-timing-actions button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --- Mini queue explicit close + long-press reorder affordance --- */
+.mini-queue-head .fx-mini-btn.ghost {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .05);
+  color: rgba(255, 255, 255, .62);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.mini-queue-head .fx-mini-btn.ghost:hover {
+  background: rgba(255, 86, 100, .75);
+  color: #fff;
+}
+
+body.panel-reordering {
+  cursor: grabbing;
+}
+
+body.panel-reordering .mini-queue-item {
+  cursor: grabbing;
+}
+
+.mini-queue-item.is-reordering {
+  opacity: .92;
+  border-color: rgba(0, 245, 212, .55);
+  background: rgba(0, 245, 212, .10);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .40), inset 0 1px 0 rgba(255, 255, 255, .10);
+}
+
+.mini-queue-item.reorder-pressing {
+  transition-duration: .05s;
+}
+
+/* --- Simple (non-DIY) mode: upstream hides quality / auto-hide / fullscreen --- */
+body.simple-mode #quality-control,
+body.simple-mode #controls-hide-btn,
+body.simple-mode .fullscreen-toggle-btn {
+  display: none !important;
+}
+
+body.simple-mode .control-cluster.modes {
+  gap: 12px;
+}
+
+body.simple-mode #bottom-bar {
+  width: min(1060px, calc(100vw - 56px));
+}
+
+body.simple-mode #controls {
+  grid-template-columns: minmax(310px, 1.05fr) minmax(344px, auto) minmax(230px, .72fr);
+}
+
+body.simple-mode .control-meta {
+  max-width: 420px;
+}
+
+body.simple-mode .mini-queue-popover {
+  width: min(380px, calc(100vw - 32px));
+}
+
+/* --- Immersive mode (全沉浸式) --- */
+body.immersive-mode #bottom-handle {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(16px) scale(.92) !important;
+}
+
+body.immersive-mode #bottom-bar.visible {
+  z-index: 32;
+  bottom: 22px;
+  width: min(620px, calc(100vw - 56px));
+  padding: 10px 20px 13px;
+  gap: 9px;
+  border-radius: 22px;
+}
+
+body.immersive-mode #bottom-bar.soft-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(96px) scale(.97);
+}
+
+body.immersive-mode #controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+body.immersive-mode .control-cluster {
+  grid-column: auto !important;
+  justify-content: center;
+  height: 64px;
+  gap: 14px;
+}
+
+body.immersive-mode .control-cluster.actions {
+  display: none;
+}
+
+body.immersive-mode .control-cluster.transport {
+  display: flex;
+  order: 1;
+}
+
+body.immersive-mode .control-cluster.modes {
+  display: flex;
+  order: 2;
+  gap: 14px;
+}
+
+body.immersive-mode .control-track,
+body.immersive-mode #heart-btn,
+body.immersive-mode #collect-btn,
+body.immersive-mode #play-mode-btn,
+body.immersive-mode .lyrics-toggle-btn,
+body.immersive-mode #mini-queue-btn,
+body.immersive-mode #quality-control,
+body.immersive-mode #volume-control,
+body.immersive-mode #controls-hide-btn,
+body.immersive-mode .fullscreen-toggle-btn {
+  display: none !important;
+}
+
+body.immersive-mode #mini-queue-popover {
+  display: none !important;
+}
+
+body.immersive-mode .ctrl-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+body.immersive-mode .ctrl-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+body.immersive-mode #play-btn {
+  width: 64px;
+  height: 64px;
+}
+
+body.immersive-mode #play-btn svg {
+  width: 25px;
+  height: 25px;
+}
+
+body.immersive-mode #immersive-btn {
+  color: #fff;
+  text-shadow: 0 0 18px rgba(255, 255, 255, .38);
+}
+
+body.immersive-mode #time-display {
+  display: flex;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+}
+
+body.immersive-mode #desktop-titlebar,
+body.immersive-mode #search-area,
+body.immersive-mode #top-right,
+body.immersive-mode #fx-fab,
+body.immersive-mode #fx-panel,
+body.immersive-mode #trial-banner,
+body.immersive-mode #toast,
+body.immersive-mode #ai-depth-chip,
+body.immersive-mode #beat-chip,
+body.immersive-mode #hint,
+body.immersive-mode #upload-tip {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* --- Responsive: uppercase upstream breakpoints --- */
+@media (max-width: 1180px) {
+  body.diy-mode #bottom-bar,
+  body.diy-mode #bottom-bar.stage-mode {
+    width: calc(100vw - 142px);
+    padding: 9px 14px 12px;
+    left: calc(50% - 34px);
+  }
+
+  body.diy-mode #controls {
+    grid-template-columns: minmax(240px, 1fr) minmax(214px, auto) minmax(260px, auto);
+    gap: 8px;
+  }
+
+  .control-cluster {
+    gap: 8px;
+  }
+
+  .control-cover {
+    width: 44px;
+    height: 44px;
+  }
+
+  .control-meta {
+    max-width: 138px;
+  }
+
+  body.diy-mode #time-display {
+    min-width: 72px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 1040px) {
+  body.diy-mode #time-display,
+  body.diy-mode #controls-hide-btn {
+    display: none !important;
+  }
+
+  body.diy-mode .control-track {
+    max-width: 260px;
+  }
+}
+
+@media (max-width: 940px) {
+  body.diy-mode .lyrics-toggle-btn,
+  body.diy-mode #volume-control,
+  body.diy-mode .fullscreen-toggle-btn {
+    display: none !important;
+  }
+}
+
+@media (max-width: 920px) {
+  #bottom-bar,
+  #bottom-bar.stage-mode {
+    width: calc(100vw - 28px);
+    padding: 9px 14px 12px;
+  }
+
+  #controls {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .control-cluster {
+    gap: 8px;
+    height: 56px;
+  }
+
+  .control-cover {
+    width: 44px;
+    height: 44px;
+  }
+
+  .control-meta {
+    max-width: 170px;
+  }
+
+  .control-title {
+    font-size: 12.5px;
+  }
+
+  .control-artist {
+    font-size: 11px;
+  }
+
+  .ctrl-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .ctrl-btn svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .volume-popover,
+  #lyric-timing-popover,
+  .quality-popover {
+    bottom: 42px;
+  }
+
+  #play-btn {
+    width: 54px;
+    height: 54px;
+  }
+
+  #time-display {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  #controls,
+  body.simple-mode #controls,
+  body.diy-mode #controls {
+    grid-template-columns: 1fr;
+  }
+
+  .control-cluster.actions,
+  .control-cluster.transport,
+  .control-cluster.modes {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+/* --- Popover close semantics: anchor surfaces stay above shell chrome --- */
+body.controls-visible #bottom-bar .volume-popover,
+body.controls-visible #bottom-bar .quality-popover,
+body.controls-visible #bottom-bar .lyric-timing-popover {
+  z-index: 22;
+}
+/* --- Lyric source row inside the lyric timing popover (Tauri extension,
+       preserves 原词/自定义 switching without occupying the bottom bar) --- */
+.lyric-timing-popover .lyric-timing-source-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, .07);
+  margin-top: 2px;
+}
+
+.lyric-timing-popover .lyric-source-seg {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.lyric-timing-popover .lyric-source-seg button {
+  height: 24px;
+  min-width: 34px;
+  padding: 0 7px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  background: rgba(255, 255, 255, .05);
+  color: rgba(255, 255, 255, .66);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.lyric-timing-popover .lyric-source-seg button.active {
+  color: #fff;
+  border-color: rgba(0, 245, 212, .34);
+  background: rgba(0, 245, 212, .12);
+}
+
+.lyric-timing-popover .lyric-custom-edit {
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  background: rgba(255, 255, 255, .05);
+  color: rgba(255, 255, 255, .66);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.lyric-timing-popover .lyric-custom-edit:hover {
+  color: #fff;
+  border-color: rgba(255, 246, 200, .34);
+}

@@ -25,6 +25,7 @@ import { configureSearchPreferences } from "./features/search/search-session-run
 import { createUpdateExperienceController } from "./features/updater/update-experience-controller";
 import { createPreferencesRepository } from "./preferences/create-preferences-repository";
 import "./styles.css";
+import "./styles/wave3-player-shell.css";
 
 async function createApplicationRoot(): Promise<React.ReactNode> {
 	if (isDesktopLyricsRoute(window.location)) {
