@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "authority": "docs/audit/2.1-product-parity-audit.md",
+  "authority": "docs/audit/2.1-product-parity-audit.md + docs/audit/golden/player-shell/upstream-player-shell.json (Wave 3)",
   "upstreamBaseline": "XxHuberrr/Mineradio@v2.1.0#96091d123b36783f5604d1acd47b00b0708cabbd",
   "rcReady": false,
   "evidenceSemantics": {
@@ -122,58 +122,58 @@
       "productStatus": "CLOSE",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
-      "blocker": false,
+      "blocker": true,
       "ownerArea": "application-shell",
-      "notes": "当前有底栏入口；未完成 field auto-hide 验证"
+      "notes": "Wave3: bottom handle DOM/几何回归 upstream；golden 结构自动化通过；field auto-hide/fullscreen 待 Layer4/5 WebView2 验证"
     },
     {
       "id": "S009",
       "name": "Bottom bar 总体",
       "severity": "P1",
-      "productStatus": "REGRESSION",
+      "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
       "blocker": true,
       "ownerArea": "application-shell",
-      "notes": "当前播放器 shell 结构不同，当前截图存在大面积布局差异"
+      "notes": "Wave3: bottom bar 三段式 IA 恢复（mini queue 前置于 progress；metadata/transport/modes 对齐），golden 结构+几何自动化通过；window chrome/shelf controls 移出底栏；visual/field 待 Layer3/4/5"
     },
     {
       "id": "S010",
       "name": "Mini queue",
       "severity": "P1",
-      "productStatus": "REGRESSION",
+      "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
       "blocker": true,
       "ownerArea": "application-shell",
-      "notes": "当前为 popover，提供 next/remove，但无等价关闭/拖排语义"
+      "notes": "Wave3: mini queue 恢复显式关闭×、标题/数量、位置（progress 上方）、长按拖排(DRAG_SORT=IN)；自动化通过；WebView2 选曲/移除/拖排 field 待验证"
     },
     {
       "id": "S011",
       "name": "Track metadata",
       "severity": "P1",
-      "productStatus": "REGRESSION",
+      "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
       "blocker": true,
       "ownerArea": "application-shell",
-      "notes": "当前 cover 被隐藏为非交互，metadata/detail 链路缺失或不等价"
+      "notes": "Wave3: cover/title/artist 恢复可点且 capability-aware；cover→album、title→song、artist→artist 用搜索路由 fallback（S068/S073 详情 surface 仍 MISSING，单独跟踪）；quality chip 进入 metadata badges；自动化通过"
     },
     {
       "id": "S012",
@@ -224,16 +224,16 @@
       "id": "S015",
       "name": "响应式与显隐规则",
       "severity": "P1",
-      "productStatus": "REGRESSION",
+      "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
       "blocker": true,
       "ownerArea": "application-shell",
-      "notes": "当前 1440x900 截图出现空白区与布局不一致；多 viewport 未证"
+      "notes": "Wave3: 920/620 等响应式 breakpoint 恢复（geometry CSS guard 自动化通过）；多 viewport 真实像素 golden 待 Layer4"
     },
     {
       "id": "S016",
@@ -242,13 +242,13 @@
       "productStatus": "CLOSE",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
-      "blocker": false,
+      "blocker": true,
       "ownerArea": "playback",
-      "notes": "button/owner 结构存在；真实媒体播放未现场验证"
+      "notes": "Wave3: 中央主按钮/state 与 transport 保持 consumer canonical store；自动化组件测试通过；真实 WebView2 媒体播放 field 待验证"
     },
     {
       "id": "S017",
@@ -257,13 +257,13 @@
       "productStatus": "CLOSE",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
-      "blocker": false,
+      "blocker": true,
       "ownerArea": "playback",
-      "notes": "transport 存在；generation/queue field 行为未证"
+      "notes": "Wave3: prev/next/mode transport 保留并继续消费 canonical store；field（generation/queue/stream）待验证"
     },
     {
       "id": "S018",
@@ -272,28 +272,28 @@
       "productStatus": "CLOSE",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
-        "visualVerified": false,
-        "fieldVerified": false
-      },
-      "blocker": false,
-      "ownerArea": "playback",
-      "notes": "进度与时间节点存在；精确 seek/缓冲现场未证"
-    },
-    {
-      "id": "S019",
-      "name": "Volume / fade",
-      "severity": "P1",
-      "productStatus": "REGRESSION",
-      "evidence": {
-        "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
       "blocker": true,
       "ownerArea": "playback",
-      "notes": "当前 popover 嵌入完整 Playback 2.0，层级和信息密度偏离上游"
+      "notes": "Wave3: progress 位置/几何回归 upstream；seek/时间保留；field 真实 seek/缓冲待验证"
+    },
+    {
+      "id": "S019",
+      "name": "Volume / fade",
+      "severity": "P1",
+      "productStatus": "PARTIAL",
+      "evidence": {
+        "codePresent": true,
+        "automatedVerified": true,
+        "visualVerified": false,
+        "fieldVerified": false
+      },
+      "blocker": true,
+      "ownerArea": "playback",
+      "notes": "Wave3: volume popover 恢复 upstream 紧凑 volume+fade in/out；Playback 2.0/output/mirror/bridge 移入 Settings Workbench advanced audio slot（不再劫持底栏）；自动化通过；field 待验证"
     },
     {
       "id": "S020",
@@ -302,13 +302,13 @@
       "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
-      "blocker": false,
+      "blocker": true,
       "ownerArea": "playback",
-      "notes": "quality 控件存在；provider tier/真实 URL 切换未证"
+      "notes": "Wave3: quality chip 归位 metadata title badges（upstream 位置）；entitlement disabled/current 表达保留；真实 provider tier/URL 切换 field 待验证"
     },
     {
       "id": "S021",
@@ -317,13 +317,13 @@
       "productStatus": "CLOSE",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
-      "blocker": false,
+      "blocker": true,
       "ownerArea": "playback",
-      "notes": "mode 控件存在；持久化与循环语义未 field 验证"
+      "notes": "Wave3: mode 控件与持久化字段未改；field 循环/持久化待验证"
     },
     {
       "id": "S022",
@@ -458,7 +458,7 @@
       },
       "blocker": true,
       "ownerArea": "playback",
-      "notes": "未发现等价产品 surface；旧 delta 将其 POST_2_1 不能替代上游审计"
+      "notes": "CUEFIELD_2_1_SCOPE=OUT（产品决策）。upstream 16-18 cuefield 模块未迁入本 repo，运行时能力已完整移除；迁移成本高。不再渲染死按钮；Player Shell 不标 EXACT。计划后续 Wave 单独评估"
     },
     {
       "id": "S031",
@@ -629,16 +629,16 @@
       "id": "S042",
       "name": "单曲歌词时差",
       "severity": "P1",
-      "productStatus": "MISSING",
+      "productStatus": "PARTIAL",
       "evidence": {
-        "codePresent": false,
-        "automatedVerified": false,
+        "codePresent": true,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
       "blocker": true,
       "ownerArea": "stage-lyrics",
-      "notes": "当前播放器没有等价 offset control"
+      "notes": "Wave3: 恢复 -0.1/0/+0.1 歌词校准，track-scoped（provider+id/local key），offset 只作用于 lyric view clock 不修改 payload，持久化走 preferences；restart persistence 与 WebView2 field 待验证"
     },
     {
       "id": "S043",
@@ -989,16 +989,16 @@
       "id": "S066",
       "name": "歌单/队列拖排",
       "severity": "P1",
-      "productStatus": "MISSING",
+      "productStatus": "PARTIAL",
       "evidence": {
-        "codePresent": false,
-        "automatedVerified": false,
+        "codePresent": true,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
       "blocker": true,
       "ownerArea": "library",
-      "notes": "当前 queue 提供 next/remove，不等价拖排"
+      "notes": "Wave3: mini queue 长按拖排恢复（QUEUE_DRAG_SORT=IN）；队列面板(playlist panel) drag-sort 仍待后续 Wave；field 拖排持久化待验证"
     },
     {
       "id": "S067",
@@ -1525,5 +1525,15 @@
       "ownerArea": "release-hygiene",
       "notes": "Ordinary startup performs no raw diagnostics probe and DesktopRuntimeControls renders no raw native/visual diagnostics surface."
     }
-  ]
+  ],
+  "wave3EvidenceNote": {
+    "wave": "WAVE_3_PLAYER_SHELL",
+    "branch": "rc-stabilization/2.1.0",
+    "scopeDecisions": {
+      "QUEUE_DRAG_SORT_2_1": "IN",
+      "CUEFIELD_2_1": "OUT"
+    },
+    "automatedGate": "bun run test; bun run typecheck; bun run web:build PASS",
+    "visualFieldPending": "Layer 3 pixel golden / Layer 4 full route / Layer 5 Windows+WebView2 field validation 尚未完成，相关 P1 仍 blocker"
+  }
 }
