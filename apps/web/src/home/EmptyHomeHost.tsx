@@ -51,6 +51,7 @@ export interface EmptyHomeHostProps {
 	discoverError?: string | null;
 	recommendationsError?: string | null;
 	weatherRadioError?: string | null;
+	servicesUnavailableReason?: string | null;
 	isPlaying?: boolean;
 	positionMs?: number;
 	durationMs?: number | null;
@@ -780,6 +781,13 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 				</div>
 
 				<div className="home-right-pane">
+					{props.servicesUnavailableReason ? (
+						<div className="home-local-errors" aria-label="首页服务可用性">
+							<div className="home-local-error" role="status" data-home-unavailable="native-runtime">
+								<span>{props.servicesUnavailableReason}</span>
+							</div>
+						</div>
+					) : null}
 					{props.discoverError || props.recommendationsError || props.weatherRadioError ? (
 						<div className="home-local-errors" aria-label="首页载入状态">
 							{props.discoverError ? (

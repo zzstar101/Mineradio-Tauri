@@ -283,6 +283,7 @@ export function App({
   hydratedPreferences,
 }: AppProps): ReactElement {
   const [applicationPorts, setApplicationPorts] = useState<ApplicationPorts | null>(null);
+  const [applicationRuntimeState, setApplicationRuntimeState] = useState<"connecting" | "available" | "unavailable">("connecting");
   const resolvedDesktopRuntime = useMemo<DesktopRuntimePort>(() => {
     if (!desktopLyricsRuntime) return desktopRuntime;
     return {
@@ -1080,9 +1081,14 @@ export function App({
   const handleApplicationConnection = useCallback(
     (ports: ApplicationPorts) => {
       setApplicationPorts(ports);
+      setApplicationRuntimeState("available");
     },
     [],
   );
+
+  const handleApplicationUnavailable = useCallback(() => {
+    setApplicationRuntimeState("unavailable");
+  }, []);
 
   const handleRuntimeLibraryRefresh = useCallback(
     (ports: ApplicationPorts) => {
@@ -1549,6 +1555,7 @@ export function App({
       applicationRuntime,
       loginProviders: ACCOUNT_PROVIDERS,
       onConnection: handleApplicationConnection,
+      onUnavailable: handleApplicationUnavailable,
       onCapabilities: setMatrix,
       onProviderStatus: acceptProviderStatus,
       onRefreshLibrary: handleRuntimeLibraryRefresh,
@@ -1701,6 +1708,9 @@ export function App({
         discoverError: homeDiscoverError,
         recommendationsError: homeRecommendationsError,
         weatherRadioError: homeWeatherRadioError,
+        servicesUnavailableReason: applicationRuntimeState === "unavailable"
+          ? "推荐与天气电台仅在 MineRadio 桌面运行时可用"
+          : null,
         isPlaying,
         positionMs,
         durationMs,

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
+import { renderToStaticMarkup } from "react-dom/server";
 import type {
 	DiscoverHomeResponse,
 	PlaylistDetail,
@@ -9,6 +10,12 @@ import type {
 	Track,
 	WeatherRadioResponse,
 } from "@mineradio/shared";
+import recommendationEnvelope from "../../../../../packages/shared/fixtures/recommendation-pages-envelope.json";
+import recommendationEmptyEnvelope from "../../../../../packages/shared/fixtures/recommendation-pages-empty-envelope.json";
+import weatherEnvelope from "../../../../../packages/shared/fixtures/weather-radio-envelope.json";
+import weatherEmptyEnvelope from "../../../../../packages/shared/fixtures/weather-radio-empty-envelope.json";
+import { SidecarClient } from "../../api/sidecar-client";
+import { EmptyHomeHost } from "../../home/EmptyHomeHost";
 import type { DiscoverPort } from "../../ports/music/discover-port";
 import type { LibraryPort } from "../../ports/music/library-port";
 import {
@@ -282,6 +289,83 @@ test("playlist generation rejects a stale first page and fast-scroll load-more s
 
 	root.unmount();
 	host.remove();
+});
+
+test("captured recommendation and weather envelopes pass client schemas, Home controller, and rendering", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	const original = (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+	(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+		invoke: (_command: string, args: Record<string, unknown>) => {
+			const path = String(args.path ?? "");
+			if (path.startsWith("/recommendations/pages")) return structuredClone(recommendationEnvelope);
+			if (path.startsWith("/weather/radio")) return structuredClone(weatherEnvelope);
+			throw new Error(`unexpected API fixture route: ${path}`);
+		},
+	};
+	const client = new SidecarClient();
+	const discover = {
+		recommendationPages: (options?: { refresh?: boolean }) => client.recommendationPages(options),
+		weatherRadio: (params?: Parameters<SidecarClient["weatherRadio"]>[0]) => client.weatherRadio(params),
+	} as unknown as DiscoverPort;
+	const controllerRef: { current: HomeControllerResult | null } = { current: null };
+	function Harness() {
+		controllerRef.current = useHomeController(createOptions(discover));
+		return null;
+	}
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	flushSync(() => root.render(<Harness />));
+	await controllerRef.current!.refreshRecommendations();
+	await controllerRef.current!.refreshWeatherRadio();
+	await new Promise((resolve) => setTimeout(resolve, 0));
+
+	expect(controllerRef.current?.recommendations[0]?.list.length).toBe(4);
+	expect(controllerRef.current?.weatherRadio?.radio.songs.length).toBeGreaterThan(0);
+	expect(controllerRef.current?.recommendationsError).toBeNull();
+	expect(controllerRef.current?.weatherRadioError).toBeNull();
+	const html = renderToStaticMarkup(React.createElement(EmptyHomeHost, {
+		recommendations: controllerRef.current?.recommendations,
+		weatherRadio: controllerRef.current?.weatherRadio,
+		recommendationsError: controllerRef.current?.recommendationsError,
+		weatherRadioError: controllerRef.current?.weatherRadioError,
+	}));
+	expect(html).not.toContain("推荐预览载入失败");
+	expect(html).not.toContain("天气电台载入失败");
+	expect(html).toContain("QQ音乐 · 歌单");
+	expect(html).toContain("My Jinji");
+
+	root.unmount();
+	host.remove();
+	if (original === undefined) delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+	else (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = original;
+});
+
+test("captured empty recommendation envelope remains a legitimate empty success", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	const original = (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+	(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+		invoke: () => structuredClone(recommendationEmptyEnvelope),
+	};
+	const client = new SidecarClient();
+	expect(await client.recommendationPages()).toEqual([]);
+	if (original === undefined) delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+	else (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = original;
+});
+
+test("captured weather response with no songs remains a legitimate empty success", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	const original = (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+	(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+		invoke: () => structuredClone(weatherEmptyEnvelope),
+	};
+	const client = new SidecarClient();
+	const weather = await client.weatherRadio();
+	expect(weather.radio.songs).toEqual([]);
+	const html = renderToStaticMarkup(React.createElement(EmptyHomeHost, { weatherRadio: weather }));
+	expect(html).not.toContain("天气电台载入失败");
+	if (original === undefined) delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+	else (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = original;
 });
 
 test("native capability gate keeps unavailable discover home out of production calls", async () => {

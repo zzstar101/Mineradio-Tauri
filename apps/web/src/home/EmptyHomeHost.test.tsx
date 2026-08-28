@@ -534,6 +534,16 @@ test("EmptyHomeHost keeps discover and weather failures local and routes indepen
 	host.remove();
 });
 
+test("EmptyHomeHost distinguishes unavailable native services from schema or provider failures", () => {
+	const html = renderToStaticMarkup(
+		<EmptyHomeHost servicesUnavailableReason="推荐与天气电台仅在 MineRadio 桌面运行时可用" />,
+	);
+	expect(html).toContain('data-home-unavailable="native-runtime"');
+	expect(html).toContain("推荐与天气电台仅在 MineRadio 桌面运行时可用");
+	expect(html).not.toContain("推荐预览载入失败");
+	expect(html).not.toContain("天气电台载入失败");
+});
+
 test("Home playlist detail renders a fully loaded 600-track surface without virtualization", () => {
 	const tracks = Array.from({ length: 600 }, (_, index) => ({
 		provider: "netease" as const,

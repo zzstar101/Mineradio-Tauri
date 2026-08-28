@@ -68,7 +68,7 @@
       },
       "blocker": true,
       "ownerArea": "application-shell",
-      "notes": "当前布局与上游截图明显不同，并显示推荐/天气错误条"
+      "notes": "Home recommendation/weather transport failures are repaired; upstream Home geometry/composition regression remains for Wave 3+ and is out of this wave."
     },
     {
       "id": "S005",
@@ -1283,7 +1283,7 @@
       },
       "blocker": true,
       "ownerArea": "home-recommendation",
-      "notes": "当前 Home composition 与上游截图不同，推荐/天气失败"
+      "notes": "Recommendation/weather valid, empty, unavailable, and failure semantics are now separated; upstream dashboard composition regression remains out of scope."
     },
     {
       "id": "S086",
@@ -1292,7 +1292,7 @@
       "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
@@ -1304,16 +1304,16 @@
       "id": "S087",
       "name": "Recommendation modules/layout",
       "severity": "P1",
-      "productStatus": "REGRESSION",
+      "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
-      "blocker": true,
+      "blocker": false,
       "ownerArea": "home-recommendation",
-      "notes": "`recommendations/pages` 在正常路由 schema validation failure"
+      "notes": "Native MineRadio-api envelopes pass strict shared schemas and Home controller/render tests; live authenticated recommendation content and upstream layout remain field/visual pending."
     },
     {
       "id": "S088",
@@ -1484,46 +1484,46 @@
       "id": "S099",
       "name": "Visual audio debug overlay",
       "severity": "P1",
-      "productStatus": "DEBUG_LEAKAGE",
+      "productStatus": "CLOSE",
       "evidence": {
-        "codePresent": true,
-        "automatedVerified": false,
+        "codePresent": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
-      "blocker": true,
+      "blocker": false,
       "ownerArea": "release-hygiene",
-      "notes": "URL/localStorage/Ctrl+Alt+D 可创建 z-index 2147483647 overlay，且随生产 visual composition 导入"
+      "notes": "Production visual composition has no debugger import/instance/tick; emitted release artifacts are scanned for query/storage/global/debug markers."
     },
     {
       "id": "S100",
       "name": "M4 parity fixture root",
       "severity": "P1",
-      "productStatus": "DEBUG_LEAKAGE",
+      "productStatus": "CLOSE",
       "evidence": {
-        "codePresent": true,
-        "automatedVerified": false,
+        "codePresent": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
-      "blocker": true,
+      "blocker": false,
       "ownerArea": "release-hygiene",
-      "notes": "`?m4-parity=1` 在 `main.tsx` 旁路正常 bootstrap；生产 dist 含 `M4ParityRoot` chunk"
+      "notes": "M4 is isolated to a Vite development-only HTML entry; production bootstrap and emitted release artifacts contain no M4 route/chunk markers."
     },
     {
       "id": "S101",
       "name": "Raw desktop diagnostics panel",
       "severity": "P1",
-      "productStatus": "DEBUG_LEAKAGE",
+      "productStatus": "CLOSE",
       "evidence": {
-        "codePresent": true,
-        "automatedVerified": false,
+        "codePresent": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
-      "blocker": true,
+      "blocker": false,
       "ownerArea": "release-hygiene",
-      "notes": "正常 startup 无条件 refresh diagnostics，UI 展示 runtime/cache/resource/visual 原始项"
+      "notes": "Ordinary startup performs no raw diagnostics probe and DesktopRuntimeControls renders no raw native/visual diagnostics surface."
     }
   ]
 }

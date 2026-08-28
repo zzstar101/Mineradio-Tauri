@@ -48,7 +48,10 @@ test("capabilities parses a valid success envelope", async () => {
 				providers: [
 					{
 						providerId: "netease",
+						registered: true,
+						configured: true,
 						available: false,
+						fieldVerified: false,
 						capabilities: [],
 						message: "pending",
 					},
@@ -61,6 +64,9 @@ test("capabilities parses a valid success envelope", async () => {
 		expect(matrix.version).toBe("0.1.0");
 		expect(matrix.providers.length).toBe(1);
 		expect(matrix.providers[0].providerId).toBe("netease");
+		expect(matrix.providers[0].registered).toBe(true);
+		expect(matrix.providers[0].available).toBe(false);
+		expect(matrix.providers[0].fieldVerified).toBe(false);
 	});
 });
 

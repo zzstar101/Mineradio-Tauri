@@ -54,6 +54,7 @@ test("ApplicationRuntimeBootstrap performs the one-shot boot sync without health
 					expect(connected).toBe(ports);
 					calls.push("connection");
 				}}
+				onUnavailable={() => { calls.push("unavailable"); }}
 				onCapabilities={() => { calls.push("matrix"); }}
 				onProviderStatus={() => { calls.push("provider-status"); }}
 				onRefreshLibrary={(connected) => {
@@ -80,4 +81,28 @@ test("ApplicationRuntimeBootstrap performs the one-shot boot sync without health
 		flushSync(() => root.unmount());
 		host.remove();
 	}
+});
+
+test("ApplicationRuntimeBootstrap reports an unavailable native runtime without publishing ports", async () => {
+	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	const calls: string[] = [];
+	const host = document.createElement("div");
+	document.body.appendChild(host);
+	const root = createRoot(host);
+	flushSync(() => root.render(
+		<ApplicationRuntimeBootstrap
+			applicationRuntime={{ connect: async () => null }}
+			loginProviders={[]}
+			onConnection={() => { calls.push("connection"); }}
+			onUnavailable={() => { calls.push("unavailable"); }}
+			onCapabilities={() => { calls.push("matrix"); }}
+			onProviderStatus={() => { calls.push("provider-status"); }}
+			onRefreshLibrary={() => { calls.push("library"); }}
+		/>,
+	));
+	await new Promise((resolve) => setTimeout(resolve, 0));
+
+	expect(calls).toEqual(["unavailable"]);
+	flushSync(() => root.unmount());
+	host.remove();
 });

@@ -13,6 +13,7 @@ export interface ApplicationRuntimeBootstrapProps {
 	applicationRuntime: ApplicationRuntimePort;
 	loginProviders: readonly ProviderId[];
 	onConnection: (ports: ApplicationPorts) => void;
+	onUnavailable: () => void;
 	onCapabilities: (matrix: CapabilityMatrix) => void;
 	onProviderStatus: (status: ProviderLoginStatus) => void;
 	onRefreshLibrary: (ports: ApplicationPorts) => void;
@@ -21,12 +22,14 @@ export interface ApplicationRuntimeBootstrapProps {
 /**
  * 启动时的一次性引导：连接运行时后同步能力矩阵、各 provider 登录态并刷新曲库。
  * 原 SidecarRecoveryRuntime 的健康轮询/重试/恢复通知已随 sidecar 进程移除；
- * `mineradio_api` in-process 初始化后常驻可用，无需心跳门禁。
+ * `mineradio_api` in-process runtime does not use heartbeat gating; provider registration,
+ * configuration, operational availability, and field verification remain separate evidence.
  */
 export function ApplicationRuntimeBootstrap({
 	applicationRuntime,
 	loginProviders,
 	onConnection,
+	onUnavailable,
 	onCapabilities,
 	onProviderStatus,
 	onRefreshLibrary,
@@ -39,9 +42,14 @@ export function ApplicationRuntimeBootstrap({
 			try {
 				connectedPorts = await applicationRuntime.connect();
 			} catch {
+				if (!cancelled) onUnavailable();
 				return;
 			}
-			if (cancelled || !connectedPorts) return;
+			if (cancelled) return;
+			if (!connectedPorts) {
+				onUnavailable();
+				return;
+			}
 			const ports = connectedPorts;
 
 			onConnection(ports);
@@ -76,6 +84,7 @@ export function ApplicationRuntimeBootstrap({
 		loginProviders,
 		onCapabilities,
 		onConnection,
+		onUnavailable,
 		onProviderStatus,
 		onRefreshLibrary,
 	]);

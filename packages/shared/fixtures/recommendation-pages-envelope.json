@@ -1,0 +1,66 @@
+{
+  "ok": true,
+  "data": [
+    {
+      "provider": "qq",
+      "list": [
+        {
+          "title": "歌单",
+          "list": [
+            {
+              "id": "playlist-id",
+              "title": "歌单",
+              "subtitle": "",
+              "coverUrl": "playlist-cover",
+              "collected": null,
+              "kind": "playlist"
+            }
+          ],
+          "kind": "playlist"
+        },
+        {
+          "title": "单曲",
+          "list": [
+            {
+              "id": "0039MnYb0qxYhV",
+              "title": "单曲",
+              "subtitle": "歌手",
+              "coverUrl": "track-cover",
+              "collected": null,
+              "kind": "track"
+            }
+          ],
+          "kind": "track"
+        },
+        {
+          "title": "双列歌单",
+          "list": [
+            {
+              "id": "double-playlist-id",
+              "title": "双列歌单",
+              "subtitle": "",
+              "coverUrl": "double-playlist-cover",
+              "collected": null,
+              "kind": "playlist"
+            }
+          ],
+          "kind": "playlist"
+        },
+        {
+          "title": "个性电台",
+          "list": [
+            {
+              "id": "personal-radio-id",
+              "title": "个性电台",
+              "subtitle": "",
+              "coverUrl": "personal-radio-cover",
+              "collected": null,
+              "kind": "stream"
+            }
+          ],
+          "kind": "mixed"
+        }
+      ]
+    }
+  ]
+}

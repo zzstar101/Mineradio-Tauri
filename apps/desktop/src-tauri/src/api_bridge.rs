@@ -623,32 +623,65 @@ fn health_body(app_version: &str, schema_version: &str) -> serde_json::Value {
 }
 
 fn capabilities_matrix() -> serde_json::Value {
+    // Registration/configuration describe this process graph only. `available` and
+    // `fieldVerified` must never be inferred from adapter presence; they remain false
+    // until an explicit operational/field evidence owner records them.
     serde_json::json!({
         "version": "0.1.0",
         "providers": [
             {
                 "providerId": "netease",
-                "available": true,
+                "registered": true,
+                "configured": true,
+                "available": false,
+                "fieldVerified": false,
                 "capabilities": ["search", "songUrl", "lyric", "playlistList", "playlistDetail", "loginStatus", "logout", "like", "quality"],
-                "message": "online"
+                "message": "registered; operational status unverified"
             },
             {
                 "providerId": "qq",
-                "available": true,
+                "registered": true,
+                "configured": true,
+                "available": false,
+                "fieldVerified": false,
                 "capabilities": ["search", "songUrl", "lyric", "playlistList", "playlistDetail", "loginStatus", "logout", "quality"],
-                "message": "online"
+                "message": "registered; operational status unverified"
             },
             {
                 "providerId": "kugou",
-                "available": true,
+                "registered": true,
+                "configured": true,
+                "available": false,
+                "fieldVerified": false,
                 "capabilities": ["search", "songUrl", "lyric", "playlistList", "playlistDetail", "loginStatus", "logout", "like", "quality"],
-                "message": "online"
+                "message": "registered; operational status unverified"
             },
             {
                 "providerId": "soda",
-                "available": true,
+                "registered": true,
+                "configured": true,
+                "available": false,
+                "fieldVerified": false,
                 "capabilities": ["search", "songUrl", "lyric", "playlistList", "playlistDetail", "loginStatus", "logout", "like", "quality"],
-                "message": "online"
+                "message": "registered; operational status unverified"
+            }
+        ],
+        "services": [
+            {
+                "serviceId": "recommendations",
+                "registered": true,
+                "configured": true,
+                "available": false,
+                "fieldVerified": false,
+                "message": "route registered; operational status unverified"
+            },
+            {
+                "serviceId": "weatherRadio",
+                "registered": true,
+                "configured": true,
+                "available": false,
+                "fieldVerified": false,
+                "message": "route registered; operational status unverified"
             }
         ]
     })
@@ -757,5 +790,27 @@ fn guess_podcast_audio_format(url: &str) -> PodcastAudioFormat {
         "flac" => PodcastAudioFormat::Flac,
         "wav" => PodcastAudioFormat::Wav,
         _ => PodcastAudioFormat::Mp3,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::capabilities_matrix;
+
+    #[test]
+    fn adapter_registration_is_not_reported_as_operational_availability() {
+        let matrix = capabilities_matrix();
+        for provider in matrix["providers"].as_array().expect("providers") {
+            assert_eq!(provider["registered"], true);
+            assert_eq!(provider["configured"], true);
+            assert_eq!(provider["available"], false);
+            assert_eq!(provider["fieldVerified"], false);
+        }
+        for service in matrix["services"].as_array().expect("services") {
+            assert_eq!(service["registered"], true);
+            assert_eq!(service["configured"], true);
+            assert_eq!(service["available"], false);
+            assert_eq!(service["fieldVerified"], false);
+        }
     }
 }

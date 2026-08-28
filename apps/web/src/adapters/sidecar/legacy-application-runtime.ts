@@ -6,6 +6,7 @@ import type {
 import type { DesktopRuntimePort } from "../../ports/desktop-runtime-port";
 import {
 	getRuntimeConfig,
+	isTauriRuntime,
 	type RuntimeConfig,
 } from "../../tauri/runtime";
 import { createTauriDesktopRuntime } from "../tauri/tauri-desktop-runtime";
@@ -18,6 +19,8 @@ export interface LegacyApplicationRuntimeDependencies {
 	loadRuntimeConfig?: () => Promise<RuntimeConfig>;
 	createClient?: (config: RuntimeConfig) => SidecarClient;
 	createDesktopRuntime?: () => DesktopRuntimePort;
+	/** Test seam; production defaults to the actual Tauri runtime marker. */
+	runtimeAvailable?: () => boolean;
 }
 
 export function createLegacyApplicationRuntime(
@@ -28,9 +31,13 @@ export function createLegacyApplicationRuntime(
 		?? ((config: RuntimeConfig) => new SidecarClient(config.mediaProxyBase));
 	const createDesktopRuntime = dependencies.createDesktopRuntime
 		?? createTauriDesktopRuntime;
+	const runtimeAvailable = dependencies.runtimeAvailable ?? isTauriRuntime;
 
 	return {
 		async connect(): Promise<ApplicationPorts | null> {
+			// The provider path is native-only. A browser preview must not publish a
+			// configured-looking Port generation whose invokes resolve to null.
+			if (!dependencies.initialRuntimeConfig && !runtimeAvailable()) return null;
 			let config: RuntimeConfig;
 			try {
 				config = dependencies.initialRuntimeConfig ?? await loadRuntimeConfig();

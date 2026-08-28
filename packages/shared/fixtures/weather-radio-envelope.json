@@ -1,0 +1,193 @@
+{
+  "ok": true,
+  "data": {
+    "ok": true,
+    "weather": {
+      "provider": "open-meteo",
+      "location": {
+        "name": "上海",
+        "country": "中国",
+        "admin1": "上海市",
+        "latitude": 31.22222,
+        "longitude": 121.45806,
+        "timezone": "Asia/Shanghai",
+        "fallback": false
+      },
+      "label": "少云",
+      "weatherCode": 2.0,
+      "temperature": 27.2,
+      "apparentTemperature": 32.7,
+      "humidity": 91.0,
+      "precipitation": 0.0,
+      "cloudCover": 51.0,
+      "windSpeed": 11.0,
+      "windGusts": 25.9,
+      "isDay": 0.0,
+      "time": "2026-08-28T23:15",
+      "updatedAt": 1787930609368,
+      "error": "",
+      "mood": {
+        "key": "humid-night",
+        "title": "闷热夜听",
+        "tagline": "音量放低一点，让夜色参与编曲。",
+        "energy": 0.42,
+        "warmth": 0.76,
+        "focus": 0.68,
+        "melancholy": 0.52,
+        "keywords": [
+          "夜晚 R&B",
+          "late night jazz",
+          "ambient",
+          "lofi sleep",
+          "夜跑 歌单",
+          "夏日 chill",
+          "bossa nova"
+        ]
+      }
+    },
+    "radio": {
+      "title": "闷热夜听",
+      "subtitle": "音量放低一点，让夜色参与编曲。",
+      "seedQueries": [
+        "落日飞车 My Jinji",
+        "告五人 爱人错过",
+        "夏日入侵企画 想去海边",
+        "陈绮贞 旅行的意义"
+      ],
+      "songs": [
+        {
+          "id": "7080394043624015873",
+          "provider": "soda",
+          "sourceId": "7080394043624015873",
+          "title": "带我去找夜生活",
+          "artists": [
+            "告五人"
+          ],
+          "album": "",
+          "coverUrl": "https://p3-luna.douyinpic.com/img/tos-cn-v-2774c002/a4cf2092d2b046fca972f2aa36351c92~tplv-1v05vqsscw-qishui:0:360.image",
+          "qualityHints": [
+            "standard"
+          ],
+          "playableState": "vip_required",
+          "durationMs": 299000
+        },
+        {
+          "id": "438462713",
+          "provider": "netease",
+          "sourceId": "438462713",
+          "title": "My Jinji",
+          "artists": [
+            "落日飞车"
+          ],
+          "album": "Jinji Kikko",
+          "coverUrl": "http://p2.music.126.net/UWWcyf4Q-7F-4cIUh5NE1w==/18825838091725130.jpg",
+          "qualityHints": [
+            "standard"
+          ],
+          "playableState": "unknown",
+          "durationMs": 400560
+        },
+        {
+          "id": "7093417854959142916",
+          "provider": "soda",
+          "sourceId": "7093417854959142916",
+          "title": "落日飞车",
+          "artists": [
+            "赧泽"
+          ],
+          "album": "",
+          "coverUrl": "https://p3-luna.douyinpic.com/img/tos-cn-v-2774c002/50bf8568488348e1a98987bd150f5c27~tplv-1v05vqsscw-qishui:0:360.image",
+          "qualityHints": [
+            "standard"
+          ],
+          "playableState": "playable",
+          "durationMs": 41000
+        },
+        {
+          "id": "0029B8mN2eOjhw",
+          "provider": "qq",
+          "sourceId": "0029B8mN2eOjhw",
+          "mediaMid": "0029B8mN2eOjhw",
+          "title": "爱人错过",
+          "artists": [
+            "告五人"
+          ],
+          "album": "我肯定在几百年前就说过爱你",
+          "coverUrl": "https://y.gtimg.cn/music/photo_new/T002R300x300M000003uVIiJ1SQEHm.jpg",
+          "qualityHints": [
+            "standard"
+          ],
+          "playableState": "unknown",
+          "durationMs": 292000
+        },
+        {
+          "id": "0041VxLs3IsSm9",
+          "provider": "qq",
+          "sourceId": "0041VxLs3IsSm9",
+          "mediaMid": "0041VxLs3IsSm9",
+          "title": "旅行的意义 (电子版|Live)",
+          "artists": [
+            "陈绮贞"
+          ],
+          "album": "夏季练习曲世界巡回现场录音",
+          "coverUrl": "https://y.gtimg.cn/music/photo_new/T002R300x300M000002sz0VI05l6wk.jpg",
+          "qualityHints": [
+            "standard"
+          ],
+          "playableState": "unknown",
+          "durationMs": 262000
+        },
+        {
+          "id": "1413863166",
+          "provider": "netease",
+          "sourceId": "1413863166",
+          "title": "想去海边",
+          "artists": [
+            "夏日入侵企画"
+          ],
+          "album": "想去海边",
+          "coverUrl": "http://p2.music.126.net/sLWN-iePq4ESOMPER0IWgQ==/109951164602081973.jpg",
+          "qualityHints": [
+            "standard"
+          ],
+          "playableState": "unknown",
+          "durationMs": 267032
+        },
+        {
+          "id": "003tIOQy4Xlc64",
+          "provider": "qq",
+          "sourceId": "003tIOQy4Xlc64",
+          "mediaMid": "003tIOQy4Xlc64",
+          "title": "第一万零一次告白",
+          "artists": [
+            "夏日入侵企画"
+          ],
+          "album": "你的婚礼 电影原声带",
+          "coverUrl": "https://y.gtimg.cn/music/photo_new/T002R300x300M000003CF2N83kIFdz.jpg",
+          "qualityHints": [
+            "standard"
+          ],
+          "playableState": "unknown",
+          "durationMs": 340000
+        },
+        {
+          "id": "7676151769341675570",
+          "provider": "soda",
+          "sourceId": "7676151769341675570",
+          "title": "夏日入侵企画",
+          "artists": [
+            "fail"
+          ],
+          "album": "",
+          "coverUrl": "https://p3-luna.douyinpic.com/img/tos-cn-v-2774c002/oM5EznIAWiazBViJu7rXAEgcLgDAQYPsCAHNo~tplv-1v05vqsscw-qishui:0:360.image",
+          "qualityHints": [
+            "standard"
+          ],
+          "playableState": "playable",
+          "durationMs": 200000
+        }
+      ],
+      "updatedAt": 1787930613714
+    }
+  }
+}

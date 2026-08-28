@@ -46,9 +46,24 @@ test("legacy application runtime creates one client and publishes one complete P
 	]);
 });
 
+test("legacy application runtime publishes no Ports outside the native Tauri runtime", async () => {
+	let configLoads = 0;
+	const runtime = createLegacyApplicationRuntime({
+		runtimeAvailable: () => false,
+		loadRuntimeConfig: async () => {
+			configLoads += 1;
+			throw new Error("must not load");
+		},
+	});
+
+	expect(await runtime.connect()).toBeNull();
+	expect(configLoads).toBe(0);
+});
+
 test("legacy application runtime publishes no Ports when runtime configuration cannot be loaded", async () => {
 	let clientCreations = 0;
 	const runtime = createLegacyApplicationRuntime({
+		runtimeAvailable: () => true,
 		loadRuntimeConfig: async () => {
 			throw new Error("runtime config unavailable");
 		},

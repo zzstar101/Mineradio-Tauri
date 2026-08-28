@@ -2,7 +2,10 @@ import { create } from "zustand";
 import type { CapabilityMatrix, ProviderId } from "@mineradio/shared";
 
 export interface ProviderStatusInfo {
+	registered: boolean;
+	configured: boolean;
 	available: boolean;
+	fieldVerified: boolean;
 	message?: string;
 }
 
@@ -19,7 +22,10 @@ function deriveStatus(matrix: CapabilityMatrix): Record<ProviderId, ProviderStat
 	const result = {} as Record<ProviderId, ProviderStatusInfo>;
 	for (const entry of matrix.providers) {
 		result[entry.providerId] = {
+			registered: entry.registered,
+			configured: entry.configured,
 			available: entry.available,
+			fieldVerified: entry.fieldVerified,
 			message: entry.message,
 		};
 	}

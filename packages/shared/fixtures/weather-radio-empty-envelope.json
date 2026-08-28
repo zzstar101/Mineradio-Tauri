@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "data": {
+    "ok": true,
+    "weather": {
+      "provider": "open-meteo",
+      "location": {
+        "name": "上海",
+        "country": "中国",
+        "admin1": "上海市",
+        "latitude": 31.22222,
+        "longitude": 121.45806,
+        "timezone": "Asia/Shanghai",
+        "fallback": false
+      },
+      "label": "少云",
+      "weatherCode": 2.0,
+      "temperature": 27.2,
+      "apparentTemperature": 32.7,
+      "humidity": 91.0,
+      "precipitation": 0.0,
+      "cloudCover": 51.0,
+      "windSpeed": 11.0,
+      "windGusts": 25.9,
+      "isDay": 0.0,
+      "time": "2026-08-28T23:15",
+      "updatedAt": 1787930609368,
+      "error": "",
+      "mood": {
+        "key": "humid-night",
+        "title": "闷热夜听",
+        "tagline": "音量放低一点，让夜色参与编曲。",
+        "energy": 0.42,
+        "warmth": 0.76,
+        "focus": 0.68,
+        "melancholy": 0.52,
+        "keywords": [
+          "夜晚 R&B",
+          "late night jazz",
+          "ambient",
+          "lofi sleep",
+          "夜跑 歌单",
+          "夏日 chill",
+          "bossa nova"
+        ]
+      }
+    },
+    "radio": {
+      "title": "闷热夜听",
+      "subtitle": "音量放低一点，让夜色参与编曲。",
+      "seedQueries": [
+        "落日飞车 My Jinji",
+        "告五人 爱人错过",
+        "夏日入侵企画 想去海边",
+        "陈绮贞 旅行的意义"
+      ],
+      "songs": [],
+      "updatedAt": 1787930613714
+    }
+  }
+}
