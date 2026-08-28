@@ -24,4 +24,5 @@ test("ordinary desktop controls do not render or auto-probe raw diagnostics", ()
 	expect(controls).not.toContain("Visual 诊断");
 	expect(controls).not.toContain("刷新诊断");
 	expect(runtime).not.toContain("void refreshDiagnostics()");
+	expect(runtime).not.toContain("await refreshDiagnostics()");
 });

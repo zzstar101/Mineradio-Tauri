@@ -338,14 +338,13 @@ export function useDesktopManagementRuntime(
 		try {
 			const result = await desktop.trimApplicationWorkingSet(true);
 			setWorkingSetAction(describeWorkingSetTrimResult(result));
-			await refreshDiagnostics();
 		} catch (cause) {
 			setError(String(cause));
 			setWorkingSetAction({ phase: "failed", message: String(cause), reclaimedBytes: null });
 		} finally {
 			setBusy(false);
 		}
-	}, [desktop, refreshDiagnostics]);
+	}, [desktop]);
 
 	return {
 		closeBehavior,
