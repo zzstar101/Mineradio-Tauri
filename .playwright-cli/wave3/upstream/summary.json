@@ -1,0 +1,18 @@
+{
+  "target": "upstream",
+  "baseUrl": "http://127.0.0.1:5190/index.html",
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "states": [
+    "auto-hide"
+  ],
+  "artifacts": [
+    {
+      "state": "auto-hide",
+      "png": "D:\\Program\\Mineradio\\.playwright-cli\\wave3\\upstream\\auto-hide\\upstream-auto-hide.png",
+      "geometry": "D:\\Program\\Mineradio\\.playwright-cli\\wave3\\upstream\\auto-hide\\upstream-auto-hide.geometry.json"
+    }
+  ]
+}

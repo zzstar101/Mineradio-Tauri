@@ -519,8 +519,8 @@ body.immersive-mode .ctrl-btn svg {
 }
 
 body.immersive-mode #play-btn {
-  width: 64px;
-  height: 64px;
+  width: 64px !important;
+  height: 64px !important;
 }
 
 body.immersive-mode #play-btn svg {
@@ -557,7 +557,108 @@ body.immersive-mode #upload-tip {
   pointer-events: none !important;
 }
 
-/* --- Responsive: uppercase upstream breakpoints --- */
+/* --- Responsive: upstream 控制栏自适应实验 ruleset (v2.1.0 final cascade).
+       Overrides the older bar/grid imported from the earlier stylesheet layer. --- */
+#bottom-bar,
+#bottom-bar.stage-mode,
+body.simple-mode #bottom-bar {
+  box-sizing: border-box;
+  width: min(1120px, calc(100vw - clamp(20px, 5vw, 72px)));
+  padding: clamp(8px, 1.2vw, 11px) clamp(12px, 2.2vw, 24px) clamp(10px, 1.35vw, 14px);
+}
+
+body.diy-mode #bottom-bar,
+body.diy-mode #bottom-bar.stage-mode {
+  left: 50%;
+  width: min(1120px, calc(100vw - clamp(28px, 8vw, 148px)));
+}
+
+#controls,
+body.simple-mode #controls,
+body.diy-mode #controls {
+  grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
+  gap: clamp(8px, 1.7vw, 18px);
+}
+
+.control-cluster {
+  min-width: 0;
+}
+
+.control-cluster.actions {
+  justify-content: flex-start;
+  overflow: visible;
+}
+
+.control-cluster.transport {
+  justify-self: center;
+  justify-content: center;
+  width: max-content;
+  gap: clamp(8px, 1.1vw, 13px);
+}
+
+.control-cluster.modes {
+  justify-content: flex-end;
+  overflow: visible;
+}
+
+.control-track {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.control-meta {
+  max-width: min(320px, 100%);
+}
+
+@media (max-width: 1180px) {
+
+  body.diy-mode #bottom-bar,
+  body.diy-mode #bottom-bar.stage-mode {
+    left: 50%;
+    width: calc(100vw - clamp(28px, 8vw, 142px));
+  }
+
+  .control-meta {
+    max-width: min(220px, 100%);
+  }
+}
+
+@media (max-width: 920px) {
+
+  #bottom-bar,
+  #bottom-bar.stage-mode,
+  body.simple-mode #bottom-bar,
+  body.diy-mode #bottom-bar,
+  body.diy-mode #bottom-bar.stage-mode {
+    width: calc(100vw - 28px);
+  }
+
+  #controls,
+  body.simple-mode #controls,
+  body.diy-mode #controls {
+    grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
+  }
+
+  .control-meta {
+    max-width: min(170px, 100%);
+  }
+}
+
+@media (max-width: 720px) {
+  .control-cover {
+    display: none;
+  }
+
+  .control-meta {
+    max-width: min(132px, 100%);
+  }
+
+  .control-cluster.modes {
+    gap: 6px;
+  }
+}
+
+/* --- Non-adaptive upstream breakpoints (kept for their specific rules) --- */
 @media (max-width: 1180px) {
   body.diy-mode #bottom-bar,
   body.diy-mode #bottom-bar.stage-mode {
@@ -617,7 +718,7 @@ body.immersive-mode #upload-tip {
   }
 
   #controls {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
     gap: 8px;
   }
 
@@ -644,8 +745,8 @@ body.immersive-mode #upload-tip {
   }
 
   .ctrl-btn {
-    width: 32px !important;
-    height: 32px !important;
+    width: 32px;
+    height: 32px;
   }
 
   .ctrl-btn svg {
@@ -660,8 +761,8 @@ body.immersive-mode #upload-tip {
   }
 
   #play-btn {
-    width: 54px;
-    height: 54px;
+    width: 54px !important;
+    height: 54px !important;
   }
 
   #time-display {
@@ -670,17 +771,42 @@ body.immersive-mode #upload-tip {
 }
 
 @media (max-width: 620px) {
+  #bottom-bar,
+  #bottom-bar.stage-mode {
+    width: calc(100vw - 20px);
+  }
+
   #controls,
   body.simple-mode #controls,
   body.diy-mode #controls {
     grid-template-columns: 1fr;
   }
 
-  .control-cluster.actions,
-  .control-cluster.transport,
-  .control-cluster.modes {
+  .control-cluster {
+    grid-column: 1 !important;
     justify-content: center;
     width: 100%;
+  }
+
+  .control-cluster.transport {
+    order: 1;
+  }
+
+  .control-cluster.actions {
+    order: 2;
+  }
+
+  .control-cluster.modes {
+    order: 3;
+  }
+
+  .control-track {
+    display: none;
+  }
+
+  .heart-svg {
+    width: 19px;
+    height: 19px;
   }
 }
 

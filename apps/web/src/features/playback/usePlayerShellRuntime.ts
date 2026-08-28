@@ -25,6 +25,9 @@ export interface PlayerShellRuntimeOptions {
 	onEnterImmersive?(): void;
 	/** 歌词视图时钟（秒）实际来源：读取已应用 offset 的时钟供视觉消费 */
 	onLyricViewOffsetChange?(offsetSeconds: number): void;
+	/** IMMERSIVE_PARTICLE_LYRICS_2_1_SCOPE=IN：进入沉浸式强制 particle lyrics。 */
+	readImmersiveLyricsEnabled?(): boolean;
+	onImmersiveLyricsEnabledChange?(enabled: boolean): void;
 }
 
 export interface PlayerShellRuntimeResult {
@@ -57,6 +60,8 @@ export function usePlayerShellRuntime({
 	showToast,
 	onEnterImmersive,
 	onLyricViewOffsetChange,
+	readImmersiveLyricsEnabled,
+	onImmersiveLyricsEnabledChange,
 }: PlayerShellRuntimeOptions): PlayerShellRuntimeResult {
 	const controlsAutoHide = usePlayerShellStore((s) => s.controlsAutoHide);
 	const immersiveMode = usePlayerShellStore((s) => s.immersiveMode);
@@ -75,6 +80,10 @@ export function usePlayerShellRuntime({
 	onEnterImmersiveRef.current = onEnterImmersive;
 	const onLyricViewOffsetChangeRef = useRef(onLyricViewOffsetChange);
 	onLyricViewOffsetChangeRef.current = onLyricViewOffsetChange;
+	const readImmersiveLyricsEnabledRef = useRef(readImmersiveLyricsEnabled);
+	readImmersiveLyricsEnabledRef.current = readImmersiveLyricsEnabled;
+	const onImmersiveLyricsEnabledChangeRef = useRef(onImmersiveLyricsEnabledChange);
+	onImmersiveLyricsEnabledChangeRef.current = onImmersiveLyricsEnabledChange;
 
 	const persistForce = useRef(0);
 
@@ -127,17 +136,24 @@ export function usePlayerShellRuntime({
 	}, [setControlsAutoHide, setImmersiveMode, setLyricOffsets]);
 
 	// 沉浸式：body 类 + 副作用。
+	const wasImmersiveRef = useRef(false);
 	const previousAutoHideRef = useRef(controlsAutoHide);
+	const savedParticleLyricsRef = useRef(false);
 	useEffect(() => {
 		if (typeof document === "undefined") return;
 		document.body.classList.toggle("immersive-mode", immersiveMode);
 		if (immersiveMode) {
 			previousAutoHideRef.current = controlsAutoHide;
+			savedParticleLyricsRef.current = readImmersiveLyricsEnabledRef.current?.() ?? false;
 			setControlsAutoHide(true);
 			onEnterImmersiveRef.current?.();
-		} else if (persistForce.current > 0) {
+			onImmersiveLyricsEnabledChangeRef.current?.(true);
+		} else if (wasImmersiveRef.current) {
 			setControlsAutoHide(previousAutoHideRef.current);
+			onImmersiveLyricsEnabledChangeRef.current?.(savedParticleLyricsRef.current);
 		}
+		wasImmersiveRef.current = immersiveMode;
+		persistImmersive(immersiveMode);
 		persistImmersive(immersiveMode);
 		return () => {
 			document.body.classList.remove("immersive-mode");

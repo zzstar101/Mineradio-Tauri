@@ -2,7 +2,7 @@
 
 Branch: `rc-stabilization/2.1.0`
 Baseline SHA: `0892c13cad29f8e5ba50ef4455828381342463b7`
-Final SHA: `0803a8b`（Wave 3 提交顶部）
+Final SHA: `79cd070`（Wave 3 提交顶部；Wave 3B 冻结 parent）
 API SHA: `fb00faf`（submodule，Wave 2 一致）
 Working tree: clean
 
@@ -11,7 +11,7 @@ Working tree: clean
 ```text
 branch: rc-stabilization/2.1.0
 baseline SHA: 0892c13cad29f8e5ba50ef4455828381342463b7
-final SHA:    0803a8b
+final SHA:    79cd070
 API SHA:      fb00fafe837a875639b905443115ce16b1abdc96
 working tree: clean
 ```
@@ -23,6 +23,8 @@ c8ec0a3 test(player): freeze upstream player shell golden
 a5d4038 fix(player): restore bottom bar information architecture and utility interactions
 9bd8524 test(player): add player shell structure, geometry, and behavior regression
 0803a8b docs(audit): record wave 3 player shell manifest parity evidence
+6c81e16 docs(audit): record wave 3 player shell report
+79cd070 test(player): run player shell geometry guard under the covered architecture path
 ```
 
 ## Scope Decisions

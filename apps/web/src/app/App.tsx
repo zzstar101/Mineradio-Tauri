@@ -1532,6 +1532,11 @@ export function App({
     onEnterImmersive: () => {
       setMiniQueue(false);
     },
+    readImmersiveLyricsEnabled: () =>
+      useVisualStore.getState().fx.particleLyrics === true,
+    onImmersiveLyricsEnabledChange: (enabled) => {
+      updateVisualBooleanSetting("particleLyrics", enabled);
+    },
   });
   const { aiDepthChip } = useGlobalShellRuntime({
     diyMode,

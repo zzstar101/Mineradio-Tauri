@@ -1,0 +1,4 @@
+{
+  "isError": true,
+  "error": "TimeoutError: page.click: Timeout 8000ms exceeded.\nCall log:\n  - waiting for locator('#quality-btn')\n    - locator resolved to <button type=\"button\" aria-label=\"音质\" id=\"quality-btn\" title=\"音质: 高清臻音\" class=\"ctrl-btn quality-pill\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n      - waiting 100ms\n    15 × waiting for element to be visible, enabled and stable\n       - element is not visible\n     - retrying click action\n       - waiting 500ms\n    - waiting for element to be visible, enabled and stable\n"
+}

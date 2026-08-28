@@ -1,0 +1,545 @@
+{
+  "base": "Wave 3B Layer 3 diff",
+  "tolerances": {
+    "position": 3,
+    "primary": 2
+  },
+  "states": [
+    {
+      "state": "default",
+      "label": "Default expanded",
+      "result": "PASS-EXPECTED",
+      "rois": [
+        {
+          "name": "bar",
+          "pixel": {
+            "region": {
+              "w": 1120,
+              "h": 106
+            },
+            "mismatchPct": 7.35,
+            "mad": 0.0435,
+            "ssim": 0.1083
+          },
+          "deltas": {
+            "bar": {
+              "dx": 0,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": 0,
+              "centerDy": 0
+            }
+          },
+          "exceeded": false
+        },
+        {
+          "name": "cover",
+          "pixel": {
+            "region": {
+              "w": 72,
+              "h": 72
+            },
+            "mismatchPct": 13.39,
+            "mad": 0.0634,
+            "ssim": 0.0999
+          },
+          "deltas": {
+            "cover": {
+              "dx": 0,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": 0,
+              "centerDy": 0
+            }
+          },
+          "exceeded": false
+        },
+        {
+          "name": "previous-play-next",
+          "pixel": {
+            "region": {
+              "w": 172,
+              "h": 74
+            },
+            "mismatchPct": 4.88,
+            "mad": 0.0378,
+            "ssim": 0.0838
+          },
+          "deltas": {
+            "prev": {
+              "dx": -24.5,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": -24.5,
+              "centerDy": 0
+            },
+            "play": {
+              "dx": -24.5,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": -24.5,
+              "centerDy": 0
+            },
+            "next": {
+              "dx": -24.5,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": -24.5,
+              "centerDy": 0
+            }
+          },
+          "exceeded": true
+        },
+        {
+          "name": "progress",
+          "pixel": {
+            "region": {
+              "w": 932,
+              "h": 20
+            },
+            "mismatchPct": 5.12,
+            "mad": 0.0348,
+            "ssim": 0.2751
+          },
+          "deltas": {
+            "progress": {
+              "dx": 0,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": 0,
+              "centerDy": 0
+            }
+          },
+          "exceeded": false
+        },
+        {
+          "name": "next-mode",
+          "pixel": null,
+          "deltas": {},
+          "exceeded": false
+        }
+      ],
+      "expectedDeviation": "play centerDx is an expected consequence of CUEFIELD_2_1_SCOPE=OUT (upstream transport keeps cuefield button)",
+      "coreDeltas": {
+        "cover": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "play": {
+          "dx": -24.5,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": -24.5,
+          "centerDy": 0
+        },
+        "progress": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "bar": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "handle": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        }
+      }
+    },
+    {
+      "state": "volume",
+      "label": "Volume popover open",
+      "result": "PASS",
+      "rois": [
+        {
+          "name": "volumePopover",
+          "pixel": null,
+          "deltas": {},
+          "exceeded": false
+        }
+      ],
+      "coreDeltas": {}
+    },
+    {
+      "state": "lyric-timing",
+      "label": "Lyric timing popover open",
+      "result": "PASS",
+      "rois": [
+        {
+          "name": "lyricPopover",
+          "pixel": null,
+          "deltas": {},
+          "exceeded": false
+        }
+      ],
+      "coreDeltas": {}
+    },
+    {
+      "state": "quality",
+      "label": "Quality popover open",
+      "result": "PASS",
+      "rois": [
+        {
+          "name": "qualityPopover",
+          "pixel": null,
+          "deltas": {},
+          "exceeded": false
+        }
+      ],
+      "coreDeltas": {}
+    },
+    {
+      "state": "mini-queue",
+      "label": "Mini queue open",
+      "result": "PASS",
+      "rois": [
+        {
+          "name": "miniQueue",
+          "pixel": null,
+          "deltas": {},
+          "exceeded": false
+        }
+      ],
+      "coreDeltas": {}
+    },
+    {
+      "state": "auto-hide",
+      "label": "Auto-hide active (collapsed/handle)",
+      "result": "PASS-EXPECTED",
+      "rois": [
+        {
+          "name": "handle",
+          "pixel": {
+            "region": {
+              "w": 264,
+              "h": 56
+            },
+            "mismatchPct": 9.46,
+            "mad": 0.0719,
+            "ssim": 0.038
+          },
+          "deltas": {
+            "handle": {
+              "dx": 0,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": 0,
+              "centerDy": 0
+            }
+          },
+          "exceeded": false
+        }
+      ],
+      "expectedDeviation": "play centerDx is an expected consequence of CUEFIELD_2_1_SCOPE=OUT (upstream transport keeps cuefield button)",
+      "coreDeltas": {
+        "cover": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "play": {
+          "dx": -24.5,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": -24.5,
+          "centerDy": 0
+        },
+        "progress": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "bar": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "handle": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        }
+      }
+    },
+    {
+      "state": "immersive",
+      "label": "Immersive mode",
+      "result": "PASS",
+      "rois": [
+        {
+          "name": "bar",
+          "pixel": null,
+          "deltas": {},
+          "exceeded": false
+        },
+        {
+          "name": "play",
+          "pixel": null,
+          "deltas": {},
+          "exceeded": false
+        }
+      ],
+      "coreDeltas": {}
+    },
+    {
+      "state": "window-920",
+      "label": "Narrow 920px",
+      "result": "PASS-EXPECTED",
+      "rois": [
+        {
+          "name": "bar",
+          "pixel": {
+            "region": {
+              "w": 892,
+              "h": 98.39999999999998
+            },
+            "mismatchPct": 14.78,
+            "mad": 0.0656,
+            "ssim": 0.0953
+          },
+          "deltas": {
+            "bar": {
+              "dx": 0,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": 0,
+              "centerDy": 0
+            }
+          },
+          "exceeded": false
+        },
+        {
+          "name": "metadata",
+          "pixel": {
+            "region": {
+              "w": 253.90000000000003,
+              "h": 59.999999999999886
+            },
+            "mismatchPct": 5.58,
+            "mad": 0.0599,
+            "ssim": 0.0511
+          },
+          "deltas": {
+            "cover": {
+              "dx": 0,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": 0,
+              "centerDy": 0
+            },
+            "heart": {
+              "dx": 21.1,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": 21.1,
+              "centerDy": 0
+            }
+          },
+          "exceeded": true
+        },
+        {
+          "name": "transport",
+          "pixel": {
+            "region": {
+              "w": 70,
+              "h": 69.99999999999989
+            },
+            "mismatchPct": 16.76,
+            "mad": 0.0776,
+            "ssim": 0.0213
+          },
+          "deltas": {
+            "play": {
+              "dx": -21,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": -21,
+              "centerDy": 0
+            }
+          },
+          "exceeded": true
+        }
+      ],
+      "expectedDeviation": "play centerDx is an expected consequence of CUEFIELD_2_1_SCOPE=OUT (upstream transport keeps cuefield button)",
+      "coreDeltas": {
+        "cover": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "play": {
+          "dx": -21,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": -21,
+          "centerDy": 0
+        },
+        "progress": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "bar": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "handle": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        }
+      }
+    },
+    {
+      "state": "window-620",
+      "label": "Narrow 620px",
+      "result": "PASS-EXPECTED",
+      "rois": [
+        {
+          "name": "bar",
+          "pixel": {
+            "region": {
+              "w": 592,
+              "h": 226.10000000000002
+            },
+            "mismatchPct": 9.14,
+            "mad": 0.054,
+            "ssim": 0.1011
+          },
+          "deltas": {
+            "bar": {
+              "dx": 0,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": 0,
+              "centerDy": 0
+            }
+          },
+          "exceeded": false
+        },
+        {
+          "name": "play",
+          "pixel": {
+            "region": {
+              "w": 70,
+              "h": 70
+            },
+            "mismatchPct": 13.22,
+            "mad": 0.0817,
+            "ssim": 0.0307
+          },
+          "deltas": {
+            "play": {
+              "dx": -20,
+              "dy": 0,
+              "dWidth": 0,
+              "dHeight": 0,
+              "centerDx": -20,
+              "centerDy": 0
+            }
+          },
+          "exceeded": true
+        }
+      ],
+      "expectedDeviation": "play centerDx is an expected consequence of CUEFIELD_2_1_SCOPE=OUT (upstream transport keeps cuefield button)",
+      "coreDeltas": {
+        "cover": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "play": {
+          "dx": -20,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": -20,
+          "centerDy": 0
+        },
+        "progress": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "bar": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        },
+        "handle": {
+          "dx": 0,
+          "dy": 0,
+          "dWidth": 0,
+          "dHeight": 0,
+          "centerDx": 0,
+          "centerDy": 0
+        }
+      }
+    }
+  ]
+}

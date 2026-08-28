@@ -1,0 +1,168 @@
+{
+  "title": "",
+  "artist": "\n              ",
+  "cover": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "1"
+  },
+  "progress": {
+    "x": 754.4,
+    "y": 1064.2,
+    "width": 411.3,
+    "height": 3.9,
+    "visible": true,
+    "opacity": "1"
+  },
+  "handle": {
+    "x": 851.4,
+    "y": 1056.1,
+    "width": 217.1,
+    "height": 25.8,
+    "visible": true,
+    "opacity": "0"
+  },
+  "bar": {
+    "x": 659.3,
+    "y": 1050.6,
+    "width": 601.4,
+    "height": 101.8,
+    "visible": true,
+    "opacity": "0"
+  },
+  "play": {
+    "x": 872.7,
+    "y": 1077.7,
+    "width": 62.1,
+    "height": 62.1,
+    "visible": true,
+    "opacity": "1"
+  },
+  "prev": {
+    "x": 820.3,
+    "y": 1089.4,
+    "width": 38.8,
+    "height": 38.8,
+    "visible": true,
+    "opacity": "1"
+  },
+  "next": {
+    "x": 948.4,
+    "y": 1089.4,
+    "width": 38.8,
+    "height": 38.8,
+    "visible": true,
+    "opacity": "1"
+  },
+  "quality": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "1"
+  },
+  "heart": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "1"
+  },
+  "collect": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "1"
+  },
+  "volume": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "1"
+  },
+  "volumePopover": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "0"
+  },
+  "lyricTiming": {
+    "x": 1002.7,
+    "y": 1108.8,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "1"
+  },
+  "lyricPopover": {
+    "x": 895.3,
+    "y": 974.9,
+    "width": 214.8,
+    "height": 96,
+    "visible": true,
+    "opacity": "0"
+  },
+  "miniQueueBtn": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "1"
+  },
+  "miniQueue": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "0"
+  },
+  "controlsHide": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "1"
+  },
+  "immersive": {
+    "x": 1016.3,
+    "y": 1089.4,
+    "width": 38.8,
+    "height": 38.8,
+    "visible": true,
+    "opacity": "1"
+  },
+  "fullscreen": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "visible": false,
+    "opacity": "1"
+  },
+  "timeDisplay": {
+    "x": 1068.6,
+    "y": 1089.4,
+    "width": 83.4,
+    "height": 38.8,
+    "visible": true,
+    "opacity": "1"
+  },
+  "qtyOptions": 5,
+  "barClasses": "visible soft-hidden",
+  "bodyClasses": "simple-mode home-wallpaper-preview empty-home-active controls-handle-awake immersive-mode",
+  "bodyImmersive": true
+}

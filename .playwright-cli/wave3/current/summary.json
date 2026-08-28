@@ -1,0 +1,24 @@
+{
+  "target": "current",
+  "baseUrl": "http://127.0.0.1:4173/",
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "states": [
+    "window-920",
+    "window-620"
+  ],
+  "artifacts": [
+    {
+      "state": "window-920",
+      "png": "D:\\Program\\Mineradio\\.playwright-cli\\wave3\\current\\window-920\\current-window-920.png",
+      "geometry": "D:\\Program\\Mineradio\\.playwright-cli\\wave3\\current\\window-920\\current-window-920.geometry.json"
+    },
+    {
+      "state": "window-620",
+      "png": "D:\\Program\\Mineradio\\.playwright-cli\\wave3\\current\\window-620\\current-window-620.png",
+      "geometry": "D:\\Program\\Mineradio\\.playwright-cli\\wave3\\current\\window-620\\current-window-620.geometry.json"
+    }
+  ]
+}
