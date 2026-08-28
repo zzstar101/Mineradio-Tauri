@@ -584,16 +584,16 @@
       "id": "S039",
       "name": "Cover interaction",
       "severity": "P1",
-      "productStatus": "REGRESSION",
+      "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
       "blocker": true,
       "ownerArea": "stage-lyrics",
-      "notes": "QQ 空 mid 假 URL、proxy Referer/CSP 和 DOM/WebGL 分裂"
+      "notes": "Cover semantic contract, canonical MediaUrlPort source, provider-aware proxy, stale generation guard, and CSP are automated; packaged Windows DOM/WebGL provider field evidence is pending."
     },
     {
       "id": "S040",
@@ -668,7 +668,7 @@
       },
       "blocker": false,
       "ownerArea": "visual-system",
-      "notes": "visual engine host 存在；当前截图未证明同构"
+      "notes": "visual engine host exists; cover-only evidence now uses the canonical MediaUrlPort source, while full default-visual parity and Windows field rendering remain pending."
     },
     {
       "id": "S045",
@@ -788,7 +788,7 @@
       },
       "blocker": false,
       "ownerArea": "visual-system",
-      "notes": "cover controls 存在；pipeline semantic gate 未过"
+      "notes": "cover controls exist; shared semantic validation and canonical source resolution are automated, while picker/clarity product parity remains pending."
     },
     {
       "id": "S053",
@@ -923,7 +923,7 @@
       },
       "blocker": false,
       "ownerArea": "library",
-      "notes": "local library 代码存在；重启和混合浏览 field 未证"
+      "notes": "local cover URI bypass and semantic preservation are automated; restart, mixed-library, DOM, and WebGL Windows field evidence remain pending."
     },
     {
       "id": "S062",
@@ -1088,7 +1088,7 @@
       },
       "blocker": false,
       "ownerArea": "search",
-      "notes": "result components 存在；cover/data semantic 未证"
+      "notes": "result components exist and their cover sources use the canonical resolver; search-row visual parity and provider field rendering remain pending."
     },
     {
       "id": "S073",
@@ -1148,7 +1148,7 @@
       },
       "blocker": false,
       "ownerArea": "providers-accounts",
-      "notes": "API/bridge 路径存在；空 album mid 已确认缺陷"
+      "notes": "QQ empty/missing album-mid cover mapping is fixed and covered by Rust tests; authenticated provider and Windows cover field evidence remain pending."
     },
     {
       "id": "S077",
@@ -1163,7 +1163,7 @@
       },
       "blocker": false,
       "ownerArea": "providers-accounts",
-      "notes": "API adapter 注册；真实登录/播放未现场验证"
+      "notes": "captured Netease cover semantics and native header policy are automated; real Windows DOM/WebGL field rendering remains pending."
     },
     {
       "id": "S078",
@@ -1178,7 +1178,7 @@
       },
       "blocker": false,
       "ownerArea": "providers-accounts",
-      "notes": "adapter/能力存在；真实字段与 Referer 未证"
+      "notes": "captured Soda cover semantics and Qishui Referer policy are automated; real Windows DOM/WebGL field rendering remains pending."
     },
     {
       "id": "S079",
@@ -1193,7 +1193,7 @@
       },
       "blocker": false,
       "ownerArea": "providers-accounts",
-      "notes": "Rust/provider code exists; current UI/field route not verified"
+      "notes": "Kugou host policy is deterministic and attacker-safe; confirmed real cover fixture and Windows DOM/WebGL field rendering are FIELD_SAMPLE_PENDING."
     },
     {
       "id": "S080",
@@ -1208,7 +1208,7 @@
       },
       "blocker": false,
       "ownerArea": "providers-accounts",
-      "notes": "Rust adapter/ProviderId 有注册，但 shared schema/capability/UI 明确排除；若 release 宣称 all upstream providers，severity 升为 P1。"
+      "notes": "transport audited only: unknown Spotify CDN receives neutral/no-provider Referer; product provider scope remains unresolved and was not changed in Wave 2."
     },
     {
       "id": "S081",
@@ -1298,7 +1298,7 @@
       },
       "blocker": false,
       "ownerArea": "home-recommendation",
-      "notes": "card schema/组件存在；实际 pages schema failure"
+      "notes": "card schemas and canonical cover resolution are automated; authenticated recommendation content and Windows cover field rendering remain pending."
     },
     {
       "id": "S087",
@@ -1334,16 +1334,16 @@
       "id": "S089",
       "name": "Cover rendering / refresh",
       "severity": "P1",
-      "productStatus": "REGRESSION",
+      "productStatus": "PARTIAL",
       "evidence": {
         "codePresent": true,
-        "automatedVerified": false,
+        "automatedVerified": true,
         "visualVerified": false,
         "fieldVerified": false
       },
       "blocker": true,
       "ownerArea": "home-recommendation",
-      "notes": "cover pipeline 缺陷 + 当前错误条，不能签通过"
+      "notes": "Canonical source resolution, invalid/empty fallback, stale WebGL replacement, and production CSP are automated; packaged Windows provider DOM/WebGL refresh evidence is pending."
     },
     {
       "id": "S090",
@@ -1448,7 +1448,7 @@
       },
       "blocker": false,
       "ownerArea": "desktop-tauri",
-      "notes": "custom protocol/Range 路径存在；混合媒体 field 未证"
+      "notes": "local media cover URI is preserved as an opaque non-proxied source and production CSP admits it; packaged Windows DOM/WebGL field evidence remains pending."
     },
     {
       "id": "S097",
