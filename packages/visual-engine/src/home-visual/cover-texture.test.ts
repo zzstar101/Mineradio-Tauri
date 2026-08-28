@@ -301,6 +301,27 @@ test("setCoverUrl(next) snapshots the previous loaded cover into uPrevCoverTex b
 	expect(uniforms.uColorMixT.value).toBe(0);
 });
 
+test("failed replacement keeps the last committed WebGL cover visible", async () => {
+	const uniforms = makeUniforms();
+	const committed = { width: 32, height: 32, src: "committed-a" };
+	const ctl = createHomeCoverTextureController({
+		uniforms: uniforms as never,
+		loadImage: async (url) => {
+			if (url.endsWith("b.jpg")) throw new Error("invalid replacement");
+			return committed;
+		},
+	});
+
+	ctl.setCoverUrl("https://img.example/a.jpg");
+	await ctl.whenIdle();
+	ctl.setCoverUrl("https://img.example/b.jpg");
+	await ctl.whenIdle();
+
+	expect(uniforms.uCoverTex.value.image).toBe(committed);
+	expect(uniforms.uHasCover.value).toBe(1);
+	expect(uniforms.uLoading.value).toBe(0);
+});
+
 test("stale cover loads are ignored when a newer URL is requested", async () => {
 	const uniforms = makeUniforms();
 	const resolvers: Array<(image: unknown) => void> = [];

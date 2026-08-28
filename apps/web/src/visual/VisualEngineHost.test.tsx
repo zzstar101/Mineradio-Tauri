@@ -58,7 +58,7 @@ test("VisualEngineHost server-renders a visual-host placeholder div without invo
 	expect(html).not.toContain("canvas");
 });
 
-test("VisualEngineHost restores baseline album background layer from the direct cover URL", () => {
+test("VisualEngineHost gives DOM and WebGL the canonical resolved cover source", () => {
 	const html = renderToStaticMarkup(
 		React.createElement(VisualEngineHost, {
 			playbackVolume: 1,
@@ -77,9 +77,9 @@ test("VisualEngineHost restores baseline album background layer from the direct 
 	);
 	expect(html).toContain('id="album-bg"');
 	expect(html).toContain('class="visible"');
-	// CSS 背景保持直链，WebGL 的 opaque URI 不应泄漏到服务端渲染标记。
-	expect(html).toContain("https://img.example/a.jpg");
-	expect(html).not.toContain("mineradio-image://");
+	// DOM background and WebGL consume the same opaque MediaUrlPort result.
+	expect(html).toContain("mineradio-image://cover/session-token/track-42");
+	expect(html).not.toContain("https://img.example/a.jpg");
 });
 
 test("Workshop replaces the album glow with an opaque visual host without intercepting UI", () => {
@@ -207,7 +207,7 @@ test("resolveVisualImageSource delegates normalized covers to the media URL port
 
 	expect(resolveVisualImageSource("//p3.music.126.net/cover.jpg", mediaUrl)).toEqual({
 		uri: "mineradio-image://cover/session-token/track-42",
-		fallbackUri: "https://p3.music.126.net/cover.jpg",
+		logicalSource: "https://p3.music.126.net/cover.jpg",
 	});
 	expect(calls).toEqual(["https://p3.music.126.net/cover.jpg"]);
 });

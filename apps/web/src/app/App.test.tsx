@@ -3450,7 +3450,7 @@ test("App opens the baseline collect picker for shelf detail collect and adds on
 		async playlistList(provider: string) {
 			if (provider === "netease") {
 				return [
-					{ provider: "netease", id: "mine-1", name: "我的歌单", coverUrl: "mine.jpg", trackCount: 12, trackIds: [] },
+					{ provider: "netease", id: "mine-1", name: "我的歌单", coverUrl: "https://example.invalid/mine.jpg", trackCount: 12, trackIds: [] },
 					{ provider: "netease", id: "sub-1", name: "收藏来的歌单", coverUrl: "", trackCount: 4, trackIds: [], subscribed: true },
 				];
 			}
@@ -3473,14 +3473,14 @@ test("App opens the baseline collect picker for shelf detail collect and adds on
 				id: "song-1",
 				name: "First Song",
 				artist: "Alice",
-				cover: "cover.jpg",
+				cover: "https://example.invalid/cover.jpg",
 				provider: "netease",
 				type: "playable",
 				sourceId: "song-1",
 				title: "First Song",
 				artists: ["Alice"],
 				album: "",
-				coverUrl: "cover.jpg",
+				coverUrl: "https://example.invalid/cover.jpg",
 				playableState: "playable",
 				qualityHints: [],
 			},

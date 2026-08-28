@@ -466,6 +466,8 @@ test("imageProxyUrl mirrors baseline cover proxy URL construction for remote cov
 	expect(client.imageProxyUrl("http://img.example/a.jpg")).toBe(`${MEDIA_BASE}/image-proxy?url=http%3A%2F%2Fimg.example%2Fa.jpg`);
 	expect(client.imageProxyUrl("data:image/png;base64,abc")).toBe("data:image/png;base64,abc");
 	expect(client.imageProxyUrl("blob:http://local/abc")).toBe("blob:http://local/abc");
+	expect(client.imageProxyUrl("http://mineradio-local.localhost/cover/id?cap=token"))
+		.toBe("http://mineradio-local.localhost/cover/id?cap=token");
 	expect(client.imageProxyUrl("file:///tmp/a.jpg")).toBe("");
 	expect(client.imageProxyUrl("")).toBe("");
 });

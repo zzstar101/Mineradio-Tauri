@@ -11,7 +11,7 @@
               "id": "playlist-id",
               "title": "歌单",
               "subtitle": "",
-              "coverUrl": "playlist-cover",
+              "coverUrl": "",
               "collected": null,
               "kind": "playlist"
             }
@@ -25,7 +25,7 @@
               "id": "0039MnYb0qxYhV",
               "title": "单曲",
               "subtitle": "歌手",
-              "coverUrl": "track-cover",
+              "coverUrl": "",
               "collected": null,
               "kind": "track"
             }
@@ -39,7 +39,7 @@
               "id": "double-playlist-id",
               "title": "双列歌单",
               "subtitle": "",
-              "coverUrl": "double-playlist-cover",
+              "coverUrl": "",
               "collected": null,
               "kind": "playlist"
             }
@@ -53,7 +53,7 @@
               "id": "personal-radio-id",
               "title": "个性电台",
               "subtitle": "",
-              "coverUrl": "personal-radio-cover",
+              "coverUrl": "",
               "collected": null,
               "kind": "stream"
             }

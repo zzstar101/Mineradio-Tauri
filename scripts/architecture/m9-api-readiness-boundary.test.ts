@@ -127,13 +127,14 @@ test("native media image source is consumed by production code", () => {
 	const portSource = readFileSync(portPath, "utf8");
 	const consumerRoots = [
 		"apps/web/src/app",
+		"apps/web/src/cover",
 		"apps/web/src/features",
 		"apps/web/src/components",
 		"apps/web/src/visual",
 	];
 	const consumers = consumerRoots.flatMap((root) => (
 		productionSourceFiles(resolve(repositoryRoot, root)).filter((path) => (
-			/\.imageSource\s*\(/.test(readFileSync(path, "utf8"))
+			/\?\.imageSource\s*\(/.test(readFileSync(path, "utf8"))
 		))
 	)).map(repositoryPath);
 

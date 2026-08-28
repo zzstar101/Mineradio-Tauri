@@ -118,7 +118,7 @@ test("EmptyHomeHost renders baseline recent and profile summary into cards and r
 	expect(html).toContain('id="home-profile-title">Alice');
 	expect(html).toContain("常听歌手 · 3 次");
 	expect(html).toContain("最近一首");
-	expect(html).toContain("https://img.example/recent.jpg");
+	expect(html).not.toContain("https://img.example/recent.jpg");
 });
 
 test("EmptyHomeHost routes baseline recent and profile cards", async () => {
@@ -295,7 +295,7 @@ test("EmptyHomeHost renders more than five playlist rail tiles without dropping 
 	expect((html.match(/class="home-tile/g) ?? []).length).toBeGreaterThan(5);
 });
 
-test("EmptyHomeHost marks real Home card covers with the baseline has-cover class", () => {
+test("EmptyHomeHost does not bypass MediaUrlPort for real Home card covers", () => {
 	const html = renderToStaticMarkup(React.createElement(EmptyHomeHost, {
 		discover: {
 			loggedIn: true,
@@ -312,9 +312,12 @@ test("EmptyHomeHost marks real Home card covers with the baseline has-cover clas
 	}));
 
 	expect(html).toContain('id="home-daily-art"');
-	expect(/class="home-card-art has-cover" id="home-daily-art" style="background-image:url\(&quot;https:\/\/img\.example\/a\.jpg&quot;\)"/.test(html)).toBe(true);
-	expect(/class="home-card-art has-cover" id="home-private-art" style="background-image:url\(&quot;https:\/\/img\.example\/b\.jpg&quot;\)"/.test(html)).toBe(true);
-	expect(/class="home-card-art has-cover" id="home-weather-art" style="background-image:url\(&quot;https:\/\/img\.example\/p\.jpg&quot;\)"/.test(html)).toBe(true);
+	expect(html).toContain('class="home-card-art has-cover" id="home-daily-art"');
+	expect(html).not.toContain("https://img.example/a.jpg");
+	expect(html).toContain('class="home-card-art has-cover" id="home-private-art"');
+	expect(html).toContain('class="home-card-art has-cover" id="home-weather-art"');
+	expect(html).not.toContain("https://img.example/b.jpg");
+	expect(html).not.toContain("https://img.example/p.jpg");
 });
 
 test("Home CSS keeps cover pseudo-elements without the extra bottom mask", async () => {
