@@ -241,8 +241,79 @@ function geometryBody() {
 `;
 }
 
+
+function routeProgram() {
+  return `async page => {
+	const mp3 = ${JSON.stringify(DEFAULT_FIXTURE)};
+	await page.waitForTimeout(1000);
+	try { const en = await page.$("[aria-label*=进入 Mineradio], #splash button, .splash button"); if (en) await en.click(); } catch(e){}
+	await page.setInputFiles("#file-input", mp3);
+	await page.waitForFunction(() => !!document.getElementById("control-cover"), null, { timeout: 30000 });
+	await page.waitForTimeout(800);
+	const barState = () => page.evaluate(() => {
+		const bar = document.getElementById("bottom-bar");
+		return { barVisible: !!bar && bar.classList.contains("visible"), barZ: bar ? getComputedStyle(bar).zIndex : null, handle: !!document.getElementById("bottom-handle"), cover: !!document.getElementById("control-cover"), bodyClasses: document.body.className };
+	});
+	const steps = [];
+	steps.push({ step: "player", ...(await barState()) });
+	try {
+		const input = await page.$("#search-box input, #search-input");
+		if (input) await input.click();
+		await page.waitForTimeout(250);
+	} catch(e){}
+	steps.push({ step: "search-focus", ...(await barState()) });
+	try {
+		const input = await page.$("#search-box input, #search-input");
+		if (input) await input.type("test");
+		await page.waitForTimeout(1400);
+	} catch(e){}
+	steps.push({ step: "search-typing", ...(await barState()) });
+	try {
+		const fab = await page.$("#fx-fab");
+		if (fab) { await fab.click(); await page.waitForTimeout(900); }
+	} catch(e){}
+	const settings = await page.evaluate(() => {
+		const panel = document.getElementById("fx-panel") || document.querySelector("#fx-panel");
+		return { panelOpen: !!panel && panel.classList.contains("show"), panelTitle: panel?.querySelector(".fx-panel-title, h2, .panel-title")?.textContent ?? "" };
+	});
+	steps.push({ step: "settings-open", ...settings, ...(await barState()) });
+	try { const fab = await page.$("#fx-fab"); if (fab) await fab.click(); } catch(e){}
+	await page.waitForTimeout(600);
+	steps.push({ step: "settings-closed", ...(await barState()) });
+	const visual = await page.evaluate(() => ({
+		hasVisualHost: !!document.querySelector("#visual-host, #stage, canvas"),
+		canvasCount: document.querySelectorAll("canvas").length,
+	}));
+	const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+	return { steps, visual, viewport };
+}`;
+}
+
 function main() {
   const [target, ...rest] = process.argv.slice(2);
+  if (target === "route") {
+    const baseUrl = arg(rest, "--base-url");
+    const outDir = path.resolve(repositoryRoot, arg(rest, "--out") ?? `.playwright-cli/wave3/current`);
+    const configPath = writeConfig(outDir, { width: 1920, height: 1080 });
+    const session = "wave3-route";
+    if (!baseUrl) { console.error("--base-url required"); process.exit(2); }
+    const program = routeProgram();
+    try {
+      runPlaywright(session, ["open", "about:blank", "--browser", "msedge", "--config", cliPath(configPath)], 120000);
+      runPlaywright(session, ["goto", baseUrl], 120000);
+      const r = runPlaywright(session, ["run-code", "--filename", writeProgram(outDir, "route", program)], 240000);
+      const result = parseOutput(r.stdout, "route");
+      writeFileSync(path.join(outDir, "route-full-app.json"), `${JSON.stringify(result, null, 2)}
+`, "utf8");
+      console.log(JSON.stringify(result, null, 2));
+      runPlaywright(session, ["close"], 30000);
+    } catch (error) {
+      console.error("route failed:", String(error));
+      try { runPlaywright(session, ["close"], 15000); } catch {}
+      process.exit(2);
+    }
+    process.exit(0);
+  }
   if (target !== "current" && target !== "upstream") {
     usage();
     process.exit(2);

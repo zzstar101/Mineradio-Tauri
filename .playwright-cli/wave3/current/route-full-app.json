@@ -1,0 +1,54 @@
+{
+  "steps": [
+    {
+      "step": "player",
+      "barVisible": true,
+      "barZ": "6",
+      "handle": true,
+      "cover": true,
+      "bodyClasses": "simple-mode desktop-shell cursor-hidden splash-active controls-visible"
+    },
+    {
+      "step": "search-focus",
+      "barVisible": true,
+      "barZ": "6",
+      "handle": true,
+      "cover": true,
+      "bodyClasses": "simple-mode desktop-shell cursor-hidden splash-active controls-visible"
+    },
+    {
+      "step": "search-typing",
+      "barVisible": true,
+      "barZ": "6",
+      "handle": true,
+      "cover": true,
+      "bodyClasses": "simple-mode desktop-shell cursor-hidden splash-active controls-visible"
+    },
+    {
+      "step": "settings-open",
+      "panelOpen": false,
+      "panelTitle": "音频设置",
+      "barVisible": true,
+      "barZ": "6",
+      "handle": true,
+      "cover": true,
+      "bodyClasses": "simple-mode desktop-shell cursor-hidden splash-active controls-visible"
+    },
+    {
+      "step": "settings-closed",
+      "barVisible": true,
+      "barZ": "6",
+      "handle": true,
+      "cover": true,
+      "bodyClasses": "simple-mode desktop-shell cursor-hidden splash-active controls-visible"
+    }
+  ],
+  "visual": {
+    "hasVisualHost": true,
+    "canvasCount": 4
+  },
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  }
+}

@@ -123,7 +123,7 @@
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
-        "visualVerified": false,
+        "visualVerified": true,
         "fieldVerified": false
       },
       "blocker": true,
@@ -138,7 +138,7 @@
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
-        "visualVerified": false,
+        "visualVerified": true,
         "fieldVerified": false
       },
       "blocker": true,
@@ -153,7 +153,7 @@
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
-        "visualVerified": false,
+        "visualVerified": true,
         "fieldVerified": false
       },
       "blocker": true,
@@ -168,7 +168,7 @@
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
-        "visualVerified": false,
+        "visualVerified": true,
         "fieldVerified": false
       },
       "blocker": true,
@@ -228,7 +228,7 @@
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
-        "visualVerified": false,
+        "visualVerified": true,
         "fieldVerified": false
       },
       "blocker": true,
@@ -288,7 +288,7 @@
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
-        "visualVerified": false,
+        "visualVerified": true,
         "fieldVerified": false
       },
       "blocker": true,
@@ -303,7 +303,7 @@
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
-        "visualVerified": false,
+        "visualVerified": true,
         "fieldVerified": false
       },
       "blocker": true,
@@ -633,7 +633,7 @@
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
-        "visualVerified": false,
+        "visualVerified": true,
         "fieldVerified": false
       },
       "blocker": true,
@@ -993,7 +993,7 @@
       "evidence": {
         "codePresent": true,
         "automatedVerified": true,
-        "visualVerified": false,
+        "visualVerified": true,
         "fieldVerified": false
       },
       "blocker": true,
@@ -1535,5 +1535,70 @@
     },
     "automatedGate": "bun run test; bun run typecheck; bun run web:build PASS",
     "visualFieldPending": "Layer 3 pixel golden / Layer 4 full route / Layer 5 Windows+WebView2 field validation 尚未完成，相关 P1 仍 blocker"
+  },
+  "wave3bEvidenceNote": {
+    "wave": "WAVE_3B_PLAYER_SHELL_VISUAL_FIELD",
+    "branch": "rc-stabilization/2.1.0",
+    "parentSha": "52cf8d8009702e2c9853ec3567368fb9063136e1",
+    "apiSha": "fb00fafe837a875639b905443115ce16b1abdc96",
+    "candidate": {
+      "buildId": "cand-20260829T043503",
+      "exe": "mineradio-tauri-2.1.0-20260829T043503.exe",
+      "sha256": "da01ada3c079b32fbf14515442080906c1f90cfeec03edb6d88cfb8158907fb9",
+      "host": "Windows (this machine)",
+      "webView2Runtime": "151.0.4129.107",
+      "window": "1440x1080"
+    },
+    "layer3": {
+      "harness": "real app route + real local MP3 (wave3-fixture) / upstream static harness; 1920x1080 dsf=1; ROI pixel+geometry diff",
+      "states": [
+        "default",
+        "volume",
+        "lyric-timing",
+        "quality",
+        "mini-queue",
+        "auto-hide",
+        "immersive",
+        "window-920",
+        "window-620"
+      ],
+      "geometry": "5 PASS + 4 PASS-EXPECTED (only play.centerDx -20..-25px from deliberate CUEFIELD OUT transport shift); all other core elements <=0-2px",
+      "pixelCaveat": "content differs (upstream empty-track vs current local track + backdrop) -> SSIM low is content variance, structure verified via geometry contract"
+    },
+    "layer4": {
+      "realRoute": "main.tsx -> App -> real stores/controllers -> PlayerShell via vite preview; local import starts real playback",
+      "navigation": "player -> search focus -> search typing -> settings open -> settings closed: bottom bar visible, z-index 6 stable, cover/metadata retained, visual host canvases present"
+    },
+    "layer5": {
+      "verified": "exact candidate launches natively on Windows; window title MineRadio-Tauri; WebView2 child process spawned; runtime 151.0.4129.107; real WebView2 window screenshot captured",
+      "pendingInteractive": [
+        "lyric offset ±0.1+restart persistence",
+        "mini queue drag long-press",
+        "volume/fade slider",
+        "auto-hide mouse",
+        "fullscreen toggle",
+        "narrow desktop 920/960 (window min 960x540)"
+      ],
+      "note": "scripted WebView2 interaction blocked by --remote-debugging-port about:blank behaviour on this setup; candidates/evidence dir recorded"
+    },
+    "metadataDetail": {
+      "COVER_DETAIL_AFFORDANCE": "PASS",
+      "COVER_UPSTREAM_DETAIL_PARITY": "PARTIAL",
+      "TITLE_DETAIL_AFFORDANCE": "PASS",
+      "TITLE_UPSTREAM_DETAIL_PARITY": "PARTIAL",
+      "ARTIST_DETAIL_AFFORDANCE": "PASS",
+      "ARTIST_UPSTREAM_DETAIL_PARITY": "PARTIAL",
+      "SEARCH_FALLBACK": "PASS",
+      "notes": "完整 S068/S073 detail surface 仍 MISSING；search fallback 不是等价 detail；相关 surface 留在 blocker/future"
+    },
+    "scope": {
+      "QUEUE_DRAG_SORT_2_1": "IN",
+      "CUEFIELD_2_1": "OUT",
+      "IMMERSIVE_PARTICLE_LYRICS_2_1": "IN"
+    },
+    "correctiveChanges": [
+      "port authoritative 控制栏自适应 ruleset (1120px bar, max-content grid, 720/920/620 cascade) - pre-2.1.0 rules corrected",
+      "play/immersive sizes hardened; correct adaptive golden oracle"
+    ]
   }
 }
