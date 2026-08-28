@@ -871,3 +871,40 @@ test("paused checkpoint autoplay disposition is consumed once by exact identity"
 		playbackIntentId: consume.playbackIntentId + 1,
 	})).toBe(false);
 });
+
+test("moveTrack reorders the queue preserving track object identity for the current track", () => {
+	resetStore();
+	const tracks = [makeTrack("a"), makeTrack("b"), makeTrack("c"), makeTrack("d")];
+	const store = usePlaybackStore.getState();
+	store.setQueue(tracks);
+	store.playAt(0);
+	const current = usePlaybackStore.getState().currentTrack;
+	usePlaybackStore.getState().moveTrack(0, 3);
+	const state = usePlaybackStore.getState();
+	expect(state.queue.map((t) => t.id)).toEqual(["b", "c", "d", "a"]);
+	// 移动后当前曲仍是同一对象身份；currentQueueIndex 推导不依赖引用数组位置之外的约定。
+	expect(state.currentTrack).toBe(current);
+});
+
+test("moveTrack rejects invalid or no-op indices without touching the queue", () => {
+	resetStore();
+	const tracks = [makeTrack("a"), makeTrack("b")];
+	usePlaybackStore.getState().setQueue(tracks);
+	usePlaybackStore.getState().moveTrack(0, 0);
+	expect(usePlaybackStore.getState().queue.map((t) => t.id)).toEqual(["a", "b"]);
+	usePlaybackStore.getState().moveTrack(-1, 1);
+	usePlaybackStore.getState().moveTrack(0, 5);
+	usePlaybackStore.getState().moveTrack(2, 1);
+	expect(usePlaybackStore.getState().queue.map((t) => t.id)).toEqual(["a", "b"]);
+});
+
+test("moveTrack preserves the active current track while it is being dragged", () => {
+	resetStore();
+	const tracks = [makeTrack("a"), makeTrack("b"), makeTrack("c")];
+	usePlaybackStore.getState().setQueue(tracks);
+	usePlaybackStore.getState().playAt(1);
+	const current = usePlaybackStore.getState().currentTrack;
+	usePlaybackStore.getState().moveTrack(1, 2);
+	expect(usePlaybackStore.getState().currentTrack).toBe(current);
+	expect(usePlaybackStore.getState().queue.map((t) => t.id)).toEqual(["a", "c", "b"]);
+});

@@ -38,7 +38,7 @@ function audioSettingsFixture(): PlaybackAudioSettingsResult {
 	};
 }
 
-test("PlaybackSurface 在 feature 层构造音频设置 ReactNode 并注入音量面板", () => {
+test("PlaybackSurface keeps Playback 2.0 audio settings out of the bottom-bar volume popover", () => {
 	const html = renderToStaticMarkup(
 		<PlaybackSurface
 			controlsProps={{ visible: true, onReveal: () => undefined }}
@@ -46,7 +46,11 @@ test("PlaybackSurface 在 feature 层构造音频设置 ReactNode 并注入音�
 		/>,
 	);
 
-	expect(html).toContain("volume-panel-extras");
-	expect(html).toContain("playback-audio-settings");
-	expect(html).toContain("音频设置");
+	// Wave 3: volume popover 只保留 upstream volume/fade；Playback 2.0 移到
+	// Settings Workbench 的 advanced audio slot（App 注入），不再注入底栏。
+	expect(html).not.toContain("volume-panel-extras");
+	expect(html).not.toContain("playback-audio-settings");
+	expect(html).toContain('id="volume-slider"');
+	expect(html).toContain('id="fade-in-slider"');
+	expect(html).toContain('id="fade-out-slider"');
 });
