@@ -122,6 +122,8 @@ const SONIC_WORKSHOP_REQUIRED_POLICY_LINES = [
 	"- 将代码完成状态宣称为已经通过 Windows/WebView2 实机验证、`Field Validated` 或 `Release Verified`。",
 ];
 // 这些文档共同定义当前收口事实，整篇锁定可避免用正则猜测自由文本的语义。
+const REVIEWED_DELTA_SUPERSEDED_NOTICE = "> **SUPERSEDED / HISTORICAL.** 本文件是当时的 selected-delta implementation 汇总，不再是 2.1 产品 parity 或 RC readiness authority。新权威为 `docs/audit/2.1-product-parity-audit.md` 与 `docs/audit/2.1-surface-manifest.json`；本文件中的 convergence/release disposition 不得单独生成 `RC_READY=true`。";
+
 const CONVERGENCE_POLICY_SNAPSHOT_DIGESTS = new Map([
 	["upstream-source-map", "41c3ca99cdfb7cc38864938c52624a64ecb3bf92d873d06b1167b6145d51be8d"],
 	["sonic-workshop-provenance", "ec07b553add89d5549e6ca5c0a12d1607228d4d83a7c117f2efdf74cd3841c89"],
@@ -288,7 +290,15 @@ function validatePolicySnapshot(documentName, source) {
 	if (!expected) {
 		return [`${documentName}: policy snapshot digest is not configured`];
 	}
-	const normalized = source.replace(/\r\n?/g, "\n");
+	let normalized = source.replace(/\r\n?/g, "\n");
+	if (documentName === "reviewed-delta-status") {
+		if (!normalized.includes(REVIEWED_DELTA_SUPERSEDED_NOTICE)) {
+			return ["reviewed-delta-status: superseded authority notice is required"];
+		}
+		// Preserve the historical body under its original digest while allowing only
+		// the exact canonical authority notice to sit outside that frozen record.
+		normalized = normalized.replace(`${REVIEWED_DELTA_SUPERSEDED_NOTICE}\n\n`, "");
+	}
 	const actual = createHash("sha256").update(normalized, "utf8").digest("hex");
 	return actual === expected
 		? []
