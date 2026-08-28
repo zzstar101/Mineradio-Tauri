@@ -12,7 +12,7 @@ import path from "node:path";
  * runner (Layer 4+); this guard catches silent CSS drift at the automation gate.
  */
 
-const repoRoot = path.resolve(__dirname, "../../..");
+const repoRoot = path.resolve(__dirname, "../..");
 const cssPath = path.join(
   repoRoot,
   "apps/web/src/styles/wave3-player-shell.css",
@@ -33,8 +33,8 @@ test("Wave 3 player-shell CSS exists and carries canonical geometry tokens", () 
     ".control-quality-chip",
     ".volume-main-row",
     ".fade-control-row",
-    "#fade-in-slider",
-    "#fade-out-slider",
+    "#volume-value",
+    ".lyric-timing-head strong",
     ".lyric-timing-actions",
     "#controls-hide-btn",
     "body.immersive-mode",
