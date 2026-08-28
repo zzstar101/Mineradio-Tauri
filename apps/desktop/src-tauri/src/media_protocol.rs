@@ -38,6 +38,8 @@ use tauri::{UriSchemeContext, UriSchemeResponder};
 
 const IMAGE_PROXY_USER_AGENT: &str =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const IMAGE_PROXY_ACCEPT: &str = "image/avif,image/webp,image/apng,image/*,*/*;q=0.8";
+const IMAGE_PROXY_MAX_BYTES: usize = 20 * 1024 * 1024;
 const MEDIA_FETCH_TIMEOUT: Duration = Duration::from_secs(120);
 
 fn http_client() -> &'static reqwest::Client {
@@ -183,11 +185,7 @@ async fn proxy_audio_for_provider(
 
 async fn proxy_image(target: &str) -> Result<(String, Vec<u8>), MediaError> {
     let url = parse_target_url(target)?;
-    let referer = referer_for_url(&url);
-    let response = http_client()
-        .get(url)
-        .header(header::USER_AGENT, IMAGE_PROXY_USER_AGENT)
-        .header(header::REFERER, referer)
+    let response = image_request(http_client(), url)
         .send()
         .await
         .map_err(|_| MediaError::Upstream)?;
@@ -195,14 +193,20 @@ async fn proxy_image(target: &str) -> Result<(String, Vec<u8>), MediaError> {
         return Err(MediaError::UpstreamStatus(response.status().as_u16()));
     }
     let content_type = content_type_of(&response).unwrap_or("").to_string();
-    if !content_type.starts_with("image/") {
-        return Err(MediaError::UpstreamStatus(502));
+    if response
+        .content_length()
+        .is_some_and(|length| length > IMAGE_PROXY_MAX_BYTES as u64)
+    {
+        return Err(MediaError::InvalidImage(
+            "image response exceeds size limit",
+        ));
     }
     let bytes = response
         .bytes()
         .await
         .map_err(|_| MediaError::Upstream)?
         .to_vec();
+    validate_image_response(&content_type, &bytes)?;
     Ok((content_type, bytes))
 }
 
@@ -236,13 +240,91 @@ fn content_type_of(response: &reqwest::Response) -> Option<&str> {
         .and_then(|value| value.to_str().ok())
 }
 
-fn referer_for_url(url: &url::Url) -> String {
-    let host = url.host_str().unwrap_or("").to_ascii_lowercase();
-    if host.contains("qq.com") || host.contains("qpic.cn") || host.contains("gtimg.cn") {
-        "https://y.qq.com/".to_string()
-    } else {
-        "https://music.163.com/".to_string()
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ImageProviderPolicy {
+    Qq,
+    Netease,
+    Soda,
+    Kugou,
+    Neutral,
+}
+
+impl ImageProviderPolicy {
+    fn referer(self) -> Option<&'static str> {
+        match self {
+            Self::Qq => Some("https://y.qq.com/"),
+            Self::Netease => Some("https://music.163.com/"),
+            Self::Soda => Some("https://www.qishui.com/"),
+            Self::Kugou => Some("https://www.kugou.com/"),
+            Self::Neutral => None,
+        }
     }
+}
+
+fn host_matches_domain(host: &str, domain: &str) -> bool {
+    host == domain
+        || host
+            .strip_suffix(domain)
+            .is_some_and(|prefix| prefix.ends_with('.'))
+}
+
+fn image_policy_for_url(url: &url::Url) -> ImageProviderPolicy {
+    let host = url.host_str().unwrap_or("").to_ascii_lowercase();
+    if ["y.qq.com", "gtimg.cn", "qpic.cn", "qlogo.cn"]
+        .iter()
+        .any(|domain| host_matches_domain(&host, domain))
+    {
+        ImageProviderPolicy::Qq
+    } else if ["music.126.net", "music.163.com"]
+        .iter()
+        .any(|domain| host_matches_domain(&host, domain))
+    {
+        ImageProviderPolicy::Netease
+    } else if ["douyinpic.com", "byteimg.com", "qishui.com", "douyin.com"]
+        .iter()
+        .any(|domain| host_matches_domain(&host, domain))
+    {
+        ImageProviderPolicy::Soda
+    } else if host_matches_domain(&host, "kugou.com") {
+        ImageProviderPolicy::Kugou
+    } else {
+        ImageProviderPolicy::Neutral
+    }
+}
+
+fn image_request(client: &reqwest::Client, url: url::Url) -> reqwest::RequestBuilder {
+    let policy = image_policy_for_url(&url);
+    let mut request = client
+        .get(url)
+        .header(header::USER_AGENT, IMAGE_PROXY_USER_AGENT)
+        .header(header::ACCEPT, IMAGE_PROXY_ACCEPT);
+    if let Some(referer) = policy.referer() {
+        request = request.header(header::REFERER, referer);
+    }
+    request
+}
+
+fn validate_image_response(content_type: &str, bytes: &[u8]) -> Result<(), MediaError> {
+    let media_type = content_type
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+    if !media_type.starts_with("image/") {
+        return Err(MediaError::InvalidImage(
+            "upstream response is not an image",
+        ));
+    }
+    if bytes.is_empty() {
+        return Err(MediaError::InvalidImage("upstream image body is empty"));
+    }
+    if bytes.len() > IMAGE_PROXY_MAX_BYTES {
+        return Err(MediaError::InvalidImage(
+            "image response exceeds size limit",
+        ));
+    }
+    Ok(())
 }
 
 fn ok_response(content_type: String, bytes: Vec<u8>) -> Response<Vec<u8>> {
@@ -258,9 +340,10 @@ fn ok_response(content_type: String, bytes: Vec<u8>) -> Response<Vec<u8>> {
 fn err_response(err: MediaError) -> Response<Vec<u8>> {
     let status = match &err {
         MediaError::BadRequest(_) => StatusCode::BAD_REQUEST,
-        MediaError::Upstream | MediaError::UpstreamStatus(_) | MediaError::Decrypt(_) => {
-            StatusCode::BAD_GATEWAY
-        }
+        MediaError::Upstream
+        | MediaError::UpstreamStatus(_)
+        | MediaError::InvalidImage(_)
+        | MediaError::Decrypt(_) => StatusCode::BAD_GATEWAY,
         MediaError::NotFound => StatusCode::NOT_FOUND,
     };
     let body = format!(
@@ -279,6 +362,7 @@ enum MediaError {
     BadRequest(&'static str),
     Upstream,
     UpstreamStatus(u16),
+    InvalidImage(&'static str),
     Decrypt(String),
     NotFound,
 }
@@ -291,8 +375,95 @@ impl std::fmt::Display for MediaError {
             MediaError::UpstreamStatus(status) => {
                 write!(f, "upstream media request returned {status}")
             }
+            MediaError::InvalidImage(message) => f.write_str(message),
             MediaError::Decrypt(message) => write!(f, "media decrypt failed: {message}"),
             MediaError::NotFound => f.write_str("unknown media route"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        http_client, image_policy_for_url, image_request, validate_image_response,
+        ImageProviderPolicy, IMAGE_PROXY_ACCEPT, IMAGE_PROXY_MAX_BYTES, IMAGE_PROXY_USER_AGENT,
+    };
+    use reqwest::header::{ACCEPT, REFERER, USER_AGENT};
+
+    fn request_for(source: &str) -> reqwest::Request {
+        image_request(http_client(), url::Url::parse(source).unwrap())
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn provider_image_requests_apply_confirmed_header_policy() {
+        let cases = [
+            (
+                "https://y.gtimg.cn/music/photo_new/cover.jpg",
+                ImageProviderPolicy::Qq,
+                Some("https://y.qq.com/"),
+            ),
+            (
+                "https://p2.music.126.net/cover.jpg",
+                ImageProviderPolicy::Netease,
+                Some("https://music.163.com/"),
+            ),
+            (
+                "https://p3-luna.douyinpic.com/cover.image",
+                ImageProviderPolicy::Soda,
+                Some("https://www.qishui.com/"),
+            ),
+            (
+                "https://imgessl.kugou.com/cover.jpg",
+                ImageProviderPolicy::Kugou,
+                Some("https://www.kugou.com/"),
+            ),
+            (
+                "https://cdn.example/cover.jpg",
+                ImageProviderPolicy::Neutral,
+                None,
+            ),
+        ];
+
+        for (source, expected_policy, expected_referer) in cases {
+            let url = url::Url::parse(source).unwrap();
+            assert_eq!(image_policy_for_url(&url), expected_policy);
+            let request = request_for(source);
+            assert_eq!(
+                request.headers().get(USER_AGENT).unwrap(),
+                IMAGE_PROXY_USER_AGENT
+            );
+            assert_eq!(request.headers().get(ACCEPT).unwrap(), IMAGE_PROXY_ACCEPT);
+            assert_eq!(
+                request
+                    .headers()
+                    .get(REFERER)
+                    .and_then(|value| value.to_str().ok()),
+                expected_referer
+            );
+        }
+    }
+
+    #[test]
+    fn provider_text_in_attacker_hostname_never_selects_provider_headers() {
+        for source in [
+            "https://y.qq.com.attacker.example/cover.jpg",
+            "https://fakekugou.example/cover.jpg",
+            "https://music.163.com.attacker.test/cover.jpg",
+            "https://douyinpic.com.attacker.test/cover.jpg",
+        ] {
+            let url = url::Url::parse(source).unwrap();
+            assert_eq!(image_policy_for_url(&url), ImageProviderPolicy::Neutral);
+            assert!(request_for(source).headers().get(REFERER).is_none());
+        }
+    }
+
+    #[test]
+    fn image_response_requires_image_content_non_empty_body_and_bounded_size() {
+        assert!(validate_image_response("image/jpeg; charset=binary", &[1, 2, 3]).is_ok());
+        assert!(validate_image_response("text/html", b"<html>").is_err());
+        assert!(validate_image_response("image/png", &[]).is_err());
+        assert!(validate_image_response("image/png", &vec![0; IMAGE_PROXY_MAX_BYTES + 1]).is_err());
     }
 }
