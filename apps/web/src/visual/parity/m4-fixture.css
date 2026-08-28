@@ -1,0 +1,33 @@
+html,
+body,
+#root,
+.m4-parity-root,
+.m4-parity-stage {
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	overflow: hidden;
+	background: radial-gradient(circle at 50% 42%, #10243b 0%, #050a12 58%, #010204 100%);
+}
+
+.m4-parity-stage > canvas {
+	width: 100% !important;
+	height: 100% !important;
+}
+
+.m4-parity-badge {
+	position: fixed;
+	right: 18px;
+	bottom: 14px;
+	z-index: 4;
+	padding: 6px 10px;
+	border: 1px solid rgba(160, 222, 255, 0.2);
+	border-radius: 999px;
+	background: rgba(2, 7, 14, 0.64);
+	color: rgba(218, 242, 255, 0.72);
+	font: 500 11px/1.2 "Microsoft YaHei UI", sans-serif;
+	letter-spacing: 0.08em;
+	pointer-events: none;
+}

@@ -270,8 +270,7 @@ export function useDesktopManagementRuntime(
 		const generation = guard.begin();
 		const storage = typeof localStorage === "undefined" ? null : localStorage;
 		const legacyBehavior = readLegacyCloseBehavior(storage);
-		// 缓存扫描可能递归遍历磁盘；仅由资源控制面显式刷新触发，不能阻塞应用启动。
-		void refreshDiagnostics();
+		// 缓存与 raw diagnostics 都只能由显式用户动作触发，不能在普通启动时 probe。
 		void desktop.getWindowRuntimeState()
 			.then(async (runtime) => {
 				if (!guard.isCurrent(generation)) return;
@@ -288,7 +287,7 @@ export function useDesktopManagementRuntime(
 			.catch((cause) => {
 				if (guard.isCurrent(generation)) setError(String(cause));
 			});
-	}, [desktop, enqueueCloseBehaviorMutation, refreshDiagnostics]);
+	}, [desktop, enqueueCloseBehaviorMutation]);
 
 	const chooseCacheRoot = useCallback(async () => {
 		if (typeof desktop.chooseCacheDirectory !== "function" || typeof desktop.setCacheRoot !== "function") return;

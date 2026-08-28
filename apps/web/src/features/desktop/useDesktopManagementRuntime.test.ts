@@ -309,11 +309,12 @@ test("working-set result feedback distinguishes completed skipped and failed out
 	});
 });
 
-test("mounting desktop management does not scan cache until the resource control is refreshed", async () => {
+test("mounting desktop management does not scan cache or probe raw diagnostics by default", async () => {
 	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");
 	(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 	const local = installTestLocalStorage();
 	let cacheCalls = 0;
+	let diagnosticsCalls = 0;
 	const desktop = {
 		getWindowRuntimeState: async () => windowRuntime("exit"),
 		setCloseBehavior: async () => windowRuntime("exit"),
@@ -321,7 +322,10 @@ test("mounting desktop management does not scan cache until the resource control
 			cacheCalls += 1;
 			return cacheSnapshot("resource-control");
 		},
-		getDesktopDiagnostics: async () => nativeDiagnostics(1),
+		getDesktopDiagnostics: async () => {
+			diagnosticsCalls += 1;
+			return nativeDiagnostics(1);
+		},
 	} as unknown as DesktopRuntimePort;
 	const controllerRef: { current: DesktopManagementRuntimeResult | null } = { current: null };
 
@@ -340,7 +344,9 @@ test("mounting desktop management does not scan cache until the resource control
 	});
 
 	expect(cacheCalls).toBe(0);
+	expect(diagnosticsCalls).toBe(0);
 	expect(controllerRef.current?.cache).toBeNull();
+	expect(controllerRef.current?.diagnostics).toBeNull();
 
 	await act(async () => {
 		await controllerRef.current!.refreshCache();
@@ -373,8 +379,7 @@ test("cache and composed diagnostics ignore older refreshes that resolve last", 
 		},
 		getDesktopDiagnostics: () => {
 			diagnosticsCalls += 1;
-			if (diagnosticsCalls === 1) return Promise.resolve(nativeDiagnostics(0));
-			return diagnosticsCalls === 2 ? oldDiagnostics.promise : newDiagnostics.promise;
+			return diagnosticsCalls === 1 ? oldDiagnostics.promise : newDiagnostics.promise;
 		},
 	} as unknown as DesktopRuntimePort;
 	const controllerRef: { current: DesktopManagementRuntimeResult | null } = { current: null };

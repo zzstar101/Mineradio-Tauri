@@ -82,7 +82,6 @@ import {
 } from "../shelf-focus-zone";
 import { createShelfTrackChangeGuard } from "../shelf-track-change-guard";
 import { isShelfPortraitViewport } from "../shelf-viewport";
-import { createVisualAudioDebugger } from "../visual-audio-debug";
 import {
 	createCursorActivityRuntime,
 	type CursorActivityRuntime,
@@ -1703,16 +1702,6 @@ export function createLegacyVisualComposition(
 					),
 				}),
 			);
-			const visualAudioDebugger = registerOwnedDisposable(scope, isCurrent, "visual-audio-debugger", "subscription", createVisualAudioDebugger({
-				frameSource,
-				audioEngine,
-				homeVisual,
-				getHomeActive: () => refs?.homeActiveRef?.current === true,
-				getPlaybackActive: () => nextContext.mediaClock.isPlaying(),
-				getCoverUrl: () => refs?.coverUrlRef?.current ?? "",
-				getFps: () => renderLoop.getFps(),
-			}));
-
 			registerOwnedCleanup(scope, isCurrent, "beatmap-lane", "subscription", renderLoop.registerStep(RenderStepSlot.Beatmap, () => {
 				if (refs?.beatMapVersionRef && syncedBeatMapVersion !== refs.beatMapVersionRef.current) {
 					syncedBeatMapVersion = refs.beatMapVersionRef.current;
@@ -1842,7 +1831,6 @@ export function createLegacyVisualComposition(
 					hasOpenContent: shelfManager.hasOpenContent(),
 				}));
 				homeVisual.updateCore(frame);
-				visualAudioDebugger.tick(frame);
 			}, { cadence: LEGACY_VISUAL_LANE_CADENCE.HomeVisual }));
 			registerOwnedCleanup(scope, isCurrent, "camera-lane", "subscription", renderLoop.registerStep(RenderStepSlot.CameraCinematic, (frame) => {
 				if (updateAndApplyFreeCamera(freeCamera, renderer.camera, frame.dt, frame.now, {

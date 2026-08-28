@@ -1,8 +1,4 @@
-import type {
-	DesktopCacheCategory,
-	DesktopDiagnosticsSnapshot,
-	DesktopJsonValue,
-} from "../../ports/desktop-runtime-port";
+import type { DesktopCacheCategory } from "../../ports/desktop-runtime-port";
 import type { DesktopManagementRuntimeResult } from "./useDesktopManagementRuntime";
 
 const CACHE_CATEGORIES: Array<{ category: DesktopCacheCategory; label: string }> = [
@@ -19,8 +15,6 @@ export const DESKTOP_RUNTIME_CONTROL_DEFINITIONS = Object.freeze({
 		runtime: "桌面运行时",
 		cache: "缓存治理",
 		resources: "资源治理",
-		nativeDiagnostics: "Native 诊断",
-		visualDiagnostics: "Visual 诊断",
 	}),
 	closeBehavior: Object.freeze({
 		label: "关闭窗口行为",
@@ -37,20 +31,6 @@ export const DESKTOP_RUNTIME_CONTROL_DEFINITIONS = Object.freeze({
 		clearPrefix: "清理",
 	}),
 	resources: Object.freeze({ trimWorkingSet: "整理应用工作集" }),
-	nativeFacts: Object.freeze([
-		"生命周期",
-		"托盘",
-		"主窗口",
-		"进程内存",
-		"桌面歌词",
-	]),
-	visualFacts: Object.freeze([
-		"渲染状态",
-		"帧耗时 P95",
-		"GPU 资源",
-		"后台任务",
-	]),
-	refreshDiagnostics: "刷新诊断",
 });
 
 export const DESKTOP_RUNTIME_SETTINGS_SEARCH_TERMS = Object.freeze([
@@ -62,36 +42,7 @@ export const DESKTOP_RUNTIME_SETTINGS_SEARCH_TERMS = Object.freeze([
 		`${DESKTOP_RUNTIME_CONTROL_DEFINITIONS.cache.clearPrefix}${label}`,
 	]),
 	...Object.values(DESKTOP_RUNTIME_CONTROL_DEFINITIONS.resources),
-	...DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts,
-	...DESKTOP_RUNTIME_CONTROL_DEFINITIONS.visualFacts,
-	DESKTOP_RUNTIME_CONTROL_DEFINITIONS.refreshDiagnostics,
 ]);
-
-type JsonRecord = Record<string, DesktopJsonValue>;
-
-function asRecord(value: DesktopJsonValue | null | undefined): JsonRecord | null {
-	return value !== null && typeof value === "object" && !Array.isArray(value)
-		? value as JsonRecord
-		: null;
-}
-
-function recordString(record: JsonRecord | null, key: string): string | null {
-	const value = record?.[key];
-	return typeof value === "string" ? value : null;
-}
-
-function recordNumber(record: JsonRecord | null, key: string): number | null {
-	const value = record?.[key];
-	return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function diagnosticProbeValue(
-	diagnostics: DesktopDiagnosticsSnapshot | null,
-	kind: string,
-): JsonRecord | null {
-	const probe = diagnostics?.probes.find((candidate) => candidate.kind === kind);
-	return probe?.status === "healthy" ? asRecord(probe.value) : null;
-}
 
 export function formatDesktopBytes(value: number): string {
 	const bytes = Math.max(0, Number.isFinite(value) ? value : 0);
@@ -101,22 +52,7 @@ export function formatDesktopBytes(value: number): string {
 	return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
-function formatDiagnosticCount(diagnostics: DesktopDiagnosticsSnapshot | null): string {
-	if (!diagnostics) return "等待采样";
-	const healthy = diagnostics.probes.filter((probe) => probe.status === "healthy").length;
-	return `${healthy}/${diagnostics.probes.length} probes · ${diagnostics.recentErrors.length} errors`;
-}
-
 export function DesktopRuntimeControls(props: DesktopManagementRuntimeResult) {
-	const nativeDiagnostics = props.diagnostics?.native ?? null;
-	const visualDiagnostics = props.diagnostics?.visual ?? null;
-	const windowProbe = diagnosticProbeValue(nativeDiagnostics, "window");
-	const trayProbe = diagnosticProbeValue(nativeDiagnostics, "tray");
-	const lifecycleProbe = asRecord(trayProbe?.lifecycle);
-	const nativeMemoryProbe = diagnosticProbeValue(nativeDiagnostics, "native");
-	const desktopLyricsProbe = diagnosticProbeValue(nativeDiagnostics, "desktopLyrics");
-	const workingSetBytes = recordNumber(nativeMemoryProbe, "workingSetBytes");
-	const privateBytes = recordNumber(nativeMemoryProbe, "privateBytes");
 	const cache = props.cache;
 
 	return (
@@ -209,34 +145,7 @@ export function DesktopRuntimeControls(props: DesktopManagementRuntimeResult) {
 					: ""}
 			</div>
 
-			<div className="fx-section-label">{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.sections.nativeDiagnostics}</div>
-			<div className="fx-runtime-summary">
-				<strong>{nativeDiagnostics?.health ?? "unavailable"}</strong>
-				<small>{formatDiagnosticCount(nativeDiagnostics)}</small>
-			</div>
-			<div className="fx-runtime-diagnostic-grid">
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[0]}</span><strong>{recordString(lifecycleProbe, "phase") ?? "—"}</strong><small>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[1]} {recordString(trayProbe, "trayPhase") ?? "—"}</small></div>
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[2]}</span><strong>{windowProbe?.isVisible === true ? "可见" : windowProbe?.isMinimized === true ? "最小化" : "后台"}</strong><small>{windowProbe?.isFocused === true ? "已聚焦" : "未聚焦"}</small></div>
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[3]}</span><strong>{workingSetBytes === null ? "—" : formatDesktopBytes(workingSetBytes)}</strong><small>{privateBytes === null ? "private —" : `private ${formatDesktopBytes(privateBytes)}`}</small></div>
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.nativeFacts[4]}</span><strong>{desktopLyricsProbe?.inputWorkerRunning === true ? "输入监听中" : "监听未运行"}</strong><small>{desktopLyricsProbe?.hasPayload === true ? "payload ready" : "等待 payload"}</small></div>
-			</div>
-
-			<div className="fx-section-label">{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.sections.visualDiagnostics}</div>
-			<div className="fx-runtime-summary">
-				<strong>{visualDiagnostics?.resources.pressure ?? "unavailable"}</strong>
-				<small>{visualDiagnostics ? `${visualDiagnostics.runtime.mode} · generation ${visualDiagnostics.runtime.generation}` : "等待 Visual Engine"}</small>
-			</div>
-			<div className="fx-runtime-diagnostic-grid">
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.visualFacts[0]}</span><strong>{visualDiagnostics?.runtime.mounted ? (visualDiagnostics.runtime.running ? "运行中" : "已挂载") : "未挂载"}</strong><small>{visualDiagnostics ? `${visualDiagnostics.frames.renders} renders` : "—"}</small></div>
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.visualFacts[1]}</span><strong>{visualDiagnostics ? `${visualDiagnostics.frames.frameCostP95Ms.toFixed(1)} ms` : "—"}</strong><small>{visualDiagnostics ? `${visualDiagnostics.frames.longFrames} long frames` : "—"}</small></div>
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.visualFacts[2]}</span><strong>{visualDiagnostics ? formatDesktopBytes(visualDiagnostics.resources.current.textureBytes + visualDiagnostics.resources.current.geometryBytes) : "—"}</strong><small>{visualDiagnostics ? `${visualDiagnostics.resources.current.meshCount} meshes` : "—"}</small></div>
-				<div><span>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.visualFacts[3]}</span><strong>{visualDiagnostics ? visualDiagnostics.tasks.queued + visualDiagnostics.tasks.running : "—"}</strong><small>{visualDiagnostics ? `${visualDiagnostics.tasks.failed} failed · ${visualDiagnostics.tasks.staleResultsDropped} stale` : "—"}</small></div>
-			</div>
-			<div className="fx-runtime-actions">
-				<button type="button" className="fx-mini-btn ghost" disabled={props.busy} onClick={() => void props.refreshDiagnostics()}>{DESKTOP_RUNTIME_CONTROL_DEFINITIONS.refreshDiagnostics}</button>
-			</div>
 			{cache?.fallbackUsed ? <div className="fx-runtime-warning">缓存目录不可用，当前使用安全回退目录。</div> : null}
-			{props.diagnostics?.visualError ? <div className="fx-runtime-warning">Visual 诊断读取失败：{props.diagnostics.visualError}</div> : null}
 			{props.error ? <div className="fx-runtime-warning">{props.error}</div> : null}
 		</div>
 	);

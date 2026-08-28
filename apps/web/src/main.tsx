@@ -26,21 +26,10 @@ import { createUpdateExperienceController } from "./features/updater/update-expe
 import { createPreferencesRepository } from "./preferences/create-preferences-repository";
 import "./styles.css";
 
-const isM4ParityRoute = new URLSearchParams(window.location.search).get("m4-parity") === "1";
-
 async function createApplicationRoot(): Promise<React.ReactNode> {
 	if (isDesktopLyricsRoute(window.location)) {
 		document.body.classList.add("desktop-lyrics-root");
 		return <DesktopLyricsRoot />;
-	}
-	if (isM4ParityRoute) {
-		return React.createElement(
-			React.lazy(() =>
-				import("./visual/parity/M4ParityRoot").then((module) => ({
-					default: module.M4ParityRoot,
-				})),
-			),
-		);
 	}
 	// 上游 2.1 startup-resume：React 首帧前恢复上次播放 checkpoint（曲目/队列/位置/
 	// 音量/mode），autoplay 由 envelope.autoplayOnStartup 门控。必须在 App 挂载前完成，

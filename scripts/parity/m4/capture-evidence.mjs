@@ -325,8 +325,7 @@ async function probePreview(baseUrl) {
 }
 
 function scenarioUrl(baseUrl, scene, seed, sonicQuality) {
-	const url = new URL(baseUrl);
-	url.searchParams.set("m4-parity", "1");
+	const url = new URL("m4-fixture.html", baseUrl);
 	url.searchParams.set("scene", scene);
 	url.searchParams.set("mode", "deterministic");
 	url.searchParams.set("seed", String(seed));
