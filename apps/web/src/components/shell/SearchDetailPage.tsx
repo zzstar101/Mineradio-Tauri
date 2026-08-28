@@ -5,6 +5,7 @@ import { isPlayable } from "../search/play-search-result";
 import { useSearchStore, type SearchMode } from "../../stores/search-store";
 import { searchSessionController } from "../../features/search/search-session-runtime";
 import { resolveVirtualListWindow, type VirtualListWindow } from "./virtual-list";
+import { useCoverSourceResolver } from "../../cover/resolved-cover-source";
 
 export interface SearchDetailPageProps {
 	client: SearchExperiencePort | null;
@@ -80,6 +81,8 @@ export function SearchDetailPage({
 	isResultLiked,
 	isResultLikeBusy,
 }: SearchDetailPageProps): ReactElement | null {
+	const resolveCover = useCoverSourceResolver();
+	const resolvedCoverStyle = (source: unknown) => coverStyle(resolveCover(source).uri);
 	const detailOpen = useSearchStore((s) => s.detailOpen);
 	const keyword = useSearchStore((s) => s.keyword);
 	const mode = useSearchStore((s) => s.mode);
@@ -243,7 +246,7 @@ export function SearchDetailPage({
 				{mode === "podcast" && selectedPodcast ? (
 					<div className="search-detail-podcast-head">
 						<button className="search-detail-podcast-back" type="button" onClick={() => controller.backToPodcastResults()}>返回播客</button>
-						<div className={`search-detail-cover${selectedPodcast.coverUrl ? " has-cover" : ""}`} style={coverStyle(selectedPodcast.coverUrl)} />
+						<div className={`search-detail-cover${selectedPodcast.coverUrl ? " has-cover" : ""}`} style={resolvedCoverStyle(selectedPodcast.coverUrl)} />
 						<div>
 							<div className="search-detail-track-title">{selectedPodcast.name || "播客"}</div>
 							<div className="search-detail-track-sub">{selectedPodcast.djName || selectedPodcast.category || `${selectedPodcast.programCount || programs.length} 期`}</div>
@@ -307,7 +310,7 @@ export function SearchDetailPage({
 								>
 									<div className="search-detail-track-index">{String(index + 1).padStart(2, "0")}</div>
 									<div className="search-detail-track-main">
-										<div className={`search-detail-cover${track.coverUrl ? " has-cover" : ""}`} style={coverStyle(track.coverUrl)} />
+										<div className={`search-detail-cover${track.coverUrl ? " has-cover" : ""}`} style={resolvedCoverStyle(track.coverUrl)} />
 										<div className="search-detail-track-text">
 											<div className="search-detail-track-title">{track.title || "未命名歌曲"}</div>
 											<div className="search-detail-track-sub">
@@ -421,7 +424,7 @@ export function SearchDetailPage({
 									onClick={() => void openPodcastPrograms(podcast)}
 								>
 									<div className="search-detail-track-index">{String(index + 1).padStart(2, "0")}</div>
-									<div className={`search-detail-cover${podcast.coverUrl ? " has-cover" : ""}`} style={coverStyle(podcast.coverUrl)} />
+									<div className={`search-detail-cover${podcast.coverUrl ? " has-cover" : ""}`} style={resolvedCoverStyle(podcast.coverUrl)} />
 									<div className="search-detail-track-text">
 										<div className="search-detail-track-title">{podcast.name}</div>
 										<div className="search-detail-track-sub">{podcast.djName || podcast.category || `${podcast.programCount || 0} 期`}</div>
@@ -455,7 +458,7 @@ export function SearchDetailPage({
 								>
 									<div className="search-detail-track-index">{String(index + 1).padStart(2, "0")}</div>
 									<div className="search-detail-track-main">
-										<div className={`search-detail-cover${program.coverUrl ? " has-cover" : ""}`} style={coverStyle(program.coverUrl)} />
+										<div className={`search-detail-cover${program.coverUrl ? " has-cover" : ""}`} style={resolvedCoverStyle(program.coverUrl)} />
 										<div className="search-detail-track-text">
 											<div className="search-detail-track-title">{program.title}</div>
 											<div className="search-detail-track-sub">{program.radioName || program.djName || "Podcast"}</div>

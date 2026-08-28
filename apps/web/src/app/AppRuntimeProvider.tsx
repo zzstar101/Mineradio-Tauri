@@ -33,3 +33,8 @@ export function useAppServices(): AppServices | null {
 	}
 	return services;
 }
+
+export function useOptionalAppServices(): AppServices | null {
+	const services = useContext(AppServicesContext);
+	return services === missingServices ? null : services;
+}

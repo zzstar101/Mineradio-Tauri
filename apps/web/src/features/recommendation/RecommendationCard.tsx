@@ -5,6 +5,7 @@ import type {
 	RecommendationModuleKind,
 } from "@mineradio/shared";
 import { resolveRecommendationCardDisplay } from "./recommendation-page-policy";
+import { useCoverSourceResolver } from "../../cover/resolved-cover-source";
 
 function coverStyle(url: string | undefined): CSSProperties | undefined {
 	return url ? { backgroundImage: `url("${url}")` } : undefined;
@@ -33,6 +34,8 @@ export function RecommendationCard({
 	onOpenPlaylist,
 	onPlayStream,
 }: RecommendationCardProps): ReactElement {
+	const resolveCover = useCoverSourceResolver();
+	const coverSource = resolveCover(card.coverUrl).uri;
 	const { title: cardTitle, subtitle: cardSubtitle } =
 		resolveRecommendationCardDisplay(card);
 
@@ -63,8 +66,8 @@ export function RecommendationCard({
 				{...interactiveProps}
 			>
 				<div
-					className={`home-recommendation-track-cover${card.coverUrl ? " has-cover" : ""}`}
-					style={coverStyle(card.coverUrl)}
+					className={`home-recommendation-track-cover${coverSource ? " has-cover" : ""}`}
+					style={coverStyle(coverSource)}
 				/>
 				<div className="home-recommendation-track-text">
 					{cardTitle ? <div className="home-recommendation-title">{cardTitle}</div> : null}
@@ -83,8 +86,8 @@ export function RecommendationCard({
 				{...interactiveProps}
 			>
 				<div
-					className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`}
-					style={coverStyle(card.coverUrl)}
+					className={`home-recommendation-media-cover${coverSource ? " has-cover" : ""}`}
+					style={coverStyle(coverSource)}
 				/>
 				{cardTitle ? (
 					<div className="home-recommendation-netease-title">
@@ -108,8 +111,8 @@ export function RecommendationCard({
 		>
 			<div className="home-recommendation-cover-card">
 				<div
-					className={`home-recommendation-media-cover${card.coverUrl ? " has-cover" : ""}`}
-					style={coverStyle(card.coverUrl)}
+					className={`home-recommendation-media-cover${coverSource ? " has-cover" : ""}`}
+					style={coverStyle(coverSource)}
 				/>
 			</div>
 			{cardTitle ? (

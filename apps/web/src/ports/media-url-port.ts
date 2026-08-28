@@ -9,6 +9,7 @@ export interface MediaUrlOptions {
  */
 export interface MediaImageSource {
 	readonly uri: string;
+	readonly logicalSource?: string;
 	readonly fallbackUri?: string;
 }
 

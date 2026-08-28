@@ -32,6 +32,7 @@ import type {
 	HomeListenRecord,
 	HomeListenSummary,
 } from "../features/home/home-listen-ledger";
+import { useCoverSourceResolver } from "../cover/resolved-cover-source";
 
 export type {
 	HomeListenRecord,
@@ -493,6 +494,7 @@ function HomePlaylistDetailPage({
 	props: EmptyHomeHostProps;
 	detail: HomePlaylistDetailView;
 }): ReactElement {
+	const resolveCover = useCoverSourceResolver();
 	const playlist = detail.playlist;
 	const tracks = detail.tracks;
 	const [scrollTop, setScrollTop] = useState(0);
@@ -522,6 +524,7 @@ function HomePlaylistDetailPage({
 	const providerName = HOME_PROVIDER_LABELS[provider];
 	const totalCount = playlist.trackCount ?? tracks.length;
 	const cover = playlist.coverUrl || tracks.find((track) => track.coverUrl)?.coverUrl;
+	const coverSource = resolveCover(cover).uri;
 	const loadedCount = tracks.length;
 	const loadedLabel = totalCount && totalCount !== loadedCount
 		? `${loadedCount}/${totalCount}`
@@ -535,7 +538,7 @@ function HomePlaylistDetailPage({
 					<div className="home-detail-provider">{providerName}</div>
 				</div>
 				<div className="home-detail-hero">
-					<div className={`home-detail-cover${cover ? " has-cover" : ""}`} style={coverStyle(cover)} />
+					<div className={`home-detail-cover${coverSource ? " has-cover" : ""}`} style={coverStyle(coverSource)} />
 					<div className="home-detail-copy">
 						<div className="home-detail-kicker">歌单</div>
 						<h2 className="home-detail-title">{playlist.name || "歌单详情"}</h2>
@@ -600,7 +603,7 @@ function HomePlaylistDetailPage({
 									>
 										<div className="home-detail-track-index">{String(index + 1).padStart(2, "0")}</div>
 										<div className="home-detail-track-main">
-											<div className={`home-detail-track-cover${track.coverUrl ? " has-cover" : ""}`} style={coverStyle(track.coverUrl)} />
+											<div className={`home-detail-track-cover${resolveCover(track.coverUrl).uri ? " has-cover" : ""}`} style={coverStyle(resolveCover(track.coverUrl).uri)} />
 											<div className="home-detail-track-text">
 												<div className="home-detail-track-title">{track.title || "未命名歌曲"}</div>
 												<div className="home-detail-track-sub">
@@ -648,6 +651,8 @@ function HomePlaylistDetailPage({
 }
 
 export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
+	const resolveCover = useCoverSourceResolver();
+	const resolvedCoverStyle = (source: unknown) => coverStyle(resolveCover(source).uri);
 	// 歌单详情优先于推荐页：在推荐页里点歌单卡片时，
 	// recommendationDetail 仍然非空，若它先行判断会永远挡住详情页。
 	if (props.playlistDetail) {
@@ -822,13 +827,13 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 							<div className="home-card-label">Library</div>
 							<div className="home-card-title" id="home-weather-card-title">{loggedOut ? "本地音乐" : "我的歌单"}</div>
 							<div className="home-card-sub" id="home-weather-card-sub">{loggedOut ? "导入本地音乐" : playlistSub(firstPlaylist)}</div>
-							<div className={cardCoverClass(libraryCover)} id="home-weather-art" style={coverStyle(libraryCover)} />
+							<div className={cardCoverClass(libraryCover)} id="home-weather-art" style={resolvedCoverStyle(libraryCover)} />
 						</button>
 						<button className="home-card" data-home-card="daily" data-home-tone="mix" type="button" onClick={props.onPlayDaily}>
 							<div className="home-card-label">Daily</div>
 							<div className="home-card-title" id="home-daily-title">{loggedOut ? "每日推荐" : (daily?.title || "每日推荐")}</div>
 							<div className="home-card-sub" id="home-daily-sub">{loggedOut ? "登录后同步你的今日歌曲" : (daily ? `当前已载入 ${dashboard.dailyLoadedCount} 首 · ${artistLine(daily, "今日歌曲")}` : "同步你的今日歌曲")}</div>
-							<div className={cardCoverClass(dailyCover)} id="home-daily-art" style={coverStyle(dailyCover)} />
+							<div className={cardCoverClass(dailyCover)} id="home-daily-art" style={resolvedCoverStyle(dailyCover)} />
 						</button>
 						<button
 							className="home-card"
@@ -843,19 +848,19 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 							<div className="home-card-label">Recent</div>
 							<div className="home-card-title" id="home-private-title">{recentTrack?.title || "最近播放"}</div>
 							<div className="home-card-sub" id="home-private-sub">{recentTrack ? artistLine(recentTrack) : "有效播放后会出现在这里"}</div>
-							<div className={cardCoverClass(privateCover)} id="home-private-art" style={coverStyle(privateCover)} />
+							<div className={cardCoverClass(privateCover)} id="home-private-art" style={resolvedCoverStyle(privateCover)} />
 						</button>
 						<button className="home-card" data-home-card="continue" data-home-tone="mix" type="button" onClick={playContinue}>
 							<div className="home-card-label">Continue</div>
 							<div className="home-card-title" id="home-continue-title">{dashboard.continue.title}</div>
 							<div className="home-card-sub" id="home-continue-sub">{dashboard.continue.subtitle}</div>
-							<div className={cardCoverClass(continueTrack?.coverUrl || continueCover)} id="home-continue-art" style={coverStyle(continueTrack?.coverUrl || continueCover)} />
+							<div className={cardCoverClass(continueTrack?.coverUrl || continueCover)} id="home-continue-art" style={resolvedCoverStyle(continueTrack?.coverUrl || continueCover)} />
 						</button>
 						<button className="home-card" data-home-card="profile" data-home-tone="local" type="button" onClick={props.onPlayNextUp ?? props.onOpenInsight}>
 							<div className="home-card-label">Next Up</div>
 							<div className="home-card-title" id="home-profile-title">{nextUp?.title || topArtist?.name || topSong?.title || "队列末尾"}</div>
 							<div className="home-card-sub" id="home-profile-sub">{nextUp ? artistLine(nextUp) : (topArtist ? `常听歌手 · ${topArtist.plays} 次` : "当前队列没有下一首")}</div>
-							<div className={cardCoverClass(nextUp?.coverUrl || profileCover)} id="home-profile-art" style={coverStyle(nextUp?.coverUrl || profileCover)} />
+							<div className={cardCoverClass(nextUp?.coverUrl || profileCover)} id="home-profile-art" style={resolvedCoverStyle(nextUp?.coverUrl || profileCover)} />
 						</button>
 						<button className="home-card" data-home-card="more" data-home-tone="local" type="button" onClick={() => {
 							if (props.onPlayForYou) props.onPlayForYou(0);
@@ -864,7 +869,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 							<div className="home-card-label">For You</div>
 							<div className="home-card-title" id="home-library-title">{firstForYou?.title || "为你推荐"}</div>
 							<div className="home-card-sub" id="home-library-sub">{firstForYou ? `${artistLine(firstForYou)} · 今日稳定` : "播放几首后生成推荐"}</div>
-							<div className={cardCoverClass(firstForYou?.coverUrl || moreCover)} id="home-library-art" style={coverStyle(firstForYou?.coverUrl || moreCover)} />
+							<div className={cardCoverClass(firstForYou?.coverUrl || moreCover)} id="home-library-art" style={resolvedCoverStyle(firstForYou?.coverUrl || moreCover)} />
 						</button>
 					</div>
 
@@ -896,7 +901,7 @@ export function EmptyHomeHost(props: EmptyHomeHostProps): ReactElement {
 												onClick={() => handleTileAction(props, tile)}
 												key={homeTileKey(tile, index)}
 											>
-												<div className={`home-tile-cover${"coverUrl" in tile && tile.coverUrl ? " has-cover" : ""}`} style={"coverUrl" in tile ? coverStyle(tile.coverUrl) : undefined} />
+												<div className={`home-tile-cover${"coverUrl" in tile && tile.coverUrl ? " has-cover" : ""}`} style={"coverUrl" in tile ? resolvedCoverStyle(tile.coverUrl) : undefined} />
 												<div className="home-tile-title">{tile.title}</div>
 												<div className="home-tile-sub">{tile.sub}</div>
 											</button>

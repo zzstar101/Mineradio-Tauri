@@ -574,6 +574,10 @@ export function createHomeCoverTextureController(
 
 	function onCoverFailure(runToken: number): void {
 		if (!isCurrent(runToken)) return;
+		if (committedUrl && uniforms.uHasCover.value > 0.5) {
+			if (uniforms.uLoading) uniforms.uLoading.value = 0;
+			return;
+		}
 		committedUrl = "";
 		uniforms.uHasCover.value = 0;
 		if (uniforms.uLoading) uniforms.uLoading.value = 0;

@@ -61,6 +61,7 @@ import {
 	PlaylistDetail,
 	SongUrlResult,
 	type ZodTypeLike,
+	inspectCoverSource,
 } from "@mineradio/shared";
 import { invokeTauriCommand } from "../tauri/runtime";
 
@@ -341,11 +342,10 @@ export class SidecarClient {
 	}
 
 	imageProxyUrl(url: string, cacheBust = false, now = Date.now()): string {
-		if (!url) return "";
-		if (/^data:image\//i.test(url) || /^blob:/i.test(url)) return url;
-		if (/^(mineradio-tauri:\/\/localhost|https?:\/\/mineradio-tauri\.localhost)(\/|$)/i.test(url)) return url;
-		if (!/^https?:\/\//i.test(url)) return "";
-		const params = new URLSearchParams({ url });
+		const inspected = inspectCoverSource(url);
+		if (inspected.kind === "empty" || inspected.kind === "invalid") return "";
+		if (inspected.kind !== "remote") return inspected.normalized;
+		const params = new URLSearchParams({ url: inspected.normalized });
 		if (cacheBust) params.set("v", String(now));
 		return `${this.mediaProxyBase}/image-proxy?${params.toString()}`;
 	}

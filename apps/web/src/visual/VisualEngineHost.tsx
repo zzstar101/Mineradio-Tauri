@@ -20,6 +20,7 @@ import type { ShelfDetailContentListController } from "./shelf-detail-data";
 import { resolveShelfItems } from "./shelf-items";
 import type { ShelfCameraMode, ShelfMode, ShelfPresence, ShelfSettings } from "../stores/shelf-store";
 import type { MediaImageSource, MediaUrlPort } from "../ports/media-url-port";
+import { resolveCoverSource, coverSourceToCssBackgroundImage } from "../cover/resolved-cover-source";
 import { createLegacyVisualEventBridge } from "./runtime/legacy-visual-events";
 import {
 	buildLyricsVisualSnapshot,
@@ -156,25 +157,19 @@ export function resolveVisualTrackKey(currentTrack: Track | null | undefined): s
 }
 
 export function normalizeVisualCoverUrl(coverUrl: string): string {
-	const url = String(coverUrl || "").trim();
-	if (!url) return "";
-	if (/^\/\//.test(url)) return `https:${url}`;
-	return url;
+	return resolveCoverSource(coverUrl, undefined).logicalSource;
 }
 
 export function resolveVisualImageSource(
 	coverUrl: string,
 	mediaUrl: Pick<MediaUrlPort, "imageSource"> | null | undefined,
 ): MediaImageSource {
-	const normalizedCoverUrl = normalizeVisualCoverUrl(coverUrl);
-	if (!normalizedCoverUrl) return { uri: "" };
-	return mediaUrl?.imageSource(normalizedCoverUrl) ?? { uri: normalizedCoverUrl };
+	const resolved = resolveCoverSource(coverUrl, mediaUrl);
+	return { uri: resolved.uri, logicalSource: resolved.logicalSource };
 }
 
 export function coverUrlToCssBackgroundImage(coverUrl: string): string | undefined {
-	const url = String(coverUrl || "").trim();
-	if (!url) return undefined;
-	return `url("${url.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")}")`;
+	return coverSourceToCssBackgroundImage(coverUrl);
 }
 
 export function mapShelfItemCoverSources(
@@ -246,16 +241,18 @@ export function VisualEngineHost(props: VisualEngineHostProps): ReactElement {
 	useEffect(() => {
 		if (visualShelfSettings.mergeCollections) setShelfPane("mine");
 	}, [visualShelfSettings.mergeCollections]);
-	// CSS 背景继续使用直链；WebGL 来源由 MediaUrlPort 独立解析，二者互不泄漏 transport 细节。
-	const directCoverUrl = useMemo(
-		() => normalizeVisualCoverUrl(resolveVisualCoverUrl(props.currentCoverUrl, props.currentTrack)),
+	const rawCoverUrl = useMemo(
+		() => resolveVisualCoverUrl(props.currentCoverUrl, props.currentTrack),
 		[props.currentCoverUrl, props.currentTrack],
 	);
-	const albumBgStyle = directCoverUrl ? { backgroundImage: coverUrlToCssBackgroundImage(directCoverUrl) } : undefined;
-	const webglCoverSource = useMemo(
-		() => resolveVisualImageSource(directCoverUrl, props.mediaUrl),
-		[directCoverUrl, props.mediaUrl],
+	const resolvedCoverSource = useMemo(
+		() => resolveCoverSource(rawCoverUrl, props.mediaUrl),
+		[rawCoverUrl, props.mediaUrl],
 	);
+	const albumBgStyle = resolvedCoverSource.uri
+		? { backgroundImage: coverUrlToCssBackgroundImage(resolvedCoverSource.uri) }
+		: undefined;
+	const webglCoverSource: MediaImageSource = resolvedCoverSource;
 
 	const handleShelfModeChange = useCallback((mode: "side") => {
 		runtimeShelfModeOverrideRef.current = mode;
@@ -378,7 +375,7 @@ export function VisualEngineHost(props: VisualEngineHostProps): ReactElement {
 			<div id="custom-bg" aria-hidden="true">
 				<video id="custom-bg-video" muted loop playsInline preload="metadata" />
 			</div>
-			<div id="album-bg" className={directCoverUrl && !workshopActive ? "visible" : undefined} style={albumBgStyle} aria-hidden="true" />
+			<div id="album-bg" className={resolvedCoverSource.uri && !workshopActive ? "visible" : undefined} style={albumBgStyle} aria-hidden="true" />
 			<div
 				id="visual-host"
 				className={workshopActive ? "visual-host sonic-workshop-active" : "visual-host"}

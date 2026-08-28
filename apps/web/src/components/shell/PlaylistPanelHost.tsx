@@ -9,6 +9,7 @@ import type {
 } from "@mineradio/shared";
 import type { ImportedPlaylistRecord } from "../../shared-playlist/imported-playlists";
 import { resolveVirtualListWindow } from "./virtual-list";
+import { useCoverSourceResolver, type ResolvedCoverSource } from "../../cover/resolved-cover-source";
 
 export type PlaylistPanelTab = "queue" | "playlists" | "podcasts";
 const QUEUE_ROW_HEIGHT = 62;
@@ -67,8 +68,13 @@ function modeLabel(mode: PlaybackMode): string {
 	return "顺序循环";
 }
 
-function coverNode(url: string | undefined, className = ""): ReactElement {
-	return url ? <img className={className || undefined} src={url} alt="" loading="lazy" decoding="async" /> : <div className={className || undefined} style={{ width: 44, height: 44, borderRadius: 8, background: "rgba(255,255,255,.06)", flexShrink: 0 }} />;
+function coverNode(
+	url: string | undefined,
+	resolveCover: (source: unknown) => ResolvedCoverSource,
+	className = "",
+): ReactElement {
+	const source = resolveCover(url).uri;
+	return source ? <img className={className || undefined} src={source} alt="" loading="lazy" decoding="async" /> : <div className={className || undefined} style={{ width: 44, height: 44, borderRadius: 8, background: "rgba(255,255,255,.06)", flexShrink: 0 }} />;
 }
 
 function detailKey(playlist: PlaylistDetailSummary): string {
@@ -80,6 +86,7 @@ function importedDetailKey(record: ImportedPlaylistRecord): string {
 }
 
 export function PlaylistPanelHost(props: PlaylistPanelHostProps): ReactElement {
+	const resolveCover = useCoverSourceResolver();
 	const [queueScrollTop, setQueueScrollTop] = useState(0);
 	const [detailScrollTop, setDetailScrollTop] = useState(0);
 	const [podcastScrollTop, setPodcastScrollTop] = useState(0);
@@ -169,7 +176,7 @@ export function PlaylistPanelHost(props: PlaylistPanelHostProps): ReactElement {
 					const artist = track.artists.join(" / ") || "未知歌手";
 					return (
 						<div key={`${track.provider}:${track.id}:${index}`} className={now ? "queue-item now" : "queue-item"} onClick={() => props.onPlayQueueIndex?.(index)}>
-							{coverNode(track.coverUrl, "queue-cover")}
+							{coverNode(track.coverUrl, resolveCover, "queue-cover")}
 							<div className="qi-info">
 								<div className="qi-name">{track.title}</div>
 								<div className="qi-sub">
@@ -215,7 +222,7 @@ export function PlaylistPanelHost(props: PlaylistPanelHostProps): ReactElement {
 			<div className="pl-inline-detail" data-pl-detail={detail.key}>
 				<div className="pl-detail-sticky">
 					<div className="pl-detail-head">
-						{coverNode((detail.playlist as PlaylistSummary).coverUrl, "pl-detail-cover")}
+						{coverNode((detail.playlist as PlaylistSummary).coverUrl, resolveCover, "pl-detail-cover")}
 						<div className="pl-detail-title-wrap">
 							<div className="pl-detail-title">{detail.playlist.name || "歌单详情"}</div>
 							<div className="pl-detail-sub">{(detail.playlist.trackCount ?? tracks.length) || 0} 首</div>
@@ -243,7 +250,7 @@ export function PlaylistPanelHost(props: PlaylistPanelHostProps): ReactElement {
 						const index = window.startIndex + localIndex;
 						return (
 						<div className="pl-detail-row" data-pl-detail-row={index} key={`${track.provider}:${track.id}:${index}`} onClick={() => props.onPlayTracks?.(tracks, index, detail.playlist.name)}>
-							{coverNode(track.coverUrl, "pl-detail-row-cover")}
+							{coverNode(track.coverUrl, resolveCover, "pl-detail-row-cover")}
 							<div className="pl-detail-row-main">
 								<div className="pl-detail-row-title">{track.title}</div>
 								<button className="pl-detail-row-artist" type="button" onClick={(event) => {
@@ -282,7 +289,7 @@ export function PlaylistPanelHost(props: PlaylistPanelHostProps): ReactElement {
 								return (
 									<div key={record.key}>
 										<div className={expanded ? "pl-card imported expanded" : "pl-card imported"} data-playlist-provider={record.provider} data-playlist-id={record.playlist.id} onClick={() => openImportedDetail(record)}>
-											{coverNode(record.playlist.coverUrl)}
+											{coverNode(record.playlist.coverUrl, resolveCover)}
 											<div className="pl-card-main">
 												<div className="pl-name">{record.playlist.name}<span className="tag-source imported">导入 · {providerLabel(record.provider)}</span></div>
 												<div className="pl-sub">{record.loadedCount || record.tracks.length}/{record.trackCount || record.tracks.length} 首</div>
@@ -306,7 +313,7 @@ export function PlaylistPanelHost(props: PlaylistPanelHostProps): ReactElement {
 								return (
 									<div key={`${playlist.provider}:${playlist.id}`}>
 										<div className={expanded ? "pl-card expanded" : "pl-card"} data-playlist-provider={playlist.provider} data-playlist-id={playlist.id} onClick={() => void openDetail(playlist)}>
-											{coverNode(playlist.coverUrl)}
+											{coverNode(playlist.coverUrl, resolveCover)}
 											<div className="pl-card-main">
 												<div className="pl-name">{playlist.name}<span className={`tag-source ${playlist.provider}`}>{providerLabel(playlist.provider)}</span></div>
 												<div className="pl-sub">{playlist.trackCount ?? 0} 首</div>
@@ -355,7 +362,7 @@ export function PlaylistPanelHost(props: PlaylistPanelHostProps): ReactElement {
 						<div className="playlist-empty">登录后显示我的播客</div>
 					) : visibleCollections.map((collection) => (
 						<div key={collection.key} className="pl-card podcast-card" data-podcast-key={collection.key} onClick={() => props.onPodcastCollectionOpen?.(collection)}>
-							{coverNode(collection.coverUrl)}
+							{coverNode(collection.coverUrl, resolveCover)}
 							<div className="pl-card-main">
 								<div className="pl-name">{collection.title}</div>
 								<div className="pl-sub">{collection.count || 0} 项 · {collection.sub || (collection.itemType === "voice" ? "声音" : "播客")}</div>

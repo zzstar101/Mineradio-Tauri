@@ -6,6 +6,7 @@ import { isSharedPlaylistCandidateText } from "../../shared-playlist/imported-pl
 import { useSearchStore, type SearchMode } from "../../stores/search-store";
 import { searchSessionController } from "../../features/search/search-session-runtime";
 import { resolveVirtualListWindow, type VirtualListWindow } from "./virtual-list";
+import { coverSourceToCssBackgroundImage, useCoverSourceResolver } from "../../cover/resolved-cover-source";
 
 export type { SearchMode } from "../../stores/search-store";
 
@@ -87,6 +88,7 @@ export function SearchShell({
 	peek = false,
 	requestedMode,
 }: SearchShellProps): ReactElement {
+	const resolveCover = useCoverSourceResolver();
 	const provider = useSearchStore((s) => s.provider);
 	const keyword = useSearchStore((s) => s.keyword);
 	const mode = useSearchStore((s) => s.mode);
@@ -284,7 +286,7 @@ export function SearchShell({
 					{podcastCurrentRadio ? (
 						<div className="podcast-result-head">
 							<button className="podcast-back-btn" type="button" aria-label="返回播客列表" onClick={backToPodcastRadios}>‹</button>
-							{podcastCurrentRadio.coverUrl ? <img src={podcastCurrentRadio.coverUrl} alt="" /> : <div className="search-result-cover-placeholder" />}
+							{resolveCover(podcastCurrentRadio.coverUrl).uri ? <img src={resolveCover(podcastCurrentRadio.coverUrl).uri} alt="" /> : <div className="search-result-cover-placeholder" />}
 							<div className="search-result-info">
 								<div className="search-result-title">{podcastCurrentRadio.name || "Podcast"}<span className="tag-podcast">Podcast</span></div>
 								<div className="search-result-meta">{podcastCurrentRadio.djName || (podcastPrograms.length ? `${podcastPrograms.length} episodes` : "No playable episodes")}</div>
@@ -306,7 +308,7 @@ export function SearchShell({
 										data-podcast-program-id={program.programId || program.id}
 										onClick={() => playResult(program)}
 									>
-										<span className="search-shell-cover" style={program.coverUrl ? { backgroundImage: `url("${program.coverUrl}")` } : undefined} />
+										<span className="search-shell-cover" style={resolveCover(program.coverUrl).uri ? { backgroundImage: coverSourceToCssBackgroundImage(resolveCover(program.coverUrl).uri) } : undefined} />
 										<span className="search-shell-meta">
 											<span className="search-shell-title">{program.title}</span>
 											<span className="search-shell-sub">{program.radioName || program.album || program.djName || "Podcast"}</span>
@@ -347,7 +349,7 @@ export function SearchShell({
 											void openPodcastPrograms(radio);
 										}}
 									>
-										{radio.coverUrl ? <img src={radio.coverUrl} alt="" /> : <div className="search-result-cover-placeholder" />}
+										{resolveCover(radio.coverUrl).uri ? <img src={resolveCover(radio.coverUrl).uri} alt="" /> : <div className="search-result-cover-placeholder" />}
 										<div className="search-result-info">
 											<div className="search-result-title">{radio.name}<span className="tag-podcast">Podcast</span></div>
 											<div className="search-result-meta">{radio.djName || radio.category || `${radio.programCount || 0} episodes`}</div>
@@ -380,7 +382,7 @@ export function SearchShell({
 													if (!disabled) playResult(track);
 												}}
 											>
-												<span className="search-shell-cover" style={track.coverUrl ? { backgroundImage: `url("${track.coverUrl}")` } : undefined} />
+												<span className="search-shell-cover" style={resolveCover(track.coverUrl).uri ? { backgroundImage: coverSourceToCssBackgroundImage(resolveCover(track.coverUrl).uri) } : undefined} />
 												<span className="search-shell-meta">
 													<span className="search-shell-title">{track.title}</span>
 												</span>

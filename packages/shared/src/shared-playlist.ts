@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ProviderIdSchema } from "./provider";
 import { TrackSchema } from "./track";
+import { CoverSourceSchema } from "./cover-source";
 
 export const SharedPlaylistSourceSchema = z.enum(["netease", "qq", "kugou", "qishui", "apple-music"]);
 
@@ -13,7 +14,7 @@ export const SharedPlaylistInfoSchema = z.object({
   provider: SharedPlaylistSourceSchema,
   id: z.string().min(1),
   name: z.string(),
-  coverUrl: z.string().optional().default(""),
+  coverUrl: CoverSourceSchema.optional().default(""),
   trackCount: z.number().int().nonnegative().optional(),
   trackIds: z.array(z.string()).default([]),
   subscribed: z.boolean().optional().default(false),

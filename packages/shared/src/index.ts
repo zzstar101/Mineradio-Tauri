@@ -1,5 +1,6 @@
 export * from "./envelope";
 export * from "./provider";
+export * from "./cover-source";
 export * from "./track";
 export * from "./song-url";
 export * from "./playlist";

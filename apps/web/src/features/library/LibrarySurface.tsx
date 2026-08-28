@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactElement } from "react";
 import { PlaylistPanelHost } from "../../components/shell/PlaylistPanelHost";
 import type { LibraryControllerResult } from "./useLibraryController";
+import { useCoverSourceResolver } from "../../cover/resolved-cover-source";
 
 type CollectController = Pick<
   LibraryControllerResult,
@@ -25,6 +26,7 @@ export function LibrarySurface({
 export function LibraryOverlaySurface({
   collect,
 }: Pick<LibrarySurfaceProps, "collect">): ReactElement | null {
+  const resolveCover = useCoverSourceResolver();
   const {
     collectTarget,
     collectBusyPlaylistId,
@@ -50,8 +52,8 @@ export function LibraryOverlaySurface({
           >
             <h2 id="collect-modal-title">收藏到歌单</h2>
             <div id="collect-current" className="collect-current">
-              {collectTarget.coverUrl ? (
-                <img src={collectTarget.coverUrl} alt="" />
+              {resolveCover(collectTarget.coverUrl).uri ? (
+                <img src={resolveCover(collectTarget.coverUrl).uri} alt="" />
               ) : (
                 <div className="cover-placeholder" />
               )}
@@ -76,8 +78,8 @@ export function LibraryOverlaySurface({
                     data-collect-pid={playlist.id}
                     onClick={() => void collectToPlaylist(playlist.id)}
                   >
-                    {playlist.coverUrl ? (
-                      <img src={playlist.coverUrl} alt="" />
+                    {resolveCover(playlist.coverUrl).uri ? (
+                      <img src={resolveCover(playlist.coverUrl).uri} alt="" />
                     ) : (
                       <div className="cover-placeholder" />
                     )}

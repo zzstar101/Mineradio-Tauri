@@ -4,26 +4,32 @@ import type {
 	MediaUrlOptions,
 	MediaUrlPort,
 } from "../../ports/media-url-port";
+import { inspectCoverSource } from "@mineradio/shared";
 
 export function createLegacyMediaUrl(
-	client: Pick<SidecarClient, "audioProxyUrl" | "imageProxyUrl"> &
-		Partial<Pick<SidecarClient, "proxiedUrl">>,
+	client: Pick<SidecarClient, "audioProxyUrl"> &
+		Partial<Pick<SidecarClient, "imageProxyUrl" | "proxiedUrl">>,
 ): MediaUrlPort {
 	const imageSource = (
 		url: string,
 		options?: MediaUrlOptions,
 	): MediaImageSource => {
-		const uri = client.imageProxyUrl(
-			url,
-			options?.cacheBust ?? false,
-			options?.now ?? Date.now(),
-		);
-		const fallbackUri = uri && uri !== url && /^https?:\/\//i.test(url)
-			? url
-			: undefined;
+		const inspected = inspectCoverSource(url);
+		if (inspected.kind === "empty" || inspected.kind === "invalid") {
+			return { uri: "", logicalSource: "" };
+		}
+		const uri = inspected.kind === "remote"
+			? typeof client.imageProxyUrl === "function"
+				? client.imageProxyUrl(
+					inspected.normalized,
+					options?.cacheBust ?? false,
+					options?.now ?? Date.now(),
+				)
+				: ""
+			: inspected.normalized;
 		return {
 			uri,
-			...(fallbackUri ? { fallbackUri } : {}),
+			logicalSource: inspected.normalized,
 		};
 	};
 	return {

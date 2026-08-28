@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ProviderIdSchema } from "./provider";
+import { CoverSourceSchema } from "./cover-source";
 
 export const PlayableStateSchema = z.enum([
   "unknown",
@@ -20,7 +21,7 @@ export const TrackSchema = z.object({
   title: z.string(),
   artists: z.array(z.string()),
   album: z.string().optional().default(""),
-  coverUrl: z.string().optional().default(""),
+  coverUrl: CoverSourceSchema.optional().default(""),
   durationMs: z.number().int().nonnegative().optional(),
   qualityHints: z.array(z.string()).default([]),
   playableState: PlayableStateSchema.default("unknown")

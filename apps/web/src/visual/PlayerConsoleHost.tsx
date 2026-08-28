@@ -11,6 +11,7 @@ import type { PlaybackQualityRequest, ProviderId, Track, TrackQualityOption } fr
 import { createProgressDragParticleEmitter, type ProgressDragParticleEmitter } from "./progress-drag-particles";
 import { resolveVirtualListWindow } from "../components/shell/virtual-list";
 import { SourceSwitcher } from "../features/playback/SourceSwitcher";
+import { coverSourceToCssBackgroundImage, useCoverSourceResolver } from "../cover/resolved-cover-source";
 
 const PLAYBACK_QUALITY_OPTIONS: Array<{
 	value: PlaybackQualityRequest;
@@ -131,6 +132,8 @@ export interface PlayerConsoleHostProps {
 }
 
 export function PlayerConsoleHost(props: PlayerConsoleHostProps): ReactElement {
+	const resolveCover = useCoverSourceResolver();
+	const currentCoverSource = resolveCover(props.currentCoverUrl).uri;
 	const barRef = useRef<HTMLDivElement | null>(null);
 	const modeBtnRef = useRef<HTMLButtonElement | null>(null);
 	const modeIconRef = useRef<SVGSVGElement | null>(null);
@@ -438,7 +441,7 @@ export function PlayerConsoleHost(props: PlayerConsoleHostProps): ReactElement {
 			<div id="controls">
 				<div className="control-cluster actions">
 					<div className="control-track">
-						<div id="control-cover" className={props.currentCoverUrl ? "control-cover has-cover" : "control-cover cover-empty"} style={props.currentCoverUrl ? { backgroundImage: `url(${props.currentCoverUrl})` } : undefined} aria-hidden="true" />
+						<div id="control-cover" className={currentCoverSource ? "control-cover has-cover" : "control-cover cover-empty"} style={currentCoverSource ? { backgroundImage: coverSourceToCssBackgroundImage(currentCoverSource) } : undefined} aria-hidden="true" />
 						<div className="control-meta">
 							<div id="control-title" className="control-title">{props.currentTitle ?? ""}</div>
 							<div id="control-artist" className="control-artist">{props.currentArtist ?? ""}</div>
@@ -548,7 +551,7 @@ export function PlayerConsoleHost(props: PlayerConsoleHostProps): ReactElement {
 								return (
 									<div className={now ? "mini-queue-item now" : "mini-queue-item"} key={`${track.provider}-${track.id}-${index}`}>
 										<button className="mini-queue-main" type="button" onClick={() => onPlayQueueIndexRef.current?.(index)}>
-											{track.coverUrl ? <img src={track.coverUrl} alt="" /> : <span className="mini-queue-cover" />}
+											{resolveCover(track.coverUrl).uri ? <img src={resolveCover(track.coverUrl).uri} alt="" /> : <span className="mini-queue-cover" />}
 											<span className="mini-queue-info">
 												<span className="mini-queue-name">{track.title}</span>
 												<span className="mini-queue-sub">{track.artists.join(" / ") || "未知艺人"}</span>

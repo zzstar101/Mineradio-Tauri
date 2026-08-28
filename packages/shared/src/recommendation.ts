@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ProviderIdSchema } from "./provider";
+import { CoverSourceSchema } from "./cover-source";
 
 export const RecommendationCardKindSchema = z.enum([
 	"track",
@@ -20,7 +21,7 @@ export const RecommendationCardSchema = z.object({
 	title: z.string().default(""),
 	subtitle: z.string().default(""),
 	kind: RecommendationCardKindSchema.default("unknown"),
-	coverUrl: z.string().default(""),
+	coverUrl: CoverSourceSchema.default(""),
 	collected: z.boolean().nullable().optional(),
 });
 

@@ -41,6 +41,6 @@
 - Output Route disabled path 不保留 mirror Audio、sync interval 或设备轮询；Virtual Output Bridge 不创建 capture stream。
 - Provider 的 canonical production path 固定为 Web Application Ports → Tauri `api_call` → Rust `api_bridge` → in-process `mineradio_api::Api`。
 - Bun Sidecar、localhost HTTP、heartbeat、supervisor、restart/recovery 与 Sidecar `externalBin` 已退出生产架构，不得重新引入。
-- CSS 封面继续使用 direct URL；WebGL 封面使用 Media URL Port 返回的 opaque native URI，并保留 direct fallback。
+- Remote DOM/CSS 与 WebGL 封面统一使用 Media URL Port 返回的 opaque native URI；local/data/blob/custom source 保持 opaque 且不重复代理，remote provider URL 不作为渲染 fallback。
 - `SidecarClient` 作为兼容命名只能存在于 API implementation 和 `adapters/sidecar` 中；该名称不代表 Sidecar transport 仍然存在。
 - `api/` 是用户所有的 Provider 行为来源；任何真实 Provider 能力只能在字段验证后标为发布可用。

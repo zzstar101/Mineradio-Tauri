@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TrackSchema } from "./track";
+import { CoverSourceSchema } from "./cover-source";
 
 const PodcastIdSchema = z.preprocess((value) => {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
@@ -10,7 +11,7 @@ export const PodcastRadioSchema = z.object({
   id: PodcastIdSchema,
   rid: PodcastIdSchema,
   name: z.string(),
-  coverUrl: z.string().optional().default(""),
+  coverUrl: CoverSourceSchema.optional().default(""),
   description: z.string().optional().default(""),
   djName: z.string().optional().default(""),
   category: z.string().optional().default(""),
@@ -59,7 +60,7 @@ export const PodcastCollectionSchema = z.object({
   sub: z.string().optional().default(""),
   itemType: z.enum(["radio", "voice"]).default("radio"),
   count: z.number().int().nonnegative().default(0),
-  coverUrl: z.string().optional().default("")
+  coverUrl: CoverSourceSchema.optional().default("")
 });
 
 export const PodcastMyResponseSchema = z.object({
