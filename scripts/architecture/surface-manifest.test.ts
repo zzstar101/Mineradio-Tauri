@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import manifest from "../../docs/audit/2.1-surface-manifest.json";
-import { validateSurfaceManifest } from "./validate-surface-manifest.mjs";
+import { validateSurfaceManifest } from "../parity/validate-surface-manifest.mjs";
 
 test("2.1 parity authority contains exactly the canonical S001-S101 surface set", () => {
 	expect(validateSurfaceManifest(manifest)).toEqual([]);
