@@ -187,9 +187,16 @@
   transform: translateX(-50%) translateY(0);
 }
 
-.control-title-badges .quality-popover {
+.control-title-badges .quality-popover,
+.control-quality-chip .quality-popover {
   width: 238px;
   padding: 8px;
+}
+
+.quality-option-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
 }
 
 /* --- Volume / fade compact surface (upstream geometry) --- */

@@ -10,6 +10,7 @@ import type {
 	DesktopWindowState,
 } from "../../ports/desktop-runtime-port";
 import {
+	shouldExitDesktopFullscreenOnEscape,
 	useDesktopRuntime,
 	type DesktopRuntimeResult,
 } from "./useDesktopRuntime";
@@ -28,6 +29,21 @@ const WINDOW_STATE: DesktopWindowState = {
 	hasDisplayOnRight: false,
 	displayBounds: null,
 };
+
+test("desktop fullscreen Escape policy is scoped to active fullscreen", () => {
+	expect(shouldExitDesktopFullscreenOnEscape(
+		{ key: "Escape", repeat: false, isComposing: false },
+		{ ...WINDOW_STATE, isNativeFullScreen: true },
+	)).toBe(true);
+	expect(shouldExitDesktopFullscreenOnEscape(
+		{ key: "Escape", repeat: false, isComposing: false },
+		WINDOW_STATE,
+	)).toBe(false);
+	expect(shouldExitDesktopFullscreenOnEscape(
+		{ key: "Escape", repeat: true, isComposing: false },
+		{ ...WINDOW_STATE, isNativeFullScreen: true },
+	)).toBe(false);
+});
 
 test("desktop runtime owns lyric enable order and hotkey cleanup", async () => {
 	await import("../../../../../packages/visual-engine/src/runtime/happy-dom-preload");

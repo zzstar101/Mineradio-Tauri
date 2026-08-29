@@ -11,6 +11,22 @@ import {
 	type DesktopLyricsPushPayload,
 } from "../../desktop-lyrics/desktop-lyrics-push";
 
+export function shouldExitDesktopFullscreenOnEscape(
+	event: Pick<KeyboardEvent, "key" | "repeat" | "isComposing">,
+	state: DesktopWindowState | null,
+): boolean {
+	return event.key === "Escape"
+		&& !event.repeat
+		&& !event.isComposing
+		&& !!state
+		&& !!(
+			state.isFullScreen
+			|| state.isNativeFullScreen
+			|| state.isHtmlFullScreen
+			|| state.isWindowFullScreen
+		);
+}
+
 export const DEFAULT_DESKTOP_HOTKEYS: DesktopGlobalHotkeyBinding[] = [
 	{ action: "togglePlay", accelerator: "Control+Alt+Space" },
 	{ action: "prevTrack", accelerator: "Control+Alt+ArrowLeft" },
@@ -180,6 +196,17 @@ export function useDesktopRuntime({
 			dependenciesRef.current.onWindowCleanup?.();
 		};
 	}, [desktop, publishWindowState]);
+
+	useEffect(() => {
+		const exitFullscreenOnEscape = (event: KeyboardEvent) => {
+			if (!shouldExitDesktopFullscreenOnEscape(event, desktopWindowState)) return;
+			event.preventDefault();
+			event.stopPropagation();
+			void dependenciesRef.current.desktop.toggleWindowFullscreen();
+		};
+		window.addEventListener("keydown", exitFullscreenOnEscape, true);
+		return () => window.removeEventListener("keydown", exitFullscreenOnEscape, true);
+	}, [desktopWindowState]);
 
 	useEffect(() => {
 		if (!desktopLyricsEnabled) return;

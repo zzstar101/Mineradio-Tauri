@@ -559,7 +559,8 @@ export function PlayerConsoleHost(props: PlayerConsoleHostProps): ReactElement {
 											onSwitch={props.onSourceSwitch}
 										/>
 									) : null}
-									<div id="quality-control" className="quality-control control-quality-chip">
+								</span>
+								<div id="quality-control" className="quality-control control-quality-chip">
 										<button id="quality-btn" className={qualityOpen ? "ctrl-btn quality-pill active" : "ctrl-btn quality-pill"} ref={registerNormal("quality-btn")} type="button" title={`音质: ${quality.label}`} aria-label="音质" onClick={() => setQualityOpen((open) => !open)}>
 											<span id="quality-btn-label">{quality.short}</span>
 										</button>
@@ -593,8 +594,7 @@ export function PlayerConsoleHost(props: PlayerConsoleHostProps): ReactElement {
 											</div>
 										</div>
 									</div>
-								</span>
-							</div>
+								</div>
 							<div id="control-artist" className="control-artist" title="歌手详情" role="button" tabIndex={0} onClick={() => trackDetailStub("artist")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); trackDetailStub("artist"); } }}>{props.currentArtist ?? ""}</div>
 						</div>
 					</div>

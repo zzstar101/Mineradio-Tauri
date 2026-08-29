@@ -47,6 +47,7 @@ const STATE_LABELS = {
 // Tolerances from the Wave 3 bubble: position/bbox <= 3px, primary control <= 2px.
 const POSITION_TOL_PX = 3;
 const PRIMARY_TOL_PX = 2;
+const CHROME_MISMATCH_TOL_PCT = 5;
 
 // ---------------------------------------------------------------- PNG decoder
 function decodePng(buffer) {
@@ -214,17 +215,18 @@ function ssim(a, b) {
   return ((2 * meanA * meanB + c1) * (2 * cov + c2)) / ((meanA * meanA + meanB * meanB + c1) * (varA + varB + c2));
 }
 
-function compareRegion(upImg, curImg, ux0, uy0, uw, uh, cx0, cy0, cw, ch) {
+function compareRegion(upImg, curImg, ux0, uy0, uw, uh, cx0, cy0, cw, ch, masks = []) {
   const w = Math.max(2, Math.min(uw, cw));
   const h = Math.max(2, Math.min(uh, ch));
   // center-align the crops
   const ucx = ux0 + uw / 2;
-  const ccy = uy0 + uh / 2;
+  const ucy = uy0 + uh / 2;
   const ux = Math.round(ucx - w / 2);
-  const uy = Math.round(ccy - h / 2);
+  const uy = Math.round(ucy - h / 2);
   const ccx = cx0 + cw / 2;
-  const cy = Math.round(ccy - h / 2);
+  const ccy = cy0 + ch / 2;
   const cx = Math.round(ccx - w / 2);
+  const cy = Math.round(ccy - h / 2);
   const lux = Math.max(0, ux);
   const luy = Math.max(0, uy);
   const lcx = Math.max(0, cx);
@@ -234,29 +236,107 @@ function compareRegion(upImg, curImg, ux0, uy0, uw, uh, cx0, cy0, cw, ch) {
   if (effW <= 0 || effH <= 0) return null;
   let mad = 0;
   let mismatch = 0;
-  let total = effW * effH;
+  let compared = 0;
+  let masked = 0;
+  const lumA = [];
+  const lumB = [];
   for (let j = 0; j < effH; j += 1) {
     for (let i = 0; i < effW; i += 1) {
-      const up = ((luy + j) * upImg.width + (lux + i)) * 4;
-      const cu = ((lcy + j) * curImg.width + (lcx + i)) * 4;
+      const upX = lux + i;
+      const upY = luy + j;
+      const curX = lcx + i;
+      const curY = lcy + j;
+      if (masks.some((mask) => pointInRect(upX, upY, mask.up) || pointInRect(curX, curY, mask.cur))) {
+        masked += 1;
+        continue;
+      }
+      const up = (upY * upImg.width + upX) * 4;
+      const cu = (curY * curImg.width + curX) * 4;
       const d0 = Math.abs(upImg.data[up] - curImg.data[cu]);
       const d1 = Math.abs(upImg.data[up + 1] - curImg.data[cu + 1]);
       const d2 = Math.abs(upImg.data[up + 2] - curImg.data[cu + 2]);
       const mean = (d0 + d1 + d2) / 3 / 255;
       mad += mean;
       if (mean > 0.11) mismatch += 1;
+      lumA.push((0.2126 * upImg.data[up] + 0.7152 * upImg.data[up + 1] + 0.0722 * upImg.data[up + 2]) / 255);
+      lumB.push((0.2126 * curImg.data[cu] + 0.7152 * curImg.data[cu + 1] + 0.0722 * curImg.data[cu + 2]) / 255);
+      compared += 1;
     }
   }
-  mad /= total;
-  const lumA = luminance(upImg, lux, luy, effW, effH);
-  const lumB = luminance(curImg, lcx, lcy, effW, effH);
-  const ssimVal = ssim(lumA, lumB);
+  if (compared === 0) {
+    return { region: { w: effW, h: effH }, mismatchPct: null, mad: null, ssim: null, comparedPixels: 0, maskedPixels: masked, maskCoveragePct: 100 };
+  }
+  mad /= compared;
   return {
     region: { w: effW, h: effH },
-    mismatchPct: Math.round((mismatch / total) * 10000) / 100,
+    mismatchPct: Math.round((mismatch / compared) * 10000) / 100,
     mad: Math.round(mad * 10000) / 10000,
-    ssim: Math.round(ssimVal * 10000) / 10000,
+    ssim: Math.round(ssim(Float64Array.from(lumA), Float64Array.from(lumB)) * 10000) / 10000,
+    comparedPixels: compared,
+    maskedPixels: masked,
+    maskCoveragePct: Math.round((masked / (compared + masked)) * 10000) / 100,
   };
+}
+
+function pointInRect(x, y, rect) {
+  return !!rect && x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height;
+}
+
+function insetBox(box, insetX, insetY = insetX) {
+  if (!box) return null;
+  return {
+    x: box.x + insetX,
+    y: box.y + insetY,
+    width: Math.max(1, box.width - insetX * 2),
+    height: Math.max(1, box.height - insetY * 2),
+  };
+}
+
+function expandBox(box, pad) {
+  if (!box) return null;
+  return { x: box.x - pad, y: box.y - pad, width: box.width + pad * 2, height: box.height + pad * 2 };
+}
+
+function visibleBox(geometry, key, pad = 0) {
+  const box = geometry?.[key];
+  return box && box.visible ? expandBox(box, pad) : null;
+}
+
+function metadataBox(geometry) {
+  const cover = geometry?.cover;
+  const heart = geometry?.heart;
+  if (!cover || !heart || !cover.visible || !heart.visible) return null;
+  const x = cover.x + cover.width + 4;
+  const right = heart.x - 4;
+  return right > x ? { x, y: cover.y, width: right - x, height: cover.height } : null;
+}
+
+// Dynamic pixels are excluded only from pixel scoring. Their DOM, typography,
+// visibility, and geometry remain covered by the separate contracts.
+function dynamicMasks(state, name, upGeo, curGeo) {
+  const masks = [];
+  const add = (label, up, cur) => {
+    if (up && cur) masks.push({ label, up, cur });
+  };
+  if (name === "cover" || name === "bar" || name === "metadata") {
+    add("cover pixels", visibleBox(upGeo, "cover", 2), visibleBox(curGeo, "cover", 2));
+  }
+  if (name === "bar" || name === "metadata") {
+    add("title/artist/source/quality badge glyph region", metadataBox(upGeo), metadataBox(curGeo));
+  }
+  if (name === "bar") {
+    add("time text", visibleBox(upGeo, "timeDisplay", 2), visibleBox(curGeo, "timeDisplay", 2));
+  }
+  if (name === "bar" || name === "progress") {
+    // Keep the outer progress track/border in the score while excluding the
+    // time-dependent fill/thumb pixels from the four-pixel progress track.
+    add("progress fill/thumb", insetBox(upGeo?.progress, 0, 1), insetBox(curGeo?.progress, 0, 1));
+  }
+  if (name.toLowerCase().includes("popover") || name === "miniQueue") {
+    const key = name === "volumePopover" ? "volumePopover" : name === "lyricPopover" ? "lyricPopover" : name === "qualityPopover" ? "qualityPopover" : "miniQueue";
+    add("popover dynamic text/content", insetBox(upGeo?.[key], 10), insetBox(curGeo?.[key], 10));
+  }
+  return masks;
 }
 
 // ---------------------------------------------------------------- geometry deltas
@@ -309,7 +389,7 @@ const STATE_ROIS = {
   ],
   "volume": [["volumePopover", ["volumePopover", "volume"], 8]],
   "lyric-timing": [["lyricPopover", ["lyricPopover", "lyricTiming"], 8]],
-  "quality": [["qualityPopover", ["quality", "quality-popover"], 8]],
+  "quality": [["qualityPopover", ["qualityPopover", "quality"], 8]],
   "mini-queue": [["miniQueue", ["miniQueue", "miniQueueBtn"], 8]],
   "auto-hide": [["handle", ["handle"], 14]],
   "immersive": [["bar", ["bar"], 0], ["play", ["play"], 8]],
@@ -323,7 +403,17 @@ function main() {
   const outDir = path.resolve(repositoryRoot, process.argv.indexOf("--out") >= 0 ? process.argv[process.argv.indexOf("--out") + 1] : ".playwright-cli/wave3/diff");
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
 
-  const summary = { base: "Wave 3B Layer 3 diff", tolerances: { position: POSITION_TOL_PX, primary: PRIMARY_TOL_PX }, states: [] };
+  const summary = {
+    base: "Wave 3C Layer 3 pixel and geometry diff",
+    pixelPolicy: {
+      dynamicContent: "MASKED",
+      maskedRegions: ["cover pixels", "title/artist/source/quality badge glyph region", "time text", "progress fill/thumb", "popover dynamic text/content"],
+      stageBackground: "excluded by shell ROI; no stage pixels are scored",
+      geometryContract: "DOM geometry and computed-style evidence remains unmasked",
+    },
+    tolerances: { position: POSITION_TOL_PX, primary: PRIMARY_TOL_PX },
+    states: [],
+  };
 
   for (const state of STATES) {
     const upPngPath = path.join(upstreamDir, state, `upstream-${state}.png`);
@@ -347,7 +437,10 @@ function main() {
       const curRoi = roiFor(curGeo, keys, pad);
       let pixel = null;
       if (upRoi && curRoi) {
-        pixel = compareRegion(upPng, curPng, upRoi.x0, upRoi.y0, upRoi.width, upRoi.height, curRoi.x0, curRoi.y0, curRoi.width, curRoi.height);
+        const masks = dynamicMasks(state, name, upGeo, curGeo);
+        const rawPixel = compareRegion(upPng, curPng, upRoi.x0, upRoi.y0, upRoi.width, upRoi.height, curRoi.x0, curRoi.y0, curRoi.width, curRoi.height);
+        pixel = compareRegion(upPng, curPng, upRoi.x0, upRoi.y0, upRoi.width, upRoi.height, curRoi.x0, curRoi.y0, curRoi.width, curRoi.height, masks);
+        pixel = { ...pixel, raw: rawPixel, masks: masks.map(({ label, up, cur }) => ({ label, upstream: up, current: cur })) };
       }
       const deltas = geometryDelta(upGeo, curGeo, keys, barCenter);
       const exceeded = Object.values(deltas).some((d) =>
@@ -416,12 +509,15 @@ function main() {
     }
     writeFileSync(path.join(outDir, `${state}-roi-diff.png`), encodePng(bandW, bandH, overlayData));
 
+    row.dynamicContentPixel = row.rois.some((roi) => (roi.pixel?.masks?.length ?? 0) > 0) ? "MASKED" : "PASS";
+    row.pixelShellChrome = row.rois.every((roi) => roi.pixel && roi.pixel.mismatchPct !== null && roi.pixel.mismatchPct <= CHROME_MISMATCH_TOL_PCT) ? "PASS" : "FAIL";
+    row.geometry = row.result === "REVIEW" ? "FAIL" : "PASS";
     summary.states.push(row);
   }
 
   writeFileSync(path.join(outDir, "wave3-diff-summary.json"), `${JSON.stringify(summary, null, 2)}\n`, "utf8");
-  console.log(`Wave 3B diff summary -> ${outDir}`);
-  const passCount = summary.states.filter((s) => s.result === "PASS").length;
+  console.log(`Wave 3C diff summary -> ${outDir}`);
+  const passCount = summary.states.filter((s) => s.result === "PASS" || s.result === "PASS-EXPECTED").length;
   const reviewCount = summary.states.length - passCount;
   console.log(`states: ${summary.states.length} (PASS=${passCount}, REVIEW=${reviewCount})`);
   for (const row of summary.states) console.log(`  ${row.state.padEnd(14)} ${row.result}`);

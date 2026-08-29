@@ -31,6 +31,7 @@ test("Wave 3 player-shell CSS exists and carries canonical geometry tokens", () 
     ".control-title-badges",
     "#quality-btn.quality-pill",
     ".control-quality-chip",
+    ".quality-option-list",
     ".volume-main-row",
     ".fade-control-row",
     "#volume-value",
@@ -49,6 +50,7 @@ test("Wave 3 player-shell CSS exists and carries canonical geometry tokens", () 
   // Geometry values mirrored from the upstream fixture.
   expect(css.includes("height: 15px")).toBe(true); // quality pill / source chip
   expect(css.includes("width: 226px")).toBe(true); // volume popover width
+  expect(css.includes("grid-template-columns: 1fr")).toBe(true); // quality options fill popover
   expect(css.includes("bottom: 46px")).toBe(true); // popover anchor
   expect(css.includes("width: min(620px, calc(100vw - 56px))")).toBe(true);
 });

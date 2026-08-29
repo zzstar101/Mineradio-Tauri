@@ -156,6 +156,9 @@ const ALLOWED_PREFERENCE_KEYS: &[(&str, u32)] = &[
     ("home.listenLedger.v2", 2),
     ("search.history", 1),
     ("accounts.providerOrder.v1", 1),
+    ("lyrics.timingOffsets", 1),
+    ("player.controlsAutoHide", 1),
+    ("player.immersiveMode", 1),
 ];
 
 const ALLOWED_LEGACY_PREFERENCE_MIGRATIONS: &[(&str, &str)] = &[
@@ -1152,6 +1155,74 @@ mod tests {
         assert_eq!(error.code(), "PREFERENCE_KEY_NOT_ALLOWED");
         let snapshot = get_preferences_snapshot(&conn).unwrap();
         assert!(snapshot.values.is_empty());
+    }
+
+    #[test]
+    fn player_shell_preferences_round_trip_through_sqlite_restart() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "mineradio-player-shell-preferences-{}-{}",
+            std::process::id(),
+            crate::runtime::now_ms()
+        ));
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        let db_path = temp_dir.join("mineradio.db");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        {
+            let conn = open_connection(&db_path).unwrap();
+            run_migrations(&conn).unwrap();
+            let snapshot = commit_preferences_transaction(
+                &conn,
+                PreferenceTransactionRequest {
+                    operations: vec![
+                        PreferenceMutation::Set {
+                            key: "lyrics.timingOffsets".to_string(),
+                            schema_version: 1,
+                            value: serde_json::json!({
+                                "local:local:track-a": {
+                                    "offset": 0.3,
+                                    "updatedAt": 123,
+                                    "title": "Track A",
+                                    "artist": "Artist"
+                                }
+                            }),
+                        },
+                        PreferenceMutation::Set {
+                            key: "player.controlsAutoHide".to_string(),
+                            schema_version: 1,
+                            value: serde_json::json!(true),
+                        },
+                        PreferenceMutation::Set {
+                            key: "player.immersiveMode".to_string(),
+                            schema_version: 1,
+                            value: serde_json::json!(false),
+                        },
+                    ],
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                snapshot.values["lyrics.timingOffsets"].value["local:local:track-a"]["offset"],
+                serde_json::json!(0.3)
+            );
+        }
+
+        let reopened = open_connection(&db_path).unwrap();
+        run_migrations(&reopened).unwrap();
+        let snapshot = get_preferences_snapshot(&reopened).unwrap();
+        assert_eq!(
+            snapshot.values["lyrics.timingOffsets"].value["local:local:track-a"]["offset"],
+            serde_json::json!(0.3)
+        );
+        assert_eq!(
+            snapshot.values["player.controlsAutoHide"].value,
+            serde_json::json!(true)
+        );
+        assert_eq!(
+            snapshot.values["player.immersiveMode"].value,
+            serde_json::json!(false)
+        );
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 
     #[test]

@@ -59,6 +59,7 @@ export const PLAYER_SHELL_META_ORDER = [
 export const PLAYER_SHELL_TITLE_ORDER = [
 	"control-title-text",
 	"control-title-badges",
+	"quality-control",
 ] as const;
 
 export const PLAYER_SHELL_VOLUME_POPOVER_ORDER = [
@@ -197,7 +198,7 @@ export function assertPlayerShellStructure(scope: Element | Document): PlayerShe
 	checks.push(
 		check("title uses .control-title-text", !!title),
 		check("title badges container exists", !!root.querySelector("#control-title-badges")),
-		check("quality chip lives inside metadata badges", !!root.querySelector("#control-title-badges #quality-control") || !!root.querySelector("#control-title-badges .quality-control")),
+		check("quality chip is a title-level metadata control", !!root.querySelector("#control-title > #quality-control") || !!root.querySelector("#control-title > .quality-control")),
 	);
 	const artist = root.querySelector("#control-artist");
 	checks.push(

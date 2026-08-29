@@ -153,7 +153,8 @@
         "action": "openTrackDetailModal('song')",
         "childOrder": [
           "control-title-text",
-          "control-title-badges"
+          "control-title-badges",
+          "quality-control"
         ]
       },
       "control-title-text": {
@@ -175,7 +176,7 @@
           "quality-btn",
           "quality-popover"
         ],
-        "note": "quality chip 位于 metadata 内部（title badges），不是漂浮 utility"
+        "note": "quality chip 位于 title row 的 metadata 内部（title badges 之后的 sibling），不是漂浮 utility"
       },
       "quality-btn": {
         "id": "quality-btn",

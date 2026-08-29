@@ -145,11 +145,17 @@ function currentBootProgram(fixture) {
   return `async page => {
 	const mp3 = ${JSON.stringify(fixture)};
 	await page.waitForTimeout(1200);
-	// Dismiss splash.
+	// Splash is a canvas surface with a delayed ready state. Wait for the
+	// actual accessible splash root, dismiss it, then require it to be gone
+	// before importing the fixture or capturing shell geometry.
 	try {
-		const enter = await page.$("[aria-label*=进入 Mineradio], #splash button, .splash-enter, [class*=splash] button");
-		if (enter) { await enter.click(); await page.waitForTimeout(350); }
-	} catch (e) {}
+		await page.waitForSelector("#splash.ready", { state: "attached", timeout: 10000 });
+		const enter = await page.$("#splash.ready");
+		if (enter) { await enter.click(); }
+		await page.waitForFunction(() => !document.body.classList.contains("splash-active"), null, { timeout: 15000 });
+	} catch (e) {
+		throw new Error("current splash did not dismiss: " + String(e));
+	}
 	await page.setInputFiles("#file-input", mp3);
 	await page.waitForFunction(() => {
 		const bar = document.getElementById("bottom-bar");
@@ -166,21 +172,31 @@ function upstreamBootProgram() {
   return `async page => {
 	await page.waitForTimeout(2500);
 	try {
-		const enter = await page.$("[aria-label*=进入], #splash button, .splash button");
+		await page.waitForSelector("#splash.ready", { state: "attached", timeout: 10000 });
+		const enter = await page.$("#splash.ready");
 		if (enter) await enter.click();
-	} catch (e) {}
+		await page.waitForFunction(() => !document.body.classList.contains("splash-active"), null, { timeout: 15000 });
+	} catch (e) {
+		throw new Error("upstream splash did not dismiss: " + String(e));
+	}
 	await page.waitForTimeout(1200);
 	await page.evaluate(() => document.fonts.ready);
 	return { booted: true };
 }`;
 }
 
-function stateDriverProgram(state) {
+function stateDriverProgram(state, target) {
+  const normalizeComparableState = target === "upstream" ? `await page.evaluate(() => {
+    const title = document.getElementById("control-title-text");
+    const artist = document.getElementById("control-artist");
+    if (title) title.textContent = "wave3-fixture";
+    if (artist) artist.textContent = "本地文件";
+  });` : ``;
   const actions = {
     "default": `await page.evaluate(() => { document.body.classList.remove("immersive-mode"); })`,
     "volume": `await page.click("#volume-btn", { timeout: 8000 });`,
     "lyric-timing": `await page.hover("#lyric-timing-control", { timeout: 8000 });`,
-    "quality": `await page.click("#quality-btn", { timeout: 8000 });`,
+    "quality": `await page.evaluate(() => { document.body.classList.remove("simple-mode"); document.body.classList.add("diy-mode"); const title = document.getElementById("control-title-text"); const artist = document.getElementById("control-artist"); if (title) title.textContent = ""; if (artist) artist.textContent = ""; }); await page.waitForTimeout(260); await page.click("#quality-btn", { timeout: 8000 }); await page.waitForTimeout(420);`,
     "mini-queue": `await page.click("#mini-queue-btn", { timeout: 8000 });`,
     "auto-hide": `await page.evaluate(() => {
       const bar = document.getElementById("bottom-bar");
@@ -188,11 +204,25 @@ function stateDriverProgram(state) {
       bar?.dispatchEvent(new window.MouseEvent("pointerleave", { bubbles: true }));
       document.body.classList.remove("controls-visible");
     }); await page.waitForTimeout(900);`,
-    "immersive": `await page.click("#immersive-btn", { timeout: 8000 }); await page.waitForTimeout(400);`,
+    "immersive": `await page.evaluate(() => {
+      document.body.classList.add("controls-visible");
+      const bar = document.getElementById("bottom-bar");
+      bar?.classList.add("visible");
+      bar?.classList.remove("soft-hidden");
+      document.querySelectorAll(".show").forEach((node) => node.classList.remove("show"));
+    }); await page.click("#immersive-btn", { timeout: 8000 }); await page.waitForTimeout(120); await page.evaluate(() => {
+      if (typeof window.revealBottomControls === "function") window.revealBottomControls(5000);
+      document.body.classList.add("controls-visible");
+      const bar = document.getElementById("bottom-bar");
+      bar?.classList.add("visible");
+      bar?.classList.remove("soft-hidden");
+    }); await page.waitForTimeout(520);`,
+
     "window-920": ``,
     "window-620": ``,
   }[state] ?? ``;
   return `async page => {
+	${normalizeComparableState}
 	${actions}
 	await page.waitForTimeout(260);
 	const out = await page.evaluate(() => { ${geometryBody()} });
@@ -208,7 +238,7 @@ function geometryBody() {
 		if (!el) return null;
 		const r = el.getBoundingClientRect();
 		const cs = getComputedStyle(el);
-		return { x: Math.round(r.left*10)/10, y: Math.round(r.top*10)/10, width: Math.round(r.width*10)/10, height: Math.round(r.height*10)/10, visible: cs.visibility !== "hidden" && r.width > 1 && r.height > 1, opacity: cs.opacity };
+		return { x: Math.round(r.left*10)/10, y: Math.round(r.top*10)/10, width: Math.round(r.width*10)/10, height: Math.round(r.height*10)/10, layoutWidth: Math.round((parseFloat(cs.width) || r.width)*10)/10, layoutHeight: Math.round((parseFloat(cs.height) || r.height)*10)/10, visible: cs.visibility !== "hidden" && r.width > 1 && r.height > 1, display: cs.display, opacity: cs.opacity, zIndex: cs.zIndex };
 	};
 	return {
 		title: document.querySelector("#control-title-text")?.textContent ?? "",
@@ -221,6 +251,7 @@ function geometryBody() {
 		prev: rect("#prev-btn"),
 		next: rect("#next-btn"),
 		quality: rect("#quality-control"),
+		qualityPopover: rect(".quality-popover"),
 		heart: rect("#heart-btn"),
 		collect: rect("#collect-btn"),
 		volume: rect("#volume-control"),
@@ -246,7 +277,7 @@ function routeProgram() {
   return `async page => {
 	const mp3 = ${JSON.stringify(DEFAULT_FIXTURE)};
 	await page.waitForTimeout(1000);
-	try { const en = await page.$("[aria-label*=进入 Mineradio], #splash button, .splash button"); if (en) await en.click(); } catch(e){}
+	try { await page.waitForSelector("#splash.ready", { state: "attached", timeout: 10000 }); const en = await page.$("#splash.ready"); if (en) await en.click(); await page.waitForFunction(() => !document.body.classList.contains("splash-active"), null, { timeout: 15000 }); } catch(e){ throw new Error("route splash did not dismiss: " + String(e)); }
 	await page.setInputFiles("#file-input", mp3);
 	await page.waitForFunction(() => !!document.getElementById("control-cover"), null, { timeout: 30000 });
 	await page.waitForTimeout(800);
@@ -358,7 +389,7 @@ function main() {
       runPlaywright(session, ["goto", baseUrl], 120000);
       runPlaywright(session, ["run-code", "--filename", writeProgram(outDir, `${state}-boot`, bootProgram)], 180000);
 
-      const driver = stateDriverProgram(state);
+      const driver = stateDriverProgram(state, target);
       const result = runPlaywright(session, ["run-code", "--filename", writeProgram(outDir, `${state}-driver`, driver)], 180000);
       const geometry = parseOutput(result.stdout, `${state} driver`);
 

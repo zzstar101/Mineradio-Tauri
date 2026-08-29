@@ -28,9 +28,9 @@ test("PlayerConsoleHost server-renders the canonical upstream bottom-bar markup"
 	expect(html).toContain('id="play-mode-btn"');
 	expect(html).toContain('id="control-cover"');
 	expect(html).toContain('id="time-display"');
-	// Quality chip lives INSIDE the metadata title badges (upstream).
+	// Quality chip is a sibling of title badges inside the title row (upstream).
 	expect(html.indexOf('id="quality-control"')).toBeGreaterThan(html.indexOf('id="control-title-badges"'));
-	expect(html.indexOf('id="quality-control"')).toBeLessThan(html.indexOf('id="heart-btn"'));
+	expect(html.indexOf('id="quality-control"')).toBeLessThan(html.indexOf('id="control-artist"'));
 	// Mini queue precedes progress (upstream).
 	expect(html.indexOf('id="mini-queue-popover"')).toBeLessThan(html.indexOf('id="progress-bar"'));
 	// Window chrome moved to titlebar.
@@ -190,6 +190,46 @@ test("PlayerConsoleHost mini queue long-press drag reorders via onMoveQueueIndex
 	}));
 
 	expect(moves).toEqual([[0, 2]]);
+	root.unmount();
+	container.remove();
+});
+
+test("PlayerConsoleHost mini queue long-press survives playback-style rerenders", async () => {
+	await import("../../../../packages/visual-engine/src/runtime/happy-dom-preload");
+	const queue = [makeTrack("a"), makeTrack("b"), makeTrack("c")];
+	const container = document.createElement("div");
+	document.body.appendChild(container);
+	const root = createRoot(container);
+	const render = (positionMs: number) => root.render(
+		React.createElement(PlayerConsoleHost, {
+			miniQueueOpen: true,
+			queue,
+			positionMs,
+			onMoveQueueIndex: () => {},
+		}),
+	);
+	render(0);
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	await new Promise((resolve) => setTimeout(resolve, 0));
+
+	const first = container.querySelector('.mini-queue-item[data-queue-index="0"]') as HTMLElement;
+	first.dispatchEvent(new window.PointerEvent("pointerdown", {
+		bubbles: true,
+		clientX: 1,
+		clientY: 1,
+		pointerId: 9,
+		isPrimary: true,
+	}));
+	// The playback clock rerenders PlayerConsoleHost while the pointer is held.
+	render(100);
+	await new Promise((resolve) => setTimeout(resolve, 560));
+	expect(document.body.classList.contains("panel-reordering")).toBe(true);
+
+	window.dispatchEvent(new window.PointerEvent("pointercancel", {
+		bubbles: true,
+		pointerId: 9,
+		isPrimary: true,
+	}));
 	root.unmount();
 	container.remove();
 });

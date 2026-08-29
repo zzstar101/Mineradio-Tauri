@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
+const DEFAULT_SET_TIMEOUT: typeof window.setTimeout = globalThis.setTimeout
+	? globalThis.setTimeout.bind(globalThis)
+	: ((() => 0) as typeof window.setTimeout);
+const DEFAULT_CLEAR_TIMEOUT: typeof window.clearTimeout = globalThis.clearTimeout
+	? globalThis.clearTimeout.bind(globalThis)
+	: ((() => undefined) as typeof window.clearTimeout);
+
 /**
  * Mini queue long-press drag reorder (upstream S010/S066 semantics).
  *
@@ -38,16 +45,8 @@ export function useMiniQueueReorder({
 	onMove,
 	timers,
 }: MiniQueueReorderOptions): MiniQueueReorderState {
-	const setTimeoutRef =
-		timers?.setTimeout
-		?? (globalThis.setTimeout
-			? globalThis.setTimeout.bind(globalThis)
-			: ((() => 0) as typeof window.setTimeout));
-	const clearTimeoutRef =
-		timers?.clearTimeout
-		?? (globalThis.clearTimeout
-			? globalThis.clearTimeout.bind(globalThis)
-			: ((() => undefined) as typeof window.clearTimeout));
+	const setTimeoutRef = timers?.setTimeout ?? DEFAULT_SET_TIMEOUT;
+	const clearTimeoutRef = timers?.clearTimeout ?? DEFAULT_CLEAR_TIMEOUT;
 	const onMoveRef = useRef(onMove);
 	onMoveRef.current = onMove;
 
